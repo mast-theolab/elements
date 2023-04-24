@@ -53,8 +53,8 @@ $(OBJ_LIB) : $(BUILDIR)/%.o : %.f90 | $(BUILDIR)
 $(OBJ_GMCD) : $(BUILDIR)/%.o : %.f90 | $(BUILDIR)
 	$(FC) $(FCFLAGS) -o $@ $<
 
-# $(BUILDIR):
-# 	mkdir -p $(BUILDIR)
+$(BUILDIR):
+	mkdir -p $(BUILDIR)
 
 # # Linker
 # $(PRG_NAME): $(OBJS)

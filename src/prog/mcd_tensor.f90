@@ -51,7 +51,7 @@ program mcd_tensor
         Smo_irxpj    ! MO-basis integral < i | r x p | j >
     ! for_guvcde = true to print information to compare with SOS/GUVCDE
     logical, parameter :: for_guvcde = .True., use_gamma = .True., &
-        use_giao = .False., DEBUG = .False.
+        use_giao = .True., DEBUG = .False.
     character(len=512) :: fname
     class(ovij_1e), allocatable :: ao_int
     class(BaseException), allocatable :: err

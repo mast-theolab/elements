@@ -115,7 +115,7 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     real(real64), dimension(3,MAXAO,max_nxyz) :: tij_p, tij_r, tij_rixr, &
         tij_rjxr, tij_rrijxp, tij_rrjxp, tij_rxp
     real(real64), dimension(6,MAXAO,max_nxyz) :: tij_r2
-    real(real64), dimension(max_nxyz,max_nxyz), target :: allones
+    real(real64), dimension(max_nxyz,max_nxyz), target :: ident_mat
     real(real64), dimension(:), allocatable :: ci, cj
     real(real64), dimension(:,:), allocatable, target :: c2p_D, c2p_F, c2p_G, &
         c2p_H, c2p_I
@@ -123,6 +123,11 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     class(BaseException), allocatable :: suberr
 
     err = InitError()
+
+    ident_mat = 0.0_real64
+    do i = 1, max_nxyz
+        ident_mat(i,i) = 1.0_real64
+    end do
 
     if (n_ao > MAXAO) then
         call RaiseError(err, 'Too many atomic orbitals')
@@ -251,10 +256,10 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
                             c2p_I = transfo_cart2pure(bsetDB(ia,iprim)%L)
                         c2pi => c2p_I
                     case default
-                        c2pi => allones
+                        c2pi => ident_mat
                 end select
             else
-                c2pi => allones
+                c2pi => ident_mat
             end if
             ja0 = 0
             do ja = 1, n_at
@@ -297,10 +302,10 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
                                     c2p_I = transfo_cart2pure(bsetDB(ja,jprim)%L)
                                 c2pj => c2p_I
                             case default
-                                c2pj => allones
+                                c2pj => ident_mat
                         end select
                     else
-                        c2pj => allones
+                        c2pj => ident_mat
                     end if
                     a = 1.0_real64/(ai+aj)
                     x = ai*aj*r2ij*a

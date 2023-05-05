@@ -7,6 +7,7 @@ module basisset
         itri_pa, phii_xn_phij
     use exception, only: BaseException, ArgumentError, InitError, RaiseError, &
         RaiseArgError
+    use output, only: iu_out, len_int
 
     integer, parameter :: max_nxyz = 28
     type, public :: PrimitiveFunction
@@ -538,7 +539,7 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err)
         tol_expm = 100.0_real64, &  ! Max. value of x for e^-x to be relevant
         sqpi3 = sqrt(pi**3)
     integer :: ndi, ndj
-    integer :: i, idi, idj, iprim, j, jj, jprim 
+    integer :: i, idi, idj, iprim, j, jj, jprim
     integer :: ia, ia0, ja, ja0
     integer, dimension(:,:), allocatable :: ldi, ldj
     real(real64) :: a, ai, aj, cijer, cjer, ebase, r2ij, x
@@ -680,7 +681,6 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err)
                             cijer = cjer*ci(idi)
                             ovi = phii_xn_phij(.true., ldi(:,idi), ri, ai, &
                                                ldj(:,idj), rj, aj, 0)
-                            ! print '(6i6,5e16.8)', ia, iprim, ja, jprim, idi, idj, product(ovi),cijer,ebase,ci(idi),cj(idj)
                             ovlp_ij(idi,idj) = product(ovi)*cijer
                         end do
                     end do
@@ -961,6 +961,80 @@ function transfo_cart2pure(L_ang) result(convmat)
     end select
 
 end function transfo_cart2pure
+
+! ======================================================================
+
+subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh_)
+    !! Check basis set redundancy
+    !!
+    !! Checks any redundancy within basis set functions.
+    !!
+    implicit none
+
+    integer, intent(in) :: n_ao
+    !! Number of atomic orbitals
+    real(real64), dimension(n_ao,n_ao), intent(in) :: ovint_i_j
+    !! Overlap integrals between atomic orbitals, < i | j >
+    real(real64), intent(in), optional :: thresh_
+    !! Threshold to consider redundancy (redundancy if norm below).
+
+    integer :: iao, jao, kao, lao
+    real(real64) :: norm, ovlp, thresh
+    real(real64), dimension(n_ao,n_ao) :: trial
+    logical, dimension(n_ao) :: is_red
+    character(len=60) :: fmt_red
+
+    if (present(thresh_)) then
+        thresh = thresh_
+        if (thresh < epsilon(thresh)) then
+            write(iu_out, '(a)') &
+                'WARNING: Threshold for redundancy check too low'
+            write(iu_out, '(9x,a,e12.4)') 'Resetting to:', epsilon(thresh)
+            thresh = epsilon(thresh)
+        end if
+    else
+        thresh = 1.0e-6_real64
+    end if
+
+    write(fmt_red, '("(""Orbital num. "",i",i0,","" - Rest norm:"",f12.8,&
+        &:,"" ["",a,""]"")")') len_int(n_ao)
+
+    ! Initialize trial matrix to check overlap
+    trial = 0.0_real64
+    do iao = 1, n_ao
+        trial(iao,iao) = 1.0_real64
+    end do
+    is_red = .False.
+
+    do iao = 1, n_ao
+        do jao = 1, iao-1
+            if (.not.is_red(jao)) then
+                ovlp = 0.0_real64
+                do kao = 1, iao
+                    do lao = 1, iao
+                        ovlp = ovlp + &
+                            trial(iao,kao)*ovint_i_j(kao,lao)*trial(jao,lao)
+                    end do
+                end do
+                trial(iao,:iao) = trial(iao,:iao) - ovlp*trial(jao,:iao)
+            end if
+        end do
+        norm = 0.0
+        do kao = 1, iao
+            do lao = 1, iao
+                norm = norm + trial(iao,kao)*ovint_i_j(kao,lao)*trial(iao,lao)
+            end do
+        end do
+        if (norm > thresh) then
+            write(iu_out, fmt_red) iao, norm
+        else
+            write(iu_out, fmt_red) iao, norm, 'redundant'
+            is_red(iao) = .True.
+        end if
+        trial(iao,:iao) = trial(iao,:iao)/sqrt(norm)
+    end do
+            
+end subroutine chk_bset_redundancy
 
 ! ======================================================================
 

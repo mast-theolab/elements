@@ -4,7 +4,7 @@ program mcd_tensor
     use output, only: prt_mat, iu_out, write_err
     use exception, only: BaseException, Error
     use gmcd_legacy, only: write_control, build_MOs
-    use basisset, only: fix_norm_AOs
+    use basisset, only: fix_norm_AOs, chk_bset_redundancy
     use electronic, only: convert_AO2MO, eltrans_amp, overlap_ao_1e, ovij_1e
     use exc_sos, only: sos_eiOg, sos_ejOei, sos_prefac_ejOei, &
         sos_MCD_tensor_LORG_corr
@@ -140,6 +140,8 @@ program mcd_tensor
         end select
     end if
     ! call prt_mat(ao_int%i_j, n_ao, n_ao)
+
+    ! call chk_bset_redundancy(n_ao, ao_int%i_j)
 
     ! convert AO -> MO quantities of interest
     if (for_guvcde) &

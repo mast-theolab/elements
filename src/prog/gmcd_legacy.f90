@@ -180,7 +180,7 @@ subroutine write_control(iout, err)
     1002 format(1x,i5,a2,i5,3f15.6,:,i4,' - ',i4)
     1003 format(1x,i5,a2,i5,2f15.6,:,15x,i4,' - ',i4)
     ! The list are for a control on the shells
-    allocate(atlist(n_mos(1)), fcoords(n_mos(1)))
+    allocate(atlist(n_ao), fcoords(n_ao))
 
     iao = 1
     do ia = 1, n_at

@@ -1,6 +1,6 @@
 module parsefchk
     use iso_fortran_env, only: int64, real64
-    use output, iu_out
+    use output, only: iu_out
     private
 
     integer, parameter :: LHEAD = 42, NCOLS_R = 5, NCOLS_I = 6

@@ -9,6 +9,7 @@ module moldata
         n_ao = 0, &      ! number of atomic orbitals
         n_at = 0, &      ! number of atoms
         n_basis = 0, &   ! number of basis functions
+        n_basok = 0, &   ! number of basis functions actually used
         n_el = 0, &      ! number of electrons
         n_mo = 0, &      ! Max. number of molecular orbitals, mainly for storage
         n_shells = 0     ! number of primitive shells

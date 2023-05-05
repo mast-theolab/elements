@@ -5,6 +5,7 @@ module gmcd_legacy
     !!   original behavior and facilitate the migration.
     use iso_fortran_env, only: real64
     use exception, only: ArgumentError, BaseException, InitError, RaiseError
+    use output, only: iu_out
     use electronic, only: convert_AO2MO
     use moldata
     use physic, only: PhysFact
@@ -78,7 +79,8 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
                 qlab = fnames_ao(ifile)(1:1) // 'B'
             end if
             new_file = qlab(:llab) // 'MO' // fnames_ao(ifile)(2:)
-            print '(" Transforming ",a," to ",a,".")', fnames_ao(ifile), new_file
+            write(iu_out, '(" Transforming ",a," to ",a,".")') &
+                fnames_ao(ifile), new_file
             inquire(iolength=lrec) q_ao(:,1)
             open(newunit=iu_in, file=fnames_ao(ifile), access='direct', &
                 action='read', recl=lrec)

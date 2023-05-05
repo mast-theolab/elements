@@ -1,7 +1,7 @@
 program mcd_tensor
     use iso_fortran_env, only: real64, output_unit
     use input, only: build_moldata, build_transdata
-    use output, only: prt_mat
+    use output, only: prt_mat, iu_out, write_err
     use exception, only: BaseException, Error
     use gmcd_legacy, only: write_control, build_MOs
     use basisset, only: fix_norm_AOs
@@ -62,34 +62,39 @@ program mcd_tensor
     if (err%raised()) then
         select type(err)
             class is (Error)
-                print *, 'Error found while parsing basic molecular data'
-                print *, 'Reason:'
-                print '(a)', trim(err%msg())
+                call write_err('std', &
+                    'Error found while parsing basic molecular data', &
+                    err%msg() &
+                )
                 stop
             class default
-                print *, 'Something went wrong while parsing molecular data.'
-                print *, 'Stopping'
+                call write_err('gen', &
+                    'Something went wrong while parsing molecular data.' &
+                )
                 stop
         end select
     end if
     if (openshell) then
-        print *, 'Sorry, open-shell systems not yet supported.  Working on it.'
+        call write_err('gen', &
+            'Sorry, open-shell systems not yet supported.  Working on it.' &
+            )
         stop
     end if
 
     if (for_guvcde) then
-    call write_control(output_unit, err)
+        call write_control(output_unit, err)
         if (err%raised()) then
             select type(err)
                 class is (Error)
-                    print *, 'Error found while printing ROAAI-like control &
-                             &output'
-                    print *, 'Reason:'
-                    print '(a)', trim(err%msg())
+                    call write_err('std', &
+                        'Error while printing ROAAI-like control output', &
+                        err%msg() &
+                        )
                     stop
                 class default
-                    print *, 'Something went wrong inside write_control.'
-                    print *, 'Stopping'
+                    call write_err('gen', &
+                        'Something went wrong inside write_control.' &
+                    )
                     stop
             end select
         end if
@@ -101,13 +106,15 @@ program mcd_tensor
     if (err%raised()) then
         select type(err)
             class is (Error)
-                print *, 'Error found while normalizing the coefficients for the AOs'
-                print *, 'Reason:'
-                print '(a)', trim(err%msg())
+                call write_err('std', &
+                    'Error while normalizing the coefficients for the AOs', &
+                    err%msg() &
+                    )
                 stop
             class default
-                print *, 'Something went wrong inside fix_norm_AOs.'
-                print *, 'Stopping'
+                call write_err('gen', &
+                    'Something went wrong inside fix_norm_AOs.' &
+                )
                 stop
         end select
     end if
@@ -120,13 +127,15 @@ program mcd_tensor
     if (err%raised()) then
         select type(err)
             class is (Error)
-                print *, 'Error found while computing the AO 1-electron integrals'
-                print *, 'Reason:'
-                print '(a)', trim(err%msg())
+                call write_err('std', &
+                    'Error while computing the AO 1-electron integrals', &
+                    err%msg() &
+                )
                 stop
             class default
-                print *, 'Something went wrong inside overlap_ao_1e.'
-                print *, 'Stopping'
+                call write_err('gen', &
+                    'Something went wrong inside overlap_ao_1e.' &
+                )
                 stop
         end select
     end if
@@ -152,23 +161,25 @@ program mcd_tensor
     if (err%raised()) then
         select type(err)
             class is (Error)
-                print *, 'Error found while parsing transition data'
-                print *, 'Reason:'
-                print '(a)', trim(err%msg())
+                call write_err('std', &
+                    'Error while parsing transition data', &
+                    err%msg() &
+                )
                 stop
             class default
-                print *, 'Something went wrong while parsing transition data.'
-                print *, 'Stopping'
+                call write_err('gen', &
+                    'Something went wrong while parsing transition data.' &
+                )
                 stop
         end select
     end if
 
     ! call prt_mat(g2e_dens(:,:,1,1), n_basis, n_basis)
 
-    print *, 'Building transition amplitudes'
+    write(iu_out, '(a)') 'Building transition amplitudes'
     allocate(t_mo(n_mo, n_mo, n_ab, n_states))
     do istate = 1, n_states
-        print '(/,a,1x,i2)', 'Now doing state:', istate
+        write(iu_out, '(/,a,1x,i2)') 'Now doing state:', istate
         t_mo(:,:,:,istate) = eltrans_amp(n_ab, n_ao, n_mos, ao_int%i_j, &
                                          g2e_dens(:,:,:,istate), .True., coef_mos)
         ! ! call prt_mat(transpose(g2e_dens(:,:,1,istate)), n_ao, n_ao)
@@ -190,7 +201,7 @@ program mcd_tensor
 
     end do
 
-    print *, 'Computing the ground-states moments'
+    write(iu_out, '(a)') 'Computing the ground-states moments'
 
     p_gg_ab = 0.0_real64
     r_gg_ab = 0.0_real64
@@ -227,15 +238,15 @@ program mcd_tensor
     edip_nuc(3) = sum(at_crd(3,:)*at_chg)
 
     if (DEBUG) then
-        print *, 'Electric dipole'
-        print '("Nucl.: X = ",f12.6,", Y = ",f12.6,", Z = ",f12.6)', edip_nuc
-        print '("Elec.: X = ",f12.6,", Y = ",f12.6,", Z = ",f12.6)', -r_gg
-        print '("Total: X = ",f12.6,", Y = ",f12.6,", Z = ",f12.6)', &
-            edip_nuc-r_gg
-        print '("rxp",3f12.6)', rxp_gg
+        write(iu_out, '(a)') 'Electric dipole'
+        write(iu_out, '("Nucl.: X = ",f12.6,", Y = ",f12.6,", Z = ",f12.6,/&
+            &"Elec.: X = ",f12.6,", Y = ",f12.6,", Z = ",f12.6,/,&
+            &"Total: X = ",f12.6,", Y = ",f12.6,", Z = ",f12.6)') &
+            edip_nuc, -r_gg, edip_nuc-r_gg
+        write(iu_out, '("rxp",3f12.6)') rxp_gg
     end if
 
-    print *, 'Computing the transition energies factors'
+    write(iu_out, '(a)') 'Computing the transition energies factors'
 
     allocate(ov_eieg(n_states), ov_eief(n_states))
     ef = g2e_energy(id_state)
@@ -256,7 +267,7 @@ program mcd_tensor
         end if
     end do
 
-    print '(4(a,/),6(/,a))', &
+    write(iu_out, '(4(a,/),6(/,a))') &
         'Computing tensor G_if:', &
         '           --      <f|u|k><k|m|i>    --       <f|m|k><k|u|i>', &
         '    G_if = \       --------------  + \        --------------', &
@@ -361,7 +372,7 @@ program mcd_tensor
     rxp_fg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irxpj)
 
     G_if = 0.0_real64
-    if (DEBUG) print *, 'NOW ON G_IF'
+    if (DEBUG) write(iu_out, '(a)') 'NOW ON G_IF'
     do istate = 1, n_states
         if (istate /= id_state) then
             r_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_irj)
@@ -369,11 +380,12 @@ program mcd_tensor
             r_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_r)
             rxp_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_rxp)
             if (DEBUG) then
-                print '(i4,"r_kg   ",3f12.6)', istate, r_kg
-                print '(4x,"rxp_kg ",3f12.6)', rxp_kg
-                print '(4x,"r_fk   ",3f12.6)', r_fk
-                print '(4x,"rxp_fk ",3f12.6)', rxp_fk
-                print '(4x,"ov_eiej",2f12.6)', ov_eieg(istate), ov_eief(istate)
+                write(iu_out, '(i4,"r_kg   ",3f12.6)') istate, r_kg
+                write(iu_out, '(4x,"rxp_kg ",3f12.6)') rxp_kg
+                write(iu_out, '(4x,"r_fk   ",3f12.6)') r_fk
+                write(iu_out, '(4x,"rxp_fk ",3f12.6)') rxp_fk
+                write(iu_out, '(4x,"ov_eiej",2f12.6)') &
+                    ov_eieg(istate), ov_eief(istate)
             end if
             do jx = 1, 3
                 do ix = 1, 3

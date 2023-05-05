@@ -7,6 +7,7 @@ module electronic
     !! * integral calculations
     use iso_fortran_env, only: real64
 
+    use output, only: iu_out
     use exception, only: ArgumentError, BaseException, InitError, &
         RaiseArgError, RaiseError
     use math, only: build_PascalTriangle, cross, itri_pa, pi, phii_xn_phij
@@ -738,7 +739,8 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, to_MO_, c_ia_)
 
         if (to_MO) then
             if (.not.present(c_ia_)) then
-                print *, 'DEVERR: Missing c_ia for the conversion from AO to MO'
+                write(iu_out, '(a)') &
+                    'DEVERR: Missing c_ia for the conversion from AO to MO'
                 stop
             end if
             call convert_AO2MO(n_ao, n_mos(iab), c_ia_(:,:,iab), tmp(:,:,iab), &

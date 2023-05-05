@@ -1,5 +1,6 @@
 module parsefchk
     use iso_fortran_env, only: int64, real64
+    use output, iu_out
     private
 
     integer, parameter :: LHEAD = 42, NCOLS_R = 5, NCOLS_I = 6
@@ -52,7 +53,7 @@ function init_fchk(fname, break) result(fchk)
 
     inquire(file=fname, exist=exists)
     if (.not.exists) then
-        print '("Error: File ",a," does not exist")', trim(fname)
+        write(iu_out, '("Error: File ",a," does not exist")') trim(fname)
         if (dobreak) stop
     else
         allocate(character(len=len_trim(fname)) :: fchk%name)
@@ -60,7 +61,7 @@ function init_fchk(fname, break) result(fchk)
         open(newunit=fchk%unit, file=fchk%name, iostat=ios)
         if (ios /= 0) then
             deallocate(fchk%name)
-            print '("Error: Could not open file ",a)', fchk%name
+            write(iu_out, '("Error: Could not open file ",a)') fchk%name
             if (dobreak) stop
         end if
     end if
@@ -181,7 +182,7 @@ function readdata(line, unit, key) result(res)
                 allocate(res%idata(res%len))
                 read(unit, *) (res%idata(i), i=1, res%len)
             case default
-                print *, 'DEVERR: Unsupported data type in FChk'
+                write(iu_out, '(a)') 'DEVERR: Unsupported data type in FChk'
                 stop
         end select
     else
@@ -195,7 +196,7 @@ function readdata(line, unit, key) result(res)
                 allocate(res%idata(res%len))
                 read(string, *) res%idata(1)
             case default
-                print *, 'DEVERR: Unsupported data type in FChk'
+                write(iu_out, '(a)')  'DEVERR: Unsupported data type in FChk'
                 stop
         end select
     end if

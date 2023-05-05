@@ -3,12 +3,48 @@ module output
     !!
     !! Different output/printing constants and procedures for GenTensor
     use iso_fortran_env, only: real32, real64, int32, int64, output_unit
+    use string, only: locase
+
+    integer :: iu_out = output_unit
 
     interface prt_mat
         module procedure :: prt_mat_r32, prt_mat_r64
     end interface prt_mat
 
+    interface len_int
+        module procedure :: len_int32, len_int64
+    end interface len_int
+
 contains
+
+! ======================================================================
+
+subroutine write_err(nature, msg, error_)
+    !! Write error message on default unit
+    !!
+    !! Writes an error message.  The formatting depends on the nature
+    !!   of the error:
+    !! * Generic/gen: generic error
+    !! * Basic/std: basic/standard error
+    implicit none
+
+    character(len=*), intent(in) :: nature
+    !! Nature of the error
+    character(len=*), intent(in) :: msg
+    !! General error message
+    character(len=*), intent(in), optional :: error_
+
+    select case (locase(trim(nature)))
+        case ('generic', 'gen')
+            write(iu_out, '(a)') trim(msg)
+            write(iu_out, '(a)') 'Stopping'
+        case ('basic', 'std')
+            write(iu_out, '(a)') trim(msg)
+            write(iu_out, '("Reason:",/,4x,a)') trim(error_)
+        case default
+            write(iu_out, '("Uncategorized error:",4x,a)') trim(msg)
+    end select
+end subroutine write_err
 
 ! ======================================================================
 
@@ -42,7 +78,7 @@ subroutine prt_mat_r32(mat, n_row, n_col, iunit_, ncol_by_blk_, prec_, thresh_)
     if (present(iunit_)) then
         iu = iunit_
     else
-        iu = output_unit
+        iu = iu_out
     end if
 
     ! Build formats
@@ -178,6 +214,38 @@ subroutine prt_mat_r64(mat, n_row, n_col, iunit_, ncol_by_blk_, prec_, thresh_)
     end do
 
 end subroutine prt_mat_r64
+
+! ======================================================================
+
+integer function len_int32(num) result(lnum)
+    !! Length of 32-bit integer num
+    !!
+    !! Returns the minimum number of characters necessary to store
+    !!    `num`.
+    implicit none
+
+    integer(int32), intent(in) :: num
+
+    lnum = floor(log10(abs(real(num, kind=real64)))) + 1
+    if (num < 0) lnum = lnum + 1
+
+end function len_int32
+
+! ======================================================================
+
+integer function len_int64(num) result(lnum)
+    !! Length of 64-bit integer num
+    !!
+    !! Returns the minimum number of characters necessary to store
+    !!    `num`.
+    implicit none
+
+    integer(int64), intent(in) :: num
+
+    lnum = floor(log10(abs(real(num, kind=real64)))) + 1
+    if (num < 0) lnum = lnum + 1
+
+end function len_int64
 
 ! ======================================================================
 

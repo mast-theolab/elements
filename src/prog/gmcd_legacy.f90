@@ -38,7 +38,7 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
     integer(int32), dimension(nfiles), parameter :: &
         LPx = [3, 6, 3, 3, 3, 3, 3, 3]
         ! LPx = [3, 6, 3, 3, 3, 3, 3, 3, 3, 3]
-    integer :: i, iab, ifile, iorb, irec0, iu_in, iu_out, iu_txt, ix, llab, &
+    integer :: i, iab, ifile, iorb, irec0, iu_fi, iu_fo, iu_txt, ix, llab, &
         lrec, N1, N2
     real(real64), dimension(n_ao,n_ao) :: q_ao
     real(real64), dimension(:, :), allocatable :: q_mo
@@ -82,10 +82,10 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
             write(iu_out, '(" Transforming ",a," to ",a,".")') &
                 fnames_ao(ifile), new_file
             inquire(iolength=lrec) q_ao(:,1)
-            open(newunit=iu_in, file=fnames_ao(ifile), access='direct', &
+            open(newunit=iu_fi, file=fnames_ao(ifile), access='direct', &
                 action='read', recl=lrec)
             inquire(iolength=lrec) q_mo(:,1)
-            open(newunit=iu_out, file=new_file, access='direct', &
+            open(newunit=iu_fo, file=new_file, access='direct', &
                 action='write', recl=lrec)
             if (LPx(ifile) == 3) then
                 lab => lab_xyz
@@ -96,12 +96,12 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
             do ix = 1, LPx(ifile)
                 irec0 = (ix-1)*n_ao
                 do iorb = 1, n_ao
-                    read(iu_in, rec=irec0+iorb) (q_ao(i,iorb),i=1,n_ao)
+                    read(iu_fi, rec=irec0+iorb) (q_ao(i,iorb),i=1,n_ao)
                 end do
                 call convert_AO2MO(n_ao, n_mo, c_ia(:,:,iab), q_ao, q_mo)
                 irec0 = (ix-1)*n_mos(iab)
                 do iorb = 1, n_mo
-                    write(iu_out, rec=irec0+iorb) (q_mo(i,iorb),i=1,n_mo)
+                    write(iu_fo, rec=irec0+iorb) (q_mo(i,iorb),i=1,n_mo)
                 end do
                 if (txt_fmt) then
                     open(newunit=iu_txt, &
@@ -120,8 +120,8 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
                     end do
                 end if
             end do
-            close(iu_in)
-            close(iu_out)
+            close(iu_fi)
+            close(iu_fo)
         end do
         deallocate(q_mo)
     end do

@@ -119,5 +119,4 @@ module atomic
     data atdata(109)/atom('Mt',   0.00000_real64 )/
     data atdata(110)/atom('Ds',   0.00000_real64 )/
 
-
 end module atomic

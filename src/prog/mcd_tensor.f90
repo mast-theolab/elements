@@ -1,8 +1,9 @@
 program mcd_tensor
     use iso_fortran_env, only: real64, output_unit
     use input, only: build_moldata, build_transdata
+    use parse_cmdline, only: CmdArgDB
     use output, only: prt_mat, iu_out, write_err
-    use exception, only: BaseException, Error
+    use exception, only: BaseException, Error, ValueError
     use gmcd_legacy, only: write_control, build_MOs
     use basisset, only: fix_norm_AOs, chk_bset_redundancy
     use electronic, only: convert_AO2MO, eltrans_amp, overlap_ao_1e, ovij_1e
@@ -50,13 +51,68 @@ program mcd_tensor
         Smo_irj, &   ! MO-basis integral < i | r | j >
         Smo_irxpj    ! MO-basis integral < i | r x p | j >
     ! for_guvcde = true to print information to compare with SOS/GUVCDE
-    logical, parameter :: for_guvcde = .True., use_gamma = .True., &
-        use_giao = .True., DEBUG = .False.
+    logical :: for_guvcde = .False., use_gamma = .True., &
+        use_giao = .True., DEBUG = .False., exists
     character(len=512) :: fname
     class(ovij_1e), allocatable :: ao_int
     class(BaseException), allocatable :: err
+    class(CmdArgDB), allocatable :: opts
 
-    call get_command_argument(1, fname)
+    ! Build parser and check arguments
+    opts = CmdArgDB(progname='mcd_tensor')
+    call opts%add_arg_char( &
+        'string', err, label='filename', &
+        help='Gaussian formatted checkpoint file')
+    call opts%add_arg_bool( &
+        'store_true', err, longname='--giao', &
+        help='Include GIAO corrections (default)', &
+        def_value=.True.)
+    call opts%add_arg_bool( &
+        'store_false', err, longname='--no-giao', &
+        help='Include GIAO corrections')
+    call opts%add_arg_real( &
+        'real', err, longname='--gamma', &
+        help='Include a shift term, gamma, to avoid a divergence of the &
+            &denominator in the summation with close states (unit: Hartree).',&
+        def_value=0.02, min_value=0.0)
+    call opts%add_arg_bool( &
+        'store_true', err, longname='--guvcde', &
+        help='Add printing similar to SOS/GUVCDE for control.')
+    
+    call opts%parse_args(err)
+    if (err%raised()) then
+        select type (err)
+            class is (ValueError)
+                write(*, '(a)') trim(err%msg())
+            class is (Error)
+                write(*, '(a)') trim(err%msg())
+            class default
+                write(*, '(a)') 'Unknown error while reading "gamma"'
+        end select
+        stop
+    end if
+
+    if (opts%is_user_set('giao', err) &
+        .and. opts%is_user_set('no-giao', err)) then
+        write(*, '(" Error: conflicting option for the definition of GIAO")')
+        stop
+    end if
+    
+    if (opts%is_user_set('no-giao', err)) use_giao = .False.
+
+    if (opts%is_user_set('guvcde', err)) for_guvcde = .True.
+
+    call opts%get_value('gamma', e_gamma, err)
+    use_gamma = abs(e_gamma) > tiny(e_gamma)
+
+    call opts%get_value('filename', fname, err)
+    inquire(file=fname, exist=exists)
+    if (.not.exists) then
+        write(*, '("Error: File ",a," does not exist.")') trim(fname)
+        stop
+    end if
+
+    stop
 
     call build_moldata(fname, err)
     if (err%raised()) then

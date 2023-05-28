@@ -3,7 +3,8 @@ module exception
     !!
     !! Module providing types for exception handling in other modules.
     private
-    public :: InitError, RaiseError, RaiseArgError
+    public :: InitError, RaiseError, RaiseArgError, RaiseTermination, &
+        RaiseValueError
     ! public :: InitError!, RaiseArgError, RaiseError
 
     type, public, abstract :: BaseException
@@ -32,10 +33,20 @@ module exception
         procedure, private :: set_msg => set_noerror
     end type NoError
 
+    type, public, extends(BaseException) :: Termination
+    contains
+        procedure, private :: set_msg => set_term_message
+    end type Termination
+
     type, public, extends(BaseException) :: Error
     contains
         procedure, private :: set_msg => set_error_message
     end type Error
+
+    type, public, extends(BaseException) :: ValueError
+    contains
+        procedure, private :: set_msg => set_value_message
+    end type ValueError
 
     type, public, extends(BaseException) :: ArgumentError
         character(len=256), public :: arg = ' '
@@ -113,6 +124,68 @@ subroutine RaiseArgError(err, arg, reason)
 
     return
 end subroutine RaiseArgError
+
+! ======================================================================
+
+subroutine RaiseTermination(err, msg_)
+    !! Set a termination signal.
+    !!
+    !! Takes an instance of BaseException and sets it to Termination
+    !!   with an optional message set in input.
+    class(BaseException), allocatable, intent(inout) :: err
+    !! Original error, updated on return
+    character(len=*), intent(in), optional :: msg_
+    !! Message to include in the error
+
+    type(Termination), allocatable :: newerr
+    
+    allocate(newerr)
+    if (present(msg_)) then
+        call newerr%raise(msg_)
+    else
+        call newerr%raise(' ')
+    end if
+
+    if (allocated(err)) deallocate(err)
+    err = newerr
+
+    return
+end subroutine RaiseTermination
+
+! ======================================================================
+
+subroutine RaiseValueError(err, msg, motive)
+    !! Sets a value error.
+    !!
+    !! Takes an instance of BaseException and sets it to the
+    !!   value-related error.
+    class(BaseException), allocatable, intent(inout) :: err
+    !! Original error, updated on return
+    character(len=*), intent(in), optional :: msg
+    !! Reason why value is invalid.
+    character(len=*), intent(in), optional :: motive
+    !! Reason why value is invalid.
+
+    type(ValueError), allocatable :: newerr
+    character(len=1024) :: new_msg
+
+    allocate(newerr)
+    if (present(msg) .and. present(motive)) then
+        write(new_msg, '(a,a," Reason: ",a)') trim(msg), new_line(' '), &
+            trim(motive)
+    else if (present(msg)) then
+        new_msg = trim(msg)
+    else if (present(motive)) then
+        write(new_msg, '("Reason: ",a)') trim(motive)
+    else
+        new_msg = ' '
+    end if
+    call newerr%raise(new_msg)
+
+    if (allocated(err)) deallocate(err)
+    err = newerr
+    
+end subroutine RaiseValueError
 
 ! ======================================================================
 
@@ -199,6 +272,27 @@ end subroutine set_error_message
 
 ! ======================================================================
 
+subroutine set_value_message(this, msg)
+    !! Set message of a standard error
+    !!
+    !! Sets a message and changes the status of a basic error
+    class(ValueError) :: this
+    character(len=*), intent(in), optional :: msg
+
+    character(len=1024) :: new_msg
+
+    if (present(msg)) then
+        call set_status(this, msg)
+    else
+        new_msg = 'Incorrect value.'
+        call set_status(this, new_msg)
+    end if
+
+    return
+end subroutine set_value_message
+
+! ======================================================================
+
 subroutine set_argerr_message(this, msg)
     !! Set error message for an ArgumentError exception
     !!
@@ -230,6 +324,25 @@ subroutine set_argerr_message(this, msg)
 
     return
 end subroutine set_argerr_message
+
+! ======================================================================
+
+subroutine set_term_message(this, msg)
+    !! Set message of a normal termination.
+    !!
+    !! Sets a message and changes the status to a special-type error
+    !!   for normal termination.
+    class(Termination) :: this
+    character(len=*), intent(in), optional :: msg
+
+    if (present(msg)) then
+        call set_status(this, msg)
+    else
+        call set_status(this, ' ')
+    end if
+
+    return
+end subroutine set_term_message
 
 ! ======================================================================
 

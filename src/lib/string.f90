@@ -66,4 +66,32 @@ end function locase
 
 ! ======================================================================
 
+function findstr(array, string) result(pos)
+    !! Find position of `string` in `array` of strings.
+    !!
+    !! Returns the position of `string` in `array`, 0 otherwise.
+    !! Array is expected to be 1D.
+    implicit none
+
+    character(len=*), dimension(:), intent(in) :: array
+    !! Array of strings to search.
+    character(len=*), intent(in) :: string
+    !! String to find.
+    integer :: pos
+    !! Position of `string` in `array`.
+
+    integer :: i
+
+    pos = 0
+    do i = 1, size(array)
+        if (array(i) == string) then
+            pos = i
+            exit
+        end if
+    end do
+
+end function findstr
+
+! ======================================================================
+
 end module string

@@ -28,7 +28,7 @@ EXE_DEVARG = $(basename $(lastword $(SRC_DEVARG)))
 .PHONY: clean docs
 
 # Compilation mode
-MODE := debug
+MODE := run
 ifeq ($(MODE), debug)
 	LDFLAGS = -g
 	FCFLAGS = -g -c -Wall -Wextra -Wconversion -Og -pedantic -fcheck=bounds -fmax-errors=5 -std=f2008

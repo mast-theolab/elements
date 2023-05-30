@@ -112,8 +112,6 @@ program mcd_tensor
         stop
     end if
 
-    stop
-
     call build_moldata(fname, err)
     if (err%raised()) then
         select type(err)

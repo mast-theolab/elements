@@ -604,7 +604,7 @@ end subroutine overlap_ao_1e
 
 ! ======================================================================
 
-subroutine convert_AO2MO_1(n_ao, n_mo, c_ia, q_ao, q_mo)
+subroutine convert_AO2MO_1(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !! Convert a scalar quantity from atomic to molecular orbitals
     !!
     !! Takes a quantity in atomic orbitals (`q_ao`) to molecular orbitals
@@ -621,27 +621,38 @@ subroutine convert_AO2MO_1(n_ao, n_mo, c_ia, q_ao, q_mo)
     !! Quantity in AO basis
     real(real64), dimension(:,:), intent(out) :: q_mo
     !! Quantity in MO basis
+    real(real64), dimension(:,:) :: tmp_arr
+    !! Temporary array
 
     integer :: a, b, i, j
-    real(real64) :: cia
 
+    !$omp parallel do collapse(2)
+    do j = 1, n_mo
+        do a = 1, n_ao
+            tmp_arr(a,j) = 0.0_real64
+            do b = 1, n_ao
+                tmp_arr(a,j) = tmp_arr(a,j) + c_ia(j,b)*q_ao(a,b)
+            end do
+        end do
+    end do
+    !$omp end parallel do
+    
+    !$omp parallel do collapse(2)
     do i = 1, n_mo
         do j = 1, n_mo
             q_mo(i,j) = 0.0_real64
             do a = 1, n_ao
-                cia = c_ia(i,a)
-                do b = 1, n_ao
-                    q_mo(i,j) = q_mo(i,j) + cia*c_ia(j,b)*q_ao(a,b)
-                end do
+                q_mo(i,j) = q_mo(i,j) + c_ia(i,a)*tmp_arr(a,j)
             end do
         end do
     end do
+    !$omp end parallel do
 
 end subroutine convert_AO2MO_1
 
 ! ======================================================================
 
-subroutine convert_AO2MO_N(n_ao, n_mo, c_ia, q_ao, q_mo)
+subroutine convert_AO2MO_N(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !! Convert a vector from atomic to molecular orbitals
     !!
     !! Takes a quantity in atomic orbitals (`q_ao`) to molecular orbitals
@@ -658,27 +669,39 @@ subroutine convert_AO2MO_N(n_ao, n_mo, c_ia, q_ao, q_mo)
     !! Quantity in AO basis
     real(real64), dimension(:,:,:), intent(out) :: q_mo
     !! Quantity in MO basis
+    real(real64), dimension(:,:,:) :: tmp_arr
+    !! Temporary array
 
     integer :: a, b, i, j
-    real(real64) :: cia
 
+    !$omp parallel do collapse(2)
+    do j = 1, n_mo
+        do a = 1, n_ao
+            tmp_arr(:,a,j) = 0.0_real64
+            do b = 1, n_ao
+                tmp_arr(:,a,j) = tmp_arr(:,a,j) + c_ia(j,b)*q_ao(:,a,b)
+            end do
+        end do
+    end do
+    !$omp end parallel do
+
+    !$omp parallel do collapse(2)
     do i = 1, n_mo
         do j = 1, n_mo
             q_mo(:,i,j) = 0.0_real64
             do a = 1, n_ao
-                cia = c_ia(i,a)
-                do b = 1, n_ao
-                    q_mo(:,i,j) = q_mo(:,i,j) + cia*c_ia(j,b)*q_ao(:,a,b)
-                end do
+                q_mo(:,i,j) = q_mo(:,i,j) + c_ia(i,a)*tmp_arr(:,a,j)
             end do
         end do
     end do
+    !$omp end parallel do
 
 end subroutine convert_AO2MO_N
 
 ! ======================================================================
 
-function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, to_MO_, c_ia_)
+function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
+                     to_MO_, c_ia_)
     !! Build and return transition amplitudes in the AO or MO basis.
     !!
     !! Builds the transition amplitudes in the atomic orbital basis
@@ -696,6 +719,8 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, to_MO_, c_ia_)
     !! Overlap integrals between atomic orbitals.
     real(real64), dimension(n_ao, n_ao, n_ab), intent(in) :: trans_el_dens
     !! Transition electronic density matrix
+    real(real64), dimension(n_ao, n_ao):: tmp_arr
+    !! Temporary array
     logical, intent(in), optional :: to_MO_
     !! Convert transition amplitudes to the MO basis.
     real(real64), dimension(:,:,:), intent(in), optional :: c_ia_
@@ -725,17 +750,29 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, to_MO_, c_ia_)
     end if
 
     do iab = 1, n_ab
+        !$omp parallel do collapse(2)
+        do i = 1, n_ao
+            do k = 1, n_ao
+                tmp_arr(k,i) = 0.0_real64
+                do l = 1, n_ao
+                    tmp_arr(k,i) = tmp_arr(k,i) + &
+                        trans_el_dens(l,k,iab)*ovlp_ao(l,i)
+                end do
+            end do
+        end do
+        !$omp end parallel do
+
+        !$omp parallel do collapse(2)
         do i = 1, n_ao
             do j = 1, n_ao
                 amp_ao(j,i,iab) = 0.0_real64
                 do k = 1, n_ao
-                    do l = 1, n_ao
-                        amp_ao(j,i,iab) = amp_ao(j,i,iab) + &
-                            ovlp_ao(j,k)*trans_el_dens(l,k,iab)*ovlp_ao(l,i)
-                    end do
+                    amp_ao(j,i,iab) = amp_ao(j,i,iab) + &
+                        ovlp_ao(j,k)*tmp_arr(k,i)
                 end do
             end do
         end do
+        !$omp end parallel do
 
         if (to_MO) then
             if (.not.present(c_ia_)) then
@@ -744,7 +781,7 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, to_MO_, c_ia_)
                 stop
             end if
             call convert_AO2MO(n_ao, n_mos(iab), c_ia_(:,:,iab), tmp(:,:,iab), &
-                               eltrans_amp(:,:,iab))
+                               eltrans_amp(:,:,iab), tmp_arr)
         end if
     end do
     if (to_MO) deallocate(tmp)

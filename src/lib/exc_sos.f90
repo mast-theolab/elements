@@ -135,6 +135,8 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij) &
 
     if (n_ab == 1) then
         ! closed shell
+        !$omp parallel private(x)
+        !$omp do collapse(2)
         do ia = 1, n_mo
             do ib = 1, n_mo
                 x = t_mo(ia,ib,1) &
@@ -146,8 +148,12 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij) &
                 prefac(:,ia,ib,1) = x
             end do
         end do
+        !$omp end do
+        !$omp end parallel
     else
         do iab = 1, n_ab
+            !$omp parallel private(x)
+            !$omp do collapse(2)
             do ia = 1, n_mos(iab)
                 do ib = 1, n_mos(iab)
                     x = t_mo(ia,ib,iab) &
@@ -164,6 +170,8 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij) &
                     prefac(:,ia,ib,iab) = x
                 end do
             end do
+            !$omp end do
+            !$omp end parallel
         end do
 
     end if

@@ -42,6 +42,7 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
         lrec, N1, N2
     real(real64), dimension(n_ao,n_ao) :: q_ao
     real(real64), dimension(:, :), allocatable :: q_mo
+    real(real64), dimension(:, :), allocatable :: tmp_arr
     character(len=2) :: qlab
     character(len=1), dimension(3), target :: lab_xyz = ['X', 'Y', 'Z']
     character(len=2), dimension(6), target :: &
@@ -67,6 +68,7 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
         write(fmt_d, '("(i6,",i0,"(e14.6,:))")') ncols_txt
     end if
 
+    allocate(tmp_arr(n_ao,maxval(n_mos)))
     do iab = 1, n_ab
         n_mo = n_mos(iab)
         allocate(q_mo(n_mo,n_mo))
@@ -98,7 +100,8 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
                 do iorb = 1, n_ao
                     read(iu_fi, rec=irec0+iorb) (q_ao(i,iorb),i=1,n_ao)
                 end do
-                call convert_AO2MO(n_ao, n_mo, c_ia(:,:,iab), q_ao, q_mo)
+                call convert_AO2MO(n_ao, n_mo, c_ia(:,:,iab), q_ao, q_mo, &
+                                   tmp_arr)
                 irec0 = (ix-1)*n_mos(iab)
                 do iorb = 1, n_mo
                     write(iu_fo, rec=irec0+iorb) (q_mo(i,iorb),i=1,n_mo)

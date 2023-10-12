@@ -15,6 +15,7 @@ program mcd_tensor
     implicit none
 
     integer :: i, iab, istate, ix, jstate, jx, qty_flag
+    integer, dimension(8) :: ia_dtime
     real(real64) :: de, ef, ei
     real(real64) :: e_gamma = .02_real64
     real(real64), dimension(3) :: &
@@ -50,10 +51,14 @@ program mcd_tensor
         Smo_ipj, &   ! MO-basis integral < i | p | j >
         Smo_irj, &   ! MO-basis integral < i | r | j >
         Smo_irxpj    ! MO-basis integral < i | r x p | j >
+    real(real64), allocatable :: tmp_ao_arr1(:,:), tmp_ao_arrN(:,:,:)
     ! for_guvcde = true to print information to compare with SOS/GUVCDE
-    logical :: for_guvcde = .False., use_gamma = .True., &
-        use_giao = .True., DEBUG = .False., exists
+    logical, parameter :: DEBUG = .False., TIMEIT = .False.
+    logical :: for_guvcde = .False., use_gamma = .True., use_giao = .True., &
+        exists
     character(len=512) :: fname
+    character(len=*), parameter :: fmt_dtime = &
+        '("Entering: ",a," - Date: ",i4,"/",i2.2,"/",i2.2," at ",i2.2,":",i2.2,":",i2.2)'
     class(ovij_1e), allocatable :: ao_int
     class(BaseException), allocatable :: err
     class(CmdArgDB), allocatable :: opts
@@ -79,6 +84,11 @@ program mcd_tensor
         'store_true', err, longname='--guvcde', &
         help='Add printing similar to SOS/GUVCDE for control.')
     
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "Option parser", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     call opts%parse_args(err)
     if (err%raised()) then
         select type (err)
@@ -112,6 +122,11 @@ program mcd_tensor
         stop
     end if
 
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "Molecular data", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     call build_moldata(fname, err)
     if (err%raised()) then
         select type(err)
@@ -136,6 +151,11 @@ program mcd_tensor
     end if
 
     if (for_guvcde) then
+        if (TIMEIT) then
+            call date_and_time(values=ia_dtime)
+            write(output_unit, fmt_dtime) "GUVCDE write control", &
+                ia_dtime(1:3), ia_dtime(5:7)
+        end if
         call write_control(output_unit, err)
         if (err%raised()) then
             select type(err)
@@ -155,6 +175,11 @@ program mcd_tensor
     end if
 
     ! normalization coeffs
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "Check AO normalization", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     call fix_norm_AOs(output_unit, n_at, n_ao, at_crd, nprim_per_at, bset_info, &
                       err)
     if (err%raised()) then
@@ -173,6 +198,11 @@ program mcd_tensor
         end select
     end if
 
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "1-e AO integral", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     ! overlap6
     qty_flag = 2**10 - 1
     ! qty_flag = ibset(qty_flag, 0)
@@ -198,21 +228,44 @@ program mcd_tensor
     ! call chk_bset_redundancy(n_ao, ao_int%i_j)
 
     ! convert AO -> MO quantities of interest
-    if (for_guvcde) &
+    if (for_guvcde) then
+        if (TIMEIT) then
+            call date_and_time(values=ia_dtime)
+            write(output_unit, fmt_dtime) "GUVCDE build MOs", ia_dtime(1:3), &
+                ia_dtime(5:7)
+        end if
         call build_MOs(n_ab, n_ao, n_mos, coef_mos, .true.)
+    endif
     ! call convert_AO2MO(n_ao, n_mo, coef_mos(1), ao_int%i_j, Smo_ij)
     allocate(Smo_irj(3,n_mo,n_mo,n_ab), Smo_ipj(3,n_mo,n_mo,n_ab), &
              Smo_irxpj(3,n_mo,n_mo,n_ab))
+    allocate(tmp_ao_arr1(n_ao,n_ao), tmp_ao_arrN(3,n_ao,n_ao))
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "AO 2 MO conversion", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     do iab = 1, n_ab
         call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_r_j, &
-                           Smo_irj(:,:,:,iab))
+                           Smo_irj(:,:,:,iab), tmp_ao_arrN)
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "<i|p|j>", ia_dtime(1:3), &
+            ia_dtime(5:7)
         call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_p_j, &
-                           Smo_ipj(:,:,:,iab))
+                           Smo_ipj(:,:,:,iab), tmp_ao_arrN)
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "<i|rxp|j>", ia_dtime(1:3), &
+            ia_dtime(5:7)
         call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_rxp_j, &
-                           Smo_irxpj(:,:,:,iab))
+                           Smo_irxpj(:,:,:,iab), tmp_ao_arrN)
     end do
     ! call convert_AO2MO(n_ao, n_mo, coef_mos(1), ao_int%i_j)
 
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "Transition data", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     call build_transdata(fname, n_ab, n_basis, err)
     if (err%raised()) then
         select type(err)
@@ -232,12 +285,18 @@ program mcd_tensor
 
     ! call prt_mat(g2e_dens(:,:,1,1), n_basis, n_basis)
 
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "Build trans. amplitudes", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     write(iu_out, '(a)') 'Building transition amplitudes'
     allocate(t_mo(n_mo, n_mo, n_ab, n_states))
     do istate = 1, n_states
         write(iu_out, '(/,a,1x,i2)') 'Now doing state:', istate
         t_mo(:,:,:,istate) = eltrans_amp(n_ab, n_ao, n_mos, ao_int%i_j, &
-                                         g2e_dens(:,:,:,istate), .True., coef_mos)
+                                         g2e_dens(:,:,:,istate), tmp_ao_arr1, &
+                                         .True., coef_mos)
         ! ! call prt_mat(transpose(g2e_dens(:,:,1,istate)), n_ao, n_ao)
         ! do i = 1, n_basis
         !     do j = 1, n_basis
@@ -259,6 +318,11 @@ program mcd_tensor
 
     write(iu_out, '(a)') 'Computing the ground-states moments'
 
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "Ground-state moments", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     p_gg_ab = 0.0_real64
     r_gg_ab = 0.0_real64
     rxp_gg_ab = 0.0_real64
@@ -304,6 +368,11 @@ program mcd_tensor
 
     write(iu_out, '(a)') 'Computing the transition energies factors'
 
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "Transition energies", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     allocate(ov_eieg(n_states), ov_eief(n_states))
     ef = g2e_energy(id_state)
     do istate = 1, n_states
@@ -338,6 +407,11 @@ program mcd_tensor
     ! For GIAO, we do some pre-processing by building the combinations
     !   < l | O | k > and < l | O | g > to be used later.
     if (use_giao) then
+        if (TIMEIT) then
+            call date_and_time(values=ia_dtime)
+            write(output_unit, fmt_dtime) "GIAO terms", ia_dtime(1:3), &
+                ia_dtime(5:7)
+        end if
         allocate(r_lk(3,n_states,0:n_states), p_lk(3,n_states,0:n_states), &
                  ov_eiej(0:n_states,0:n_states))
         do istate = 1, n_states
@@ -386,6 +460,11 @@ program mcd_tensor
     ! The prefactor are used to compute < f | O | e_i > and < f | O | g >
     !   (the latter for GIAO)
     ! For this reason, they are pre-computed once to speed up later
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "Prefactors", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
                               r_gg_ab, Smo_irj)
     pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
@@ -417,6 +496,11 @@ program mcd_tensor
 
     ! Compute the transition moment < f | O | g >
     ! we need to correct the sign of p and divided by the energy
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "Transition moments", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     if (use_giao) then
         r_fg = r_lk(:,id_state,0)
         p_fg = -p_lk(:,id_state,0) / g2e_energy(id_state)
@@ -467,6 +551,11 @@ program mcd_tensor
                 + r_fk(ix)*rxp_kg(jx)*ov_eieg(id_state)
         end do
     end do
+    if (TIMEIT) then
+        call date_and_time(values=ia_dtime)
+        write(output_unit, fmt_dtime) "LORG correction", ia_dtime(1:3), &
+            ia_dtime(5:7)
+    end if
     if (use_giao) then
         call sos_MCD_tensor_LORG_corr( &
             n_states, n_els, id_state, id_state, r_gg, r_lk, p_lk, ov_eieg, &

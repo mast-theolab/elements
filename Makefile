@@ -30,10 +30,12 @@ EXE_DEVARG = $(basename $(lastword $(SRC_DEVARG)))
 # Compilation mode
 MODE := run
 ifeq ($(MODE), debug)
+	PARFLAGS = 
 	LDFLAGS = -g
 	FCFLAGS = -g -c -Wall -Wextra -Wconversion -Og -pedantic -fcheck=bounds -fmax-errors=5 -std=f2008
 else
-	FCFLAGS = -O4 -c
+	PARFLAGS = -fopenmp
+	FCFLAGS = -O4 -c $(PARFLAGS)
 	LDFLAGS = 
 endif
 FCFLAGS += -J$(BUILDIR)
@@ -43,7 +45,7 @@ all: $(EXE_GMCD) | $(BINDIR)
 
 $(EXE_GMCD): $(OBJ_LIB) $(OBJ_GMCD)
 	cd $(BUILDIR) && \
-	$(FC) $(LDFLAGS) -o $@ $(patsubst $(BUILDIR)/%, %, $^) && \
+	$(FC) $(PARFLAGS) $(LDFLAGS) -o $@ $(patsubst $(BUILDIR)/%, %, $^) && \
 	cp $@ ../$(BINDIR)
 
 clean:

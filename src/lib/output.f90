@@ -1,7 +1,7 @@
 module output
-    !! Output-related module for GenTensor
+    !! Output-related module
     !!
-    !! Different output/printing constants and procedures for GenTensor
+    !! Different output/printing-related procedures
     use iso_fortran_env, only: real32, real64, int32, int64, output_unit
     use string, only: locase
 
@@ -14,6 +14,10 @@ module output
     interface len_int
         module procedure :: len_int32, len_int64
     end interface len_int
+
+    interface num_digits_int
+        module procedure num_digits_int32, num_digits_int64
+    end interface
 
 contains
 
@@ -246,6 +250,58 @@ integer function len_int64(num) result(lnum)
     if (num < 0) lnum = lnum + 1
 
 end function len_int64
+
+! ======================================================================
+
+function num_digits_int32(number)
+    !! Finds the number of digits in an integer `number`.
+    !!
+    !! This functions is useful for instance to set a proper format for
+    !! strings.
+    implicit none
+
+    integer(int32) :: number
+    !! Number of interest.
+    integer(int32) :: num_digits_int32
+    !! Number of digits in `Number`.
+
+    integer(int32) :: ioff
+
+    if (number < 0) then
+        ioff = 2
+    else
+        ioff = 1
+    end if
+
+    num_digits_int32 = floor(log10(real(abs(number), kind=real32))) + ioff
+
+end function num_digits_int32
+
+! ======================================================================
+
+function num_digits_int64(number)
+    !! Finds the number of digits in an integer `number`.
+    !!
+    !! This functions is useful for instance to set a proper format for
+    !! strings.
+    implicit none
+
+    integer(int64) :: number
+    !! Number of interest.
+    integer(int64) :: num_digits_int64
+    !! Number of digits in `Number`.
+
+    integer(int64) :: ioff
+
+    if (number < 0) then
+        ioff = 2
+    else
+        ioff = 1
+    end if
+
+    num_digits_int64 = floor(log10(real(abs(number), kind=real64))) + ioff
+
+end function num_digits_int64
 
 ! ======================================================================
 

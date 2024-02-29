@@ -4,6 +4,7 @@ module string
     !! The module contains string operations:
     !! - Conversion to lower case
     !! - Conversion to upper case
+    !! - find string in array
 contains
 
 ! ======================================================================

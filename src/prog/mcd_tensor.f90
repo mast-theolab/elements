@@ -2,7 +2,7 @@ program mcd_tensor
     use iso_fortran_env, only: real64, output_unit
     use input, only: build_moldata, build_transdata
     use parse_cmdline, only: CmdArgDB
-    use output, only: prt_mat, iu_out, write_err
+    use output, only: prt_mat, iu_out, write_err, num_digits_int
     use exception, only: BaseException, Error, ValueError
     use gmcd_legacy, only: write_control, build_MOs
     use basisset, only: fix_norm_AOs, chk_bset_redundancy
@@ -56,9 +56,10 @@ program mcd_tensor
     logical, parameter :: DEBUG = .False., TIMEIT = .False.
     logical :: for_guvcde = .False., use_gamma = .True., use_giao = .True., &
         exists
-    character(len=512) :: fname
+    character(len=512) :: fmt_elstate, fname
     character(len=*), parameter :: fmt_dtime = &
-        '("Entering: ",a," - Date: ",i4,"/",i2.2,"/",i2.2," at ",i2.2,":",i2.2,":",i2.2)'
+        '("Entering: ",a," - Date: ",i4,"/",i2.2,"/",i2.2," at &
+            &",i2.2,":",i2.2,":",i2.2)'
     class(ovij_1e), allocatable :: ao_int
     class(BaseException), allocatable :: err
     class(CmdArgDB), allocatable :: opts
@@ -292,8 +293,11 @@ program mcd_tensor
     end if
     write(iu_out, '(a)') 'Building transition amplitudes'
     allocate(t_mo(n_mo, n_mo, n_ab, n_states))
+    ! "Now doing state num. ",i3," out of 123
+    write(fmt_elstate, '("(''Now doing state num. '',i",i0,",'' out of '',&
+        &i0,''.'')")') num_digits_int(n_states)
     do istate = 1, n_states
-        write(iu_out, '(/,a,1x,i2)') 'Now doing state:', istate
+        write(iu_out, fmt_elstate) istate, n_states
         t_mo(:,:,:,istate) = eltrans_amp(n_ab, n_ao, n_mos, ao_int%i_j, &
                                          g2e_dens(:,:,:,istate), tmp_ao_arr1, &
                                          .True., coef_mos)
@@ -396,7 +400,7 @@ program mcd_tensor
         'Computing tensor G_if:', &
         '           --      <f|u|k><k|m|i>    --       <f|m|k><k|u|i>', &
         '    G_if = \       --------------  + \        --------------', &
-        '           /_ k!=g    E_k - E_i      /_ k!=f     E_k - E_f', &
+        '           /_ k!=i    E_k - E_i      /_ k!=f     E_k - E_f', &
         '    i:   initial state', &
         '    f:   final state', &
         '    k:   intermediate state', &

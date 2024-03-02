@@ -582,6 +582,6 @@ program mcd_tensor
     G_if = G_if / 2.0_real64
 
     write(*, '("MCD G tensor",/)')
-    write(*, '(3f12.6)') G_if
+    write(*, '(3es15.6)') G_if
 
 end program mcd_tensor

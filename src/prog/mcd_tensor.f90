@@ -54,7 +54,11 @@ program mcd_tensor
     real(real64), allocatable :: tmp_ao_arr1(:,:), tmp_ao_arrN(:,:,:)
     ! for_guvcde = true to print information to compare with SOS/GUVCDE
     logical, parameter :: DEBUG = .False., TIMEIT = .False.
-    logical :: for_guvcde = .False., use_gamma = .True., use_giao = .True., &
+    logical :: &
+        for_guvcde = .False.,  & ! Code behavior matches SOS/GUVCDE for testing
+        use_gamma = .True., &    ! Use gamma to "fuzzy" singularity condition
+        use_giao = .True., &     ! Use GIAO
+        in_mem = .True., &       ! Store integrals in memory
         exists
     character(len=512) :: fmt_elstate, fname
     character(len=*), parameter :: fmt_dtime = &
@@ -207,7 +211,7 @@ program mcd_tensor
     ! overlap6
     qty_flag = 2**10 - 1
     ! qty_flag = ibset(qty_flag, 0)
-    call overlap_ao_1e(output_unit, n_at, n_ao, qty_flag, .True., .True., &
+    call overlap_ao_1e(output_unit, n_at, n_ao, qty_flag, for_guvcde, in_mem, &
                        at_crd, nprim_per_at, bset_info, ao_int, err)
     if (err%raised()) then
         select type(err)

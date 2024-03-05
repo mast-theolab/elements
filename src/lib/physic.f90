@@ -49,7 +49,7 @@ contains
 elemental real(real32) function s_conv_bohr_to_Ang(this, x)
     class(PhysFact), intent(in) :: this
     real(real32), intent(in) :: x
-    s_conv_bohr_to_Ang = x * this%bohr
+    s_conv_bohr_to_Ang = x * real(this%bohr, kind=real32)
 end function s_conv_bohr_to_Ang
 
 ! ======================================================================
@@ -65,7 +65,7 @@ end function d_conv_bohr_to_Ang
 elemental real(real32) function s_conv_amu_to_kg(this, x)
     class(PhysFact), intent(in) :: this
     real(real32), intent(in) :: x
-    s_conv_amu_to_kg = x * this%amu
+    s_conv_amu_to_kg = x * real(this%amu, kind=real32)
 end function s_conv_amu_to_kg
 
 ! ======================================================================
@@ -81,7 +81,7 @@ end function d_conv_amu_to_kg
 elemental real(real32) function s_conv_e_to_C(this, x)
     class(PhysFact), intent(in) :: this
     real(real32), intent(in) :: x
-    s_conv_e_to_C = x * this%echarge
+    s_conv_e_to_C = x * real(this%echarge, kind=real32)
 end function s_conv_e_to_C
 
 ! ======================================================================
@@ -97,7 +97,7 @@ end function d_conv_e_to_C
 elemental real(real32) function s_conv_cal_to_J(this, x)
     class(PhysFact), intent(in) :: this
     real(real32), intent(in) :: x
-    s_conv_cal_to_J = x * this%cal
+    s_conv_cal_to_J = x * real(this%cal, kind=real32)
 end function s_conv_cal_to_J
 
 ! ======================================================================
@@ -113,7 +113,7 @@ end function d_conv_cal_to_J
 elemental real(real32) function s_conv_hartree_to_J(this, x)
     class(PhysFact), intent(in) :: this
     real(real32), intent(in) :: x
-    s_conv_hartree_to_J = x * this%hartree
+    s_conv_hartree_to_J = x * real(this%hartree, kind=real32)
 end function s_conv_hartree_to_J
 
 ! ======================================================================

@@ -3,7 +3,7 @@ module exception
     !!
     !! Module providing types for exception handling in other modules.
     private
-    public :: InitError, RaiseError, RaiseArgError, &
+    public :: InitError, RaiseError, RaiseAllocateError, RaiseArgError, &
         RaiseFileError, RaiseTermination, RaiseValueError
 
     type, public, abstract :: BaseException
@@ -46,6 +46,11 @@ module exception
     contains
         procedure, private :: set_msg => set_value_message
     end type ValueError
+
+    type, public, extends(BaseException) :: AllocateError
+    contains
+        procedure, private :: set_msg => set_allocate_message
+    end type AllocateError
 
     type, public, extends(BaseException) :: FileError
         character(len=256), public :: file = ' '
@@ -168,9 +173,9 @@ subroutine RaiseValueError(err, msg, motive)
     class(BaseException), allocatable, intent(inout) :: err
     !! Original error, updated on return
     character(len=*), intent(in), optional :: msg
-    !! Reason why value is invalid.
+    !! General error message.
     character(len=*), intent(in), optional :: motive
-    !! Reason why value is invalid.
+    !! Complement or alternative message: reason why value is invalid.
 
     type(ValueError), allocatable :: newerr
     character(len=1024) :: new_msg
@@ -192,6 +197,41 @@ subroutine RaiseValueError(err, msg, motive)
     err = newerr
     
 end subroutine RaiseValueError
+
+! ======================================================================
+
+subroutine RaiseAllocateError(err, what, errmsg)
+    !! Sets a memory allocation error.
+    !!
+    !! Takes an instance of BaseException and sets it to the
+    !!   allocate-related error.
+    class(BaseException), allocatable, intent(inout) :: err
+    !! Original error, updated on return
+    character(len=*), intent(in), optional :: what
+    !! What was allocated.
+    character(len=*), intent(in), optional :: errmsg
+    !! Error message provided by the system.
+
+    type(AllocateError), allocatable :: newerr
+    character(len=1024) :: new_msg
+
+    allocate(newerr)
+    if (present(what) .and. present(errmsg)) then
+        write(new_msg, '("Allocation of ",a," failed.",a,"Reason: ",a)') &
+            trim(what), new_line(' '), trim(errmsg)
+    else if (present(what)) then
+        write(new_msg, '("Allocation of ",a," failed.")') trim(what)
+    else if (present(errmsg)) then
+        write(new_msg, '("Memory allocation failed. Reason: ",a)') trim(errmsg)
+    else
+        new_msg = ' '
+    end if
+    call newerr%raise(new_msg)
+
+    if (allocated(err)) deallocate(err)
+    err = newerr
+    
+end subroutine RaiseAllocateError
 
 ! ======================================================================
 
@@ -313,6 +353,27 @@ subroutine set_error_message(this, msg)
 
     return
 end subroutine set_error_message
+
+! ======================================================================
+
+subroutine set_allocate_message(this, msg)
+    !! Set message of a standard error
+    !!
+    !! Sets a message and changes the status of a basic error
+    class(AllocateError) :: this
+    character(len=*), intent(in), optional :: msg
+
+    character(len=1024) :: new_msg
+
+    if (present(msg)) then
+        call set_status(this, msg)
+    else
+        new_msg = 'Memory allocation failed.'
+        call set_status(this, new_msg)
+    end if
+
+    return
+end subroutine set_allocate_message
 
 ! ======================================================================
 

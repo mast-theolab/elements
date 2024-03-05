@@ -3,7 +3,7 @@ program mcd_tensor
     use input, only: build_moldata, build_transdata
     use parse_cmdline, only: CmdArgDB
     use output, only: prt_mat, iu_out, write_err, num_digits_int
-    use exception, only: BaseException, Error, ArgumentError, &
+    use exception, only: BaseException, Error, AllocateError, ArgumentError, &
         FileError, ValueError
     use gmcd_legacy, only: write_control, build_MOs
     use basisset, only: fix_norm_AOs, chk_bset_redundancy
@@ -71,6 +71,20 @@ program mcd_tensor
 
     ! Build parser and check arguments
     opts = CmdArgDB(progname='mcd_tensor')
+    if (opts%error%raised()) then
+        write(*, '(a)') 'Failed to initialize the command-line parser'
+        select type (err => opts%error)
+            class is (AllocateError)
+                write(*, '(a)') trim(err%msg())
+            class is (ArgumentError)
+                write(*, '(a)') trim(err%msg())
+            class is (Error)
+                write(*, '(a)') trim(err%msg())
+            class default
+                write(*, '(a)') 'Unknown error.'
+        end select
+        stop
+    end if
     call opts%add_arg_char( &
         'string', err, label='filename', &
         help='Gaussian formatted checkpoint file')

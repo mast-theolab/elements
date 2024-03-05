@@ -2,8 +2,8 @@ module parse_cmdline
 
     use iso_fortran_env, only: int32, int64, real32, real64
     use exception, only: ArgumentError, BaseException, Error, InitError, &
-        RaiseArgError, RaiseError, RaiseTermination, RaiseValueError, &
-        ValueError
+        RaiseAllocateError, RaiseArgError, RaiseError, RaiseTermination, &
+        RaiseValueError, ValueError
     use numeric, only: is_number, to_int64, to_real64
     use string, only: findstr, locase, upcase
 
@@ -150,6 +150,9 @@ module parse_cmdline
         integer :: iarg_help = 0
         !! Stores indexes of positional arguments. <0 for arbitrary number
         integer :: nargs = 0, nargs_pos = 0
+        ! Stores error status, that can be updated if needed
+        ! The first time, contains the initialization status
+        class(BaseException), allocatable, public :: error
     contains
         procedure, private :: get_value_int32val, get_value_int64val, &
             get_value_int32arr, get_value_int64arr, &
@@ -721,15 +724,21 @@ function init_args_db(add_help, prefixes, progname) result(db)
     type(CmdArgDB) :: db
     !! Database of command-line arguments.
 
-    integer :: i, n_prefix
+    integer :: i, istat, n_prefix
     logical :: add_help_
     character(len=1) :: prefix
-    class(BaseException), allocatable :: err
+    
+    db%error = InitError()
 
     if (present(prefixes)) then
         n_prefix = len(prefixes)
         allocate(db%prefixes(n_prefix), db%prefix_short(n_prefix), &
-                 db%prefix_long(n_prefix))
+                 db%prefix_long(n_prefix), stat=istat)
+        if (istat /= 0) then
+            call RaiseAllocateError(db%error, &
+                                    'user-defined arguments prefixes')
+            return
+        end if
         do i = 1, n_prefix
             prefix = prefixes(i:i)
             db%prefixes(i) = prefix
@@ -737,7 +746,12 @@ function init_args_db(add_help, prefixes, progname) result(db)
             db%prefix_long(i) = prefix // prefix
         end do
     else
-        allocate(db%prefixes(1), db%prefix_short(1), db%prefix_long(1))
+        allocate(db%prefixes(1), db%prefix_short(1), db%prefix_long(1), &
+                 stat=istat)
+        if (istat /= 0) then
+            Call RaiseAllocateError(db%error, 'default arguments prefixes')
+            return
+        end if
         db%prefixes(1) = '-'
         db%prefix_short(1) = '-'
         db%prefix_long(1) = '--'
@@ -758,7 +772,7 @@ function init_args_db(add_help, prefixes, progname) result(db)
     end if
 
     if (add_help_) then
-        call db%add_arg_bool('store_true', err, '-h', '--help', &
+        call db%add_arg_bool('store_true', db%error, '-h', '--help', &
                              help='Print this help message', &
                              def_value=.False.)
     end if

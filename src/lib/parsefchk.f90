@@ -14,7 +14,7 @@ module parsefchk
         logical, dimension(:), allocatable :: ldata
         character(len=:), dimension(:), allocatable :: cdata
     end type fchkdata
-    
+
     ! TODO: We could add int_kind, real_kind for more versatile parser
     ! TODO: Add possibility to store keys for faster search
     type, public :: fchkparser
@@ -25,6 +25,7 @@ module parsefchk
         procedure :: filename => get_fchkname
         procedure, private :: readitem, readitems
         generic :: read => readitem, readitems
+        procedure :: close => close_fchk
     end type fchkparser
 
     ! The interface must have the same name as the class to allow
@@ -75,6 +76,19 @@ function get_fchkname(this) result(fname)
     class(fchkparser), intent(in), target :: this
     fname => this%name
 end function get_fchkname
+
+! ======================================================================
+
+function close_fchk(this) result(status)
+    ! Method to close the opened fchk file
+    logical :: status
+    class(fchkparser), intent(in), target :: this
+
+    integer :: ios
+    close(this%unit, iostat=ios)
+    status = ios == 0
+
+end function close_fchk
 
 ! ======================================================================
 

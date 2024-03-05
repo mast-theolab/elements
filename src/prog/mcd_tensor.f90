@@ -3,7 +3,8 @@ program mcd_tensor
     use input, only: build_moldata, build_transdata
     use parse_cmdline, only: CmdArgDB
     use output, only: prt_mat, iu_out, write_err, num_digits_int
-    use exception, only: BaseException, Error, ValueError
+    use exception, only: BaseException, Error, ArgumentError, &
+        FileError, ValueError
     use gmcd_legacy, only: write_control, build_MOs
     use basisset, only: fix_norm_AOs, chk_bset_redundancy
     use electronic, only: convert_AO2MO, eltrans_amp, overlap_ao_1e, ovij_1e
@@ -135,6 +136,9 @@ program mcd_tensor
     call build_moldata(fname, err)
     if (err%raised()) then
         select type(err)
+            class is (FileError)
+                call write_err('std', 'Error found with input file', err%msg())
+                stop
             class is (Error)
                 call write_err('std', &
                     'Error found while parsing basic molecular data', &
@@ -274,6 +278,9 @@ program mcd_tensor
     call build_transdata(fname, n_ab, n_basis, err)
     if (err%raised()) then
         select type(err)
+            class is (FileError)
+                call write_err('std', 'Error found with input file', err%msg())
+                stop
             class is (Error)
                 call write_err('std', &
                     'Error while parsing transition data', &

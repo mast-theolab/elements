@@ -3,9 +3,8 @@ module exception
     !!
     !! Module providing types for exception handling in other modules.
     private
-    public :: InitError, RaiseError, RaiseArgError, RaiseTermination, &
-        RaiseValueError
-    ! public :: InitError!, RaiseArgError, RaiseError
+    public :: InitError, RaiseError, RaiseArgError, &
+        RaiseFileError, RaiseTermination, RaiseValueError
 
     type, public, abstract :: BaseException
         private
@@ -47,6 +46,13 @@ module exception
     contains
         procedure, private :: set_msg => set_value_message
     end type ValueError
+
+    type, public, extends(BaseException) :: FileError
+        character(len=256), public :: file = ' '
+        character(len=64), public :: action = ' '
+    contains
+        procedure, private :: set_msg => set_file_message
+    end type FileError
 
     type, public, extends(BaseException) :: ArgumentError
         character(len=256), public :: arg = ' '
@@ -189,6 +195,44 @@ end subroutine RaiseValueError
 
 ! ======================================================================
 
+subroutine RaiseFileError(err, file, action, osmsg)
+    !! Sets a file-related error error.
+    !!
+    !! Takes an instance of BaseException and sets it to the
+    !!   file-related error.
+    !!
+    !! Note: action should be as gerund (opening, closing...)
+    class(BaseException), allocatable, intent(inout) :: err
+    !! Original error, updated on return
+    character(len=*), intent(in) :: file
+    !! File name.
+    character(len=*), intent(in) :: action
+    !! Action applied to the file.
+    character(len=*), intent(in), optional :: osmsg
+    !! Optional OS message encountered.
+
+    type(FileError), allocatable :: newerr
+
+    allocate(newerr)
+    if (file /= ' ') then
+        newerr%file = '"' // trim(file) // '"'
+    else
+        newerr%file = '<unknown>'
+    end if
+    if (action /= ' ') then
+        newerr%action = trim(action)
+    else
+        newerr%action = 'operating on'
+    end if
+    call newerr%raise(osmsg)
+
+    if (allocated(err)) deallocate(err)
+    err = newerr
+    
+end subroutine RaiseFileError
+
+! ======================================================================
+
 function check_status(this) result(stat)
     !! Check status of an exception
     !!
@@ -290,6 +334,30 @@ subroutine set_value_message(this, msg)
 
     return
 end subroutine set_value_message
+
+! ======================================================================
+
+subroutine set_file_message(this, msg)
+    !! Set message of a standard error
+    !!
+    !! Sets a message and changes the status of a basic error
+    class(FileError) :: this
+    character(len=*), intent(in), optional :: msg
+
+    character(len=1024) :: new_msg
+
+    if (present(msg)) then
+        write(new_msg, '("Error while ",a," file ",a,".",a,"Reason: ",a)') &
+            trim(this%action), trim(this%file), new_line(' '), trim(msg)
+    else
+        write(new_msg, '("Error encountered while ",a," file ",a,".")') &
+            trim(this%action), trim(this%file)
+    end if
+    
+    call set_status(this, new_msg)
+
+    return
+end subroutine set_file_message
 
 ! ======================================================================
 

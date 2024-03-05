@@ -9,7 +9,7 @@ module input
     use atomic, only: atdata
     use moldata
     use transdata
-    use exception, only: ArgumentError, BaseException, Error, InitError, &
+    use exception, only: BaseException, Error, InitError, RaiseFileError, &
         RaiseError
 
     public :: build_moldata, build_transdata
@@ -164,6 +164,7 @@ subroutine build_moldata_fchk(fname, err)
         coef_contr, &    ! contraction coefficients
         coef_contrSP, &  ! contraction coefficients (P(S=P))
         prim_exp         ! primitives exponents
+    logical :: ok
     character(len=512) :: errmsg
     type(fchkparser) :: datafile
     type(fchkdata), dimension(:), allocatable :: dbase
@@ -173,6 +174,12 @@ subroutine build_moldata_fchk(fname, err)
 
     datafile = fchkparser(fname)
     dbase = datafile%read(fchk_keys)
+
+    ok = datafile%close()
+    if (.not. ok) then
+        call RaiseFileError(err, fname, 'closing')
+        return
+    end if
 
     ! Molecule information
     n_at = dbase(1)%idata(1)
@@ -315,6 +322,7 @@ subroutine build_transdata_fchk(fname, n_ab, n_basis, err)
         lblock_ETran, &  ! Length of a data block for a given state
         NLR              ! indicate if left and right trans. matrix data stored
     real(real64) :: rval
+    logical :: ok
     type(fchkparser) :: datafile
     type(fchkdata), dimension(:), allocatable :: dbase
     
@@ -322,6 +330,12 @@ subroutine build_transdata_fchk(fname, n_ab, n_basis, err)
 
     datafile = fchkparser(fname)
     dbase = datafile%read(fchk_keys)
+
+    ok = datafile%close()
+    if (.not. ok) then
+        call RaiseFileError(err, fname, 'closing')
+        return
+    end if
 
     ! First check that NLR == 1. We do not support the other case for now
     NLR = dbase(6)%idata(1)

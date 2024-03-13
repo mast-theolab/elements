@@ -31,8 +31,16 @@
 *.out
 *.app
 
-# Testing
+# Xmake cache
+.xmake/
+build/
+
+# MacOS Cache
+.DS_Store
+
+# Binaries
 /bin/*
-/build/*
+
+# Local
 /tmp/*
 /local/*

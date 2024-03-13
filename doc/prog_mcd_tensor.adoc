@@ -1,0 +1,29 @@
+= MCD Tensor Calculator
+:email: julien.bloino@sns.it
+:revnumber: 0.0.1
+:revremark: Initial placeholder.
+:toc: left
+:toclevels: 1
+:icons: font
+:stem:
+
+== Introduction
+
+TODO
+
+== Usage
+
+TODO
+
+=== Options
+
+=== Simple case
+
+== Description
+
+== Theoretical background
+
+== References
+
+== Going further
+

@@ -1,54 +1,179 @@
 module output
     !! Output-related module
     !!
-    !! Different output/printing-related procedures
+    !! Different output/printing-related procedures to:
+    !! - print a real matrix: prt_mat -> prt_mat_r32, prt_mat64
+    !! - write an error message -> write_err
+    !! - print a section header or title in consistent format -> sec_header
+    !! - print atomic coordinates -> prt_coord
     use iso_fortran_env, only: real32, real64, int32, int64, output_unit
     use string, only: locase
+    use physic, only: PhysFact
 
     integer :: iu_out = output_unit
+    type(PhysFact), private :: phys
 
     interface prt_mat
         module procedure :: prt_mat_r32, prt_mat_r64
     end interface prt_mat
 
+    interface prt_coord
+        module procedure :: prt_coord_r32, prt_coord_r64
+    end interface prt_coord
+
     interface len_int
         module procedure :: len_int32, len_int64
     end interface len_int
-
-    interface num_digits_int
-        module procedure num_digits_int32, num_digits_int64
-    end interface
 
 contains
 
 ! ======================================================================
 
-subroutine write_err(nature, msg, error_)
-    !! Write error message on default unit
+integer function len_int32(num) result(lnum)
+    !! Length of 32-bit integer num
     !!
-    !! Writes an error message.  The formatting depends on the nature
-    !!   of the error:
-    !! * Generic/gen: generic error
-    !! * Basic/std: basic/standard error
+    !! Returns the minimum number of characters necessary to store
+    !!    `num`.
     implicit none
 
-    character(len=*), intent(in) :: nature
-    !! Nature of the error
-    character(len=*), intent(in) :: msg
-    !! General error message
-    character(len=*), intent(in), optional :: error_
+    integer(int32), intent(in) :: num
 
-    select case (locase(trim(nature)))
-        case ('generic', 'gen')
-            write(iu_out, '(a)') trim(msg)
-            write(iu_out, '(a)') 'Stopping'
-        case ('basic', 'std')
-            write(iu_out, '(a)') trim(msg)
-            write(iu_out, '("Reason:",/,4x,a)') trim(error_)
-        case default
-            write(iu_out, '("Uncategorized error:",4x,a)') trim(msg)
-    end select
-end subroutine write_err
+    lnum = floor(log10(abs(real(num, kind=real64)))) + 1
+    if (num < 0) lnum = lnum + 1
+
+end function len_int32
+
+! ======================================================================
+
+integer function len_int64(num) result(lnum)
+    !! Length of 64-bit integer num
+    !!
+    !! Returns the minimum number of characters necessary to store
+    !!    `num`.
+    implicit none
+
+    integer(int64), intent(in) :: num
+
+    lnum = floor(log10(abs(real(num, kind=real64)))) + 1
+    if (num < 0) lnum = lnum + 1
+
+end function len_int64
+
+! ======================================================================
+
+subroutine prt_coord_r32(n_at, at_lab, at_crd, at_mass_, iunit_)
+    !! Prints the atomic coordinates in a formatted way (32bit version).
+    !!
+    !! Prints the atomic coordinates as a table, optionally with the
+    !! atomic masses included.
+    implicit none
+
+    integer, intent(in) :: n_at
+    !! Number of atoms
+    character(len=*), dimension(n_at), intent(in) :: at_lab
+    !! Atomic labels
+    real(real32), dimension(3, n_at), intent(in) :: at_crd
+    !! Atomic coordinates (in au)
+    real(real32), dimension(n_at), intent(in), optional :: at_mass_
+    !! Atomic masses (in u)
+    integer, intent(in), optional :: iunit_
+    !! Output unit
+
+    integer :: ia, iu
+
+    1000 format(" Atom |    Mass    |        X            Y            Z")
+    1001 format(" -----+------------+----------------------------------------")
+    1010 format(2x,a,2x,"|",2x,f8.4,2x,"|",3(1x,f12.6))
+    1100 format(" Atom |        X            Y            Z")
+    1101 format(" -----+----------------------------------------")
+    1110 format(2x,a,2x,"|",3(1x,f12.6))
+
+    ! Set output
+    if (present(iunit_)) then
+        iu = iunit_
+    else
+        iu = iu_out
+    end if
+
+    if (present(at_mass_)) then
+        write(iu, 1000)
+        write(iu, 1001)
+        do ia = 1, n_at
+            write(iu, 1010) at_lab(ia), at_mass_(ia), &
+                phys%bohr2Ang(at_crd(:,ia))
+        end do
+        write(iu, 1001)
+    else
+        write(iu, 1100)
+        write(iu, 1101)
+        do ia = 1, n_at
+            write(iu, 1110) at_lab(ia), at_mass_(ia), &
+                phys%bohr2Ang(at_crd(:,ia))
+        end do
+        write(iu, 1101)
+    end if
+
+end subroutine prt_coord_r32
+
+! ======================================================================
+
+subroutine prt_coord_r64(n_at, at_lab, at_crd, at_mass_, iunit_)
+    !! Prints the atomic coordinates in a formatted way (64bit version).
+    !!
+    !! Prints the atomic coordinates as a table, optionally with the
+    !! atomic masses included.
+    implicit none
+
+    integer, intent(in) :: n_at
+    !! Number of atoms
+    character(len=*), dimension(n_at), intent(in) :: at_lab
+    !! Atomic labels
+    real(real64), dimension(3, n_at), intent(in) :: at_crd
+    !! Atomic coordinates (in au)
+    real(real64), dimension(n_at), intent(in), optional :: at_mass_
+    !! Atomic masses (in u)
+    integer, intent(in), optional :: iunit_
+    !! Output unit
+
+    integer :: ia, iu
+
+    1000 format(" Atom      Mass             X            Y            Z")
+    1001 format(" ===== ============ ========================================")
+    1002 format(" ----- ------------ ----------------------------------------")
+    1010 format(2x,a,5x,f8.4,3x,3(1x,f12.6))
+    1100 format(" Atom |        X            Y            Z")
+    1101 format(" ===== ========================================")
+    1102 format(" ----- ----------------------------------------")
+    1110 format(2x,a,3x,3(1x,f12.6))
+
+    ! Set output
+    if (present(iunit_)) then
+        iu = iunit_
+    else
+        iu = iu_out
+    end if
+
+    if (present(at_mass_)) then
+        write(iu, 1001)
+        write(iu, 1000)
+        write(iu, 1002)
+        do ia = 1, n_at
+            write(iu, 1010) at_lab(ia), at_mass_(ia), &
+                phys%bohr2Ang(at_crd(:,ia))
+        end do
+        write(iu, 1001)
+    else
+        write(iu, 1101)
+        write(iu, 1100)
+        write(iu, 1102)
+        do ia = 1, n_at
+            write(iu, 1110) at_lab(ia), at_mass_(ia), &
+                phys%bohr2Ang(at_crd(:,ia))
+        end do
+        write(iu, 1101)
+    end if
+
+end subroutine prt_coord_r64
 
 ! ======================================================================
 
@@ -221,87 +346,107 @@ end subroutine prt_mat_r64
 
 ! ======================================================================
 
-integer function len_int32(num) result(lnum)
-    !! Length of 32-bit integer num
+subroutine sec_header(level, title)
+    !! Formats and writes a section header in default unit.
     !!
-    !! Returns the minimum number of characters necessary to store
-    !!    `num`.
+    !! Formats and prints a header with title `title`.
+    !! Available header levels are:
+    !!
+    !! -1. Main title
+    !!  0. Chapter
+    !!  1. Section / Header1
+    !!  2. Subsection / Header2
+    !!  3. Subsubsection / Header3
+    !!  4. Paragraph / Header4
     implicit none
 
-    integer(int32), intent(in) :: num
+    integer, intent(in) :: level
+    !! Header level
+    character(len=*), intent(in) :: title
+    !! Header title
 
-    lnum = floor(log10(abs(real(num, kind=real64)))) + 1
-    if (num < 0) lnum = lnum + 1
+    integer :: lblc, lshft, ltitle
+    character(len=256) :: fmt
 
-end function len_int32
+    1000 format('(1x,"/",',i0,'("-"),"\",/,1x,"|",',i0,'x,"|",/,1x,"|",',i0, &
+        'x,a,',i0,'x,"|",/,1x,"|",',i0,'x,"|",/,1x,"\",',i0,'("-"),"/")')
+    1010 format('(//,1x,',i0,'("*"),/,1x,',i0,'x,a,/,1x,',i0,'("*"))')
+    1020 Format('(//,1x,a,/,1x,',i0,'("="))')
+    1030 Format('(/,1x,a,/,1x,',i0,'("-"))')
+    1040 Format('(/,1x,a,/,1x,',i0,'("^"))')
+    1050 Format(/,1x,'### ',a,' ###')
+
+    ltitle = len_trim(title)
+
+    select case(level)
+    case(-1)
+        if (ltitle > 68) then ! include at least 4 spaces before/after border
+            lblc = ltitle + 8
+            lshft = 4
+        else
+            lblc = 76
+            lshft = (lblc-ltitle)/2
+        endif
+        write(fmt, 1000) lblc, lblc, lshft, lblc - ltitle - lshft, lblc, lblc
+        write(iu_out, fmt) trim(title)
+    case(0)
+        if (ltitle > 78) then
+            lblc = ltitle + 4
+            lshft = 2
+        else
+            lblc = 78
+            lshft = (lblc-ltitle)/2
+        endif
+        write(fmt, 1010) lblc, lshft, lblc - ltitle - lshft, lblc
+        write(iu_out, fmt) trim(title)
+    case(1)
+        write(fmt, 1020) ltitle
+        write(iu_out, fmt) trim(title)
+    case(2)
+        write(fmt, 1030) ltitle
+        write(iu_out, fmt) trim(title)
+    case(3)
+        write(fmt, 1040) ltitle
+        write(iu_out, fmt) trim(title)
+    case(4:)
+        write(fmt, 1050) ltitle
+        write(iu_out, fmt) trim(title)
+    case default
+        print *, 'Unknown header level.  Stopping.'
+        stop
+
+    end select
+
+end subroutine sec_header
 
 ! ======================================================================
 
-integer function len_int64(num) result(lnum)
-    !! Length of 64-bit integer num
+subroutine write_err(nature, msg, error_)
+    !! Writes error message on default unit.
     !!
-    !! Returns the minimum number of characters necessary to store
-    !!    `num`.
+    !! Writes an error message.  The formatting depends on the nature
+    !!   of the error:
+    !! * Generic/gen: generic error
+    !! * Basic/std: basic/standard error
     implicit none
 
-    integer(int64), intent(in) :: num
+    character(len=*), intent(in) :: nature
+    !! Nature of the error
+    character(len=*), intent(in) :: msg
+    !! General error message
+    character(len=*), intent(in), optional :: error_
 
-    lnum = floor(log10(abs(real(num, kind=real64)))) + 1
-    if (num < 0) lnum = lnum + 1
-
-end function len_int64
-
-! ======================================================================
-
-function num_digits_int32(number)
-    !! Finds the number of digits in an integer `number`.
-    !!
-    !! This functions is useful for instance to set a proper format for
-    !! strings.
-    implicit none
-
-    integer(int32) :: number
-    !! Number of interest.
-    integer(int32) :: num_digits_int32
-    !! Number of digits in `Number`.
-
-    integer(int32) :: ioff
-
-    if (number < 0) then
-        ioff = 2
-    else
-        ioff = 1
-    end if
-
-    num_digits_int32 = floor(log10(real(abs(number), kind=real32))) + ioff
-
-end function num_digits_int32
-
-! ======================================================================
-
-function num_digits_int64(number)
-    !! Finds the number of digits in an integer `number`.
-    !!
-    !! This functions is useful for instance to set a proper format for
-    !! strings.
-    implicit none
-
-    integer(int64) :: number
-    !! Number of interest.
-    integer(int64) :: num_digits_int64
-    !! Number of digits in `Number`.
-
-    integer(int64) :: ioff
-
-    if (number < 0) then
-        ioff = 2
-    else
-        ioff = 1
-    end if
-
-    num_digits_int64 = floor(log10(real(abs(number), kind=real64))) + ioff
-
-end function num_digits_int64
+    select case (locase(trim(nature)))
+        case ('generic', 'gen')
+            write(iu_out, '(a)') trim(msg)
+            write(iu_out, '(a)') 'Stopping'
+        case ('basic', 'std')
+            write(iu_out, '(a)') trim(msg)
+            write(iu_out, '("Reason:",/,4x,a)') trim(error_)
+        case default
+            write(iu_out, '("Uncategorized error:",4x,a)') trim(msg)
+    end select
+end subroutine write_err
 
 ! ======================================================================
 

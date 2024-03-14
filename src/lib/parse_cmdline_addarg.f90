@@ -786,7 +786,7 @@ module procedure add_argument_char
     !!   parameters.
     !! Supported type of arguments:
     !! - 'string': scalar character string
-    !! - 'list': list of reals
+    !! - 'list': list of strings
     implicit none
 
     integer :: ival

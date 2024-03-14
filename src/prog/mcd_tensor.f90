@@ -1,8 +1,10 @@
 program mcd_tensor
     use iso_fortran_env, only: real64, output_unit
+    use string, only: labXYZ_1D
     use input, only: build_moldata, build_transdata
     use parse_cmdline, only: CmdArgDB
-    use output, only: prt_mat, iu_out, write_err, num_digits_int
+    use output, only: iu_out, sec_header, len_int, prt_coord, prt_mat, &
+      write_err
     use exception, only: BaseException, Error, AllocateError, ArgumentError, &
         FileError, ValueError
     use gmcd_legacy, only: write_control, build_MOs
@@ -15,10 +17,9 @@ program mcd_tensor
 
     implicit none
 
-    integer :: i, iab, istate, ix, jstate, jx, qty_flag
-    integer, dimension(8) :: ia_dtime
+    integer :: fstate, i, iab, istate, ix, jstate, jx, qty_flag
     real(real64) :: de, ef, ei
-    real(real64) :: e_gamma = .02_real64
+    real(real64) :: e_gamma = 1.0e-4
     real(real64), dimension(3) :: &
         r_gg, &      ! < g | r | g >
         p_gg, &      ! < g | p | g >
@@ -62,91 +63,25 @@ program mcd_tensor
         in_mem = .True., &       ! Store integrals in memory
         exists
     character(len=512) :: fmt_elstate, fname
-    character(len=*), parameter :: fmt_dtime = &
-        '("Entering: ",a," - Date: ",i4,"/",i2.2,"/",i2.2," at &
-            &",i2.2,":",i2.2,":",i2.2)'
     class(ovij_1e), allocatable :: ao_int
     class(BaseException), allocatable :: err
-    class(CmdArgDB), allocatable :: opts
 
-    ! Build parser and check arguments
-    opts = CmdArgDB(progname='mcd_tensor')
-    if (opts%error%raised()) then
-        write(*, '(a)') 'Failed to initialize the command-line parser'
-        select type (err => opts%error)
-            class is (AllocateError)
-                write(*, '(a)') trim(err%msg())
-            class is (ArgumentError)
-                write(*, '(a)') trim(err%msg())
-            class is (Error)
-                write(*, '(a)') trim(err%msg())
-            class default
-                write(*, '(a)') 'Unknown error.'
-        end select
-        stop
-    end if
-    call opts%add_arg_char( &
-        'string', err, label='filename', &
-        help='Gaussian formatted checkpoint file')
-    call opts%add_arg_bool( &
-        'store_true', err, longname='--giao', &
-        help='Include GIAO corrections (default)', &
-        def_value=.True.)
-    call opts%add_arg_bool( &
-        'store_false', err, longname='--no-giao', &
-        help='Include GIAO corrections')
-    call opts%add_arg_real( &
-        'real', err, longname='--gamma', &
-        help='Include a shift term, gamma, to avoid a divergence of the &
-            &denominator in the summation with close states (unit: Hartree).',&
-        def_value=0.02, min_value=0.0)
-    call opts%add_arg_bool( &
-        'store_true', err, longname='--guvcde', &
-        help='Add printing similar to SOS/GUVCDE for control.')
-    
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "Option parser", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
-    call opts%parse_args(err)
-    if (err%raised()) then
-        select type (err)
-            class is (ValueError)
-                write(*, '(a)') trim(err%msg())
-            class is (Error)
-                write(*, '(a)') trim(err%msg())
-            class default
-                write(*, '(a)') 'Unknown error while reading "gamma"'
-        end select
-        stop
-    end if
+    interface write_param
+        procedure write_param_bool, write_param_int, write_param_real, &
+            write_param_char
+    end interface write_param
 
-    if (opts%is_user_set('giao', err) &
-        .and. opts%is_user_set('no-giao', err)) then
-        write(*, '(" Error: conflicting option for the definition of GIAO")')
-        stop
-    end if
-    
-    if (opts%is_user_set('no-giao', err)) use_giao = .False.
+    1200 format(/, &
+        ' > Number of excited states : ',i0,/, &
+        ' > Reference excited state  : ',i0)
 
-    if (opts%is_user_set('guvcde', err)) for_guvcde = .True.
+    ! Write title
+    call sec_header(-1, 'MCD Tensor Calculator')
 
-    call opts%get_value('gamma', e_gamma, err)
-    use_gamma = abs(e_gamma) > tiny(e_gamma)
+    call parse_opts
 
-    call opts%get_value('filename', fname, err)
-    inquire(file=fname, exist=exists)
-    if (.not.exists) then
-        write(*, '("Error: File ",a," does not exist.")') trim(fname)
-        stop
-    end if
-
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "Molecular data", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
+    call sec_header(1, 'Data on Molecular System')
+    if (TIMEIT) call write_time('Molecular data')
     call build_moldata(fname, err)
     if (err%raised()) then
         select type(err)
@@ -172,14 +107,11 @@ program mcd_tensor
             )
         stop
     end if
+    call write_moldata
 
     if (for_guvcde) then
-        if (TIMEIT) then
-            call date_and_time(values=ia_dtime)
-            write(output_unit, fmt_dtime) "GUVCDE write control", &
-                ia_dtime(1:3), ia_dtime(5:7)
-        end if
-        call write_control(output_unit, err)
+        if (TIMEIT) call write_time('GUVCDE write control')
+        call write_control(iu_out, err)
         if (err%raised()) then
             select type(err)
                 class is (Error)
@@ -198,13 +130,9 @@ program mcd_tensor
     end if
 
     ! normalization coeffs
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "Check AO normalization", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
-    call fix_norm_AOs(output_unit, n_at, n_ao, at_crd, nprim_per_at, bset_info, &
-                      err)
+    if (TIMEIT) call write_time('Check AO normalization')
+    call fix_norm_AOs(iu_out, n_at, n_ao, at_crd, nprim_per_at, bset_info, &
+                      err, DEBUG)
     if (err%raised()) then
         select type(err)
             class is (Error)
@@ -221,15 +149,12 @@ program mcd_tensor
         end select
     end if
 
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "1-e AO integral", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
+    call sec_header(2, 'Computation of one-electron integrals')
+    if (TIMEIT) call write_time('1-e AO integral')
     ! overlap6
     qty_flag = 2**10 - 1
     ! qty_flag = ibset(qty_flag, 0)
-    call overlap_ao_1e(output_unit, n_at, n_ao, qty_flag, for_guvcde, in_mem, &
+    call overlap_ao_1e(iu_out, n_at, n_ao, qty_flag, for_guvcde, in_mem, &
                        at_crd, nprim_per_at, bset_info, ao_int, err)
     if (err%raised()) then
         select type(err)
@@ -250,45 +175,31 @@ program mcd_tensor
 
     ! call chk_bset_redundancy(n_ao, ao_int%i_j)
 
+    call sec_header(2, 'Definition of Molecular Orbitals')
     ! convert AO -> MO quantities of interest
     if (for_guvcde) then
-        if (TIMEIT) then
-            call date_and_time(values=ia_dtime)
-            write(output_unit, fmt_dtime) "GUVCDE build MOs", ia_dtime(1:3), &
-                ia_dtime(5:7)
-        end if
+        if (TIMEIT) call write_time('GUVCDE build MOs')
         call build_MOs(n_ab, n_ao, n_mos, coef_mos, .true.)
     endif
     ! call convert_AO2MO(n_ao, n_mo, coef_mos(1), ao_int%i_j, Smo_ij)
     allocate(Smo_irj(3,n_mo,n_mo,n_ab), Smo_ipj(3,n_mo,n_mo,n_ab), &
              Smo_irxpj(3,n_mo,n_mo,n_ab))
     allocate(tmp_ao_arr1(n_ao,n_ao), tmp_ao_arrN(3,n_ao,n_ao))
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "AO 2 MO conversion", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
+    if (TIMEIT) call write_time('AO to MO conversion')
     do iab = 1, n_ab
         call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_r_j, &
                            Smo_irj(:,:,:,iab), tmp_ao_arrN)
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "<i|p|j>", ia_dtime(1:3), &
-            ia_dtime(5:7)
+        if (TIMEIT) call write_time('<i|p|j>')
         call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_p_j, &
                            Smo_ipj(:,:,:,iab), tmp_ao_arrN)
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "<i|rxp|j>", ia_dtime(1:3), &
-            ia_dtime(5:7)
-        call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_rxp_j, &
-                           Smo_irxpj(:,:,:,iab), tmp_ao_arrN)
+        if (TIMEIT) call write_time('<i|rxp|j>')
+        call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), &
+                           ao_int%i_rxp_j, Smo_irxpj(:,:,:,iab), tmp_ao_arrN)
     end do
     ! call convert_AO2MO(n_ao, n_mo, coef_mos(1), ao_int%i_j)
 
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "Transition data", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
+    call sec_header(1, 'Transition Data')
+    if (TIMEIT) call write_time('Transition data')
     call build_transdata(fname, n_ab, n_basis, err)
     if (err%raised()) then
         select type(err)
@@ -308,19 +219,21 @@ program mcd_tensor
                 stop
         end select
     end if
+    write(iu_out, 1200) n_states, id_state
+    if (fstate > 0 .and. fstate /= id_state) then
+        write(iu_out, '(/," Changing reference state to state num. ",i0)') &
+            fstate
+        id_state = fstate
+    end if
 
     ! call prt_mat(g2e_dens(:,:,1,1), n_basis, n_basis)
 
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "Build trans. amplitudes", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
-    write(iu_out, '(a)') 'Building transition amplitudes'
+    call sec_header(2, 'Definition of Transition Amplitudes')
+    if (TIMEIT) call write_time('Build trans. amplitudes')
     allocate(t_mo(n_mo, n_mo, n_ab, n_states))
     ! "Now doing state num. ",i3," out of 123
-    write(fmt_elstate, '("(''Now doing state num. '',i",i0,",'' out of '',&
-        &i0,''.'')")') num_digits_int(n_states)
+    write(fmt_elstate, '("('' Now doing state num. '',i",i0,",'' out of '',&
+        &i0,''.'')")') len_int(n_states)
     do istate = 1, n_states
         write(iu_out, fmt_elstate) istate, n_states
         t_mo(:,:,:,istate) = eltrans_amp(n_ab, n_ao, n_mos, ao_int%i_j, &
@@ -345,13 +258,10 @@ program mcd_tensor
 
     end do
 
-    write(iu_out, '(a)') 'Computing the ground-states moments'
+    call sec_header(1, 'Computation of Properties')
+    call sec_header(2, 'Ground-state properties')
 
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "Ground-state moments", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
+    if (TIMEIT) call write_time('Ground-state moments')
     p_gg_ab = 0.0_real64
     r_gg_ab = 0.0_real64
     rxp_gg_ab = 0.0_real64
@@ -395,13 +305,9 @@ program mcd_tensor
         write(iu_out, '("rxp",3f12.6)') rxp_gg
     end if
 
-    write(iu_out, '(a)') 'Computing the transition energies factors'
+    call sec_header(2, 'Transition Energies Factors')
 
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "Transition energies", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
+    if (TIMEIT) call write_time('Transition energies')
     allocate(ov_eieg(n_states), ov_eief(n_states))
     ef = g2e_energy(id_state)
     do istate = 1, n_states
@@ -421,8 +327,9 @@ program mcd_tensor
         end if
     end do
 
-    write(iu_out, '(4(a,/),6(/,a))') &
-        'Computing tensor G_if:', &
+    call sec_header(1, 'MCD Tensor')
+    write(iu_out, '(/,4(a,/),6(/,a))') &
+        ' Computing tensor G_if:', &
         '           --      <f|u|k><k|m|i>    --       <f|m|k><k|u|i>', &
         '    G_if = \       --------------  + \        --------------', &
         '           /_ k!=i    E_k - E_i      /_ k!=f     E_k - E_f', &
@@ -436,11 +343,7 @@ program mcd_tensor
     ! For GIAO, we do some pre-processing by building the combinations
     !   < l | O | k > and < l | O | g > to be used later.
     if (use_giao) then
-        if (TIMEIT) then
-            call date_and_time(values=ia_dtime)
-            write(output_unit, fmt_dtime) "GIAO terms", ia_dtime(1:3), &
-                ia_dtime(5:7)
-        end if
+        if (TIMEIT) call write_time('GIAO terms')
         allocate(r_lk(3,n_states,0:n_states), p_lk(3,n_states,0:n_states), &
                  ov_eiej(0:n_states,0:n_states))
         do istate = 1, n_states
@@ -489,11 +392,7 @@ program mcd_tensor
     ! The prefactor are used to compute < f | O | e_i > and < f | O | g >
     !   (the latter for GIAO)
     ! For this reason, they are pre-computed once to speed up later
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "Prefactors", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
+    if (TIMEIT) call write_time('Prefactors')
     pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
                               r_gg_ab, Smo_irj)
     pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
@@ -525,11 +424,7 @@ program mcd_tensor
 
     ! Compute the transition moment < f | O | g >
     ! we need to correct the sign of p and divided by the energy
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "Transition moments", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
+    if (TIMEIT) call write_time('Transition moments')
     if (use_giao) then
         r_fg = r_lk(:,id_state,0)
         p_fg = -p_lk(:,id_state,0) / g2e_energy(id_state)
@@ -580,11 +475,7 @@ program mcd_tensor
                 + r_fk(ix)*rxp_kg(jx)*ov_eieg(id_state)
         end do
     end do
-    if (TIMEIT) then
-        call date_and_time(values=ia_dtime)
-        write(output_unit, fmt_dtime) "LORG correction", ia_dtime(1:3), &
-            ia_dtime(5:7)
-    end if
+    if (TIMEIT) call write_time('LORG correction')
     if (use_giao) then
         call sos_MCD_tensor_LORG_corr( &
             n_states, n_els, id_state, id_state, r_gg, r_lk, p_lk, ov_eieg, &
@@ -606,7 +497,300 @@ program mcd_tensor
     ! Correct using a factor of 1/2
     G_if = G_if / 2.0_real64
 
-    write(*, '("MCD G tensor",/)')
-    write(*, '(3es15.6)') G_if
+    call sec_header(2, 'Final Value')
+    write(iu_out, '(10X,"X              Y              Z")')
+    do i = 1, 3
+        write(iu_out, '(1x,a,3es15.6)') labXYZ_1D(i), G_if(i,:)
+    end do
+
+contains
+    function fmt_param(label, sub) result(res)
+        !! Formats the parameter label for output
+        implicit none
+
+        integer, parameter :: maxchar = 44
+
+        character(len=*), intent(in) :: label
+        !! Label of the parameter
+        logical, intent(in), optional :: sub
+        !! Build parameter label as suboption.
+        character(len=maxchar) :: res
+        !! Result of the function
+
+        logical :: main
+
+        if (present(sub)) then
+            main = .not.sub
+        else
+            main = .true.
+        end if
+
+        if (main) then
+            res = ' - ' // trim(label) // ' ' // repeat('-', maxchar)
+            res(maxchar:maxchar) = '>'
+        else
+            res = '   > ' // trim(label)
+            res(maxchar:maxchar) = ':'
+        end if
+    end function fmt_param
+
+    subroutine parse_opts
+        !! Parses commandline options and updates information.
+        !!
+        !! Builds options parser and parse user-options, setting
+        !! default values where necessary
+        implicit none
+
+        character(len=512) :: outfile
+        class(CmdArgDB), allocatable :: opts
+
+        ! Build parser and check arguments
+        opts = CmdArgDB(progname='mcd_tensor')
+        if (opts%error%raised()) then
+            write(*, '(a)') 'Failed to initialize the command-line parser'
+            select type (err => opts%error)
+                class is (AllocateError)
+                    write(*, '(a)') trim(err%msg())
+                class is (ArgumentError)
+                    write(*, '(a)') trim(err%msg())
+                class is (Error)
+                    write(*, '(a)') trim(err%msg())
+                class default
+                    write(*, '(a)') 'Unknown error.'
+            end select
+            stop
+        end if
+        call opts%add_arg_char( &
+            'string', err, label='filename', &
+            help='Gaussian formatted checkpoint file')
+        call opts%add_arg_real( &
+            'real', err, longname='--gamma', &
+            help='Include a shift term, gamma, to avoid a divergence of the &
+                &denominator in the summation with close states (unit: Hartree).',&
+            def_value=real(e_gamma), min_value=0.0)
+        call opts%add_arg_int( &
+            'scalar', err, longname='--final', &
+            help='Final excited electronic state (starting from 1)', &
+            min_value=1)
+        call opts%add_arg_bool( &
+            'store_true', err, longname='--giao', &
+            help='Include GIAO corrections (default)', &
+            def_value=.True.)
+        call opts%add_arg_bool( &
+            'store_true', err, longname='--guvcde', &
+            help='Add printing similar to SOS/GUVCDE for control.')
+        call opts%add_arg_bool( &
+            'store_false', err, longname='--no-giao', &
+            help='Include GIAO corrections')
+        call opts%add_arg_char( &
+            'string', err, label='output', shortname='-o', longname='--output', &
+            help='Name of the file to store the output. Existing content will &
+            &be overwritten.')
+        
+        if (TIMEIT) call write_time('Option parser')
+        call opts%parse_args(err)
+        if (err%raised()) then
+            select type (err)
+                class is (ValueError)
+                    write(*, '(a)') trim(err%msg())
+                class is (Error)
+                    write(*, '(a)') trim(err%msg())
+                class default
+                    write(*, '(a)') 'Unknown error while reading "gamma"'
+            end select
+            stop
+        end if
+        if (opts%is_user_set('output', err)) then
+            call opts%get_value('output', outfile, err)
+            open(newunit=iu_out, file=outfile, action='write')
+            call sec_header(-1, 'MCD Tensor Calculator')
+        end if
+        call sec_header(1, 'Simulation Parameters')
+        write(iu_out, '(1x)')
+        if(DEBUG) call write_param("Debugging mode", .true.)
+        if(TIMEIT) call write_param("Timer", .true.)
+
+
+        if (opts%is_user_set('giao', err) &
+            .and. opts%is_user_set('no-giao', err)) then
+            write(*, '(" Error: conflicting option for the definition of GIAO")')
+            stop
+        end if
+        
+        if (opts%is_user_set('no-giao', err)) use_giao = .False.
+        call write_param('GIAO correction', use_giao)
+
+        if (opts%is_user_set('guvcde', err)) for_guvcde = .True.
+        call write_param('Compatibility mode with GUVCDE', for_guvcde)
+
+        call opts%get_value('gamma', e_gamma, err)
+        use_gamma = abs(e_gamma) > tiny(e_gamma)
+        call write_param('Correction term against degeneracies', use_gamma)
+        if (use_gamma) &
+            call write_param('Value of the term (in Hartrees)', e_gamma, .true.)
+
+        call opts%get_value('filename', fname, err)
+        inquire(file=fname, exist=exists)
+        if (.not.exists) then
+            write(*, '("Error: File ",a," does not exist.")') trim(fname)
+            stop
+        end if
+        call write_param('Input filename', fname)
+
+        if (opts%is_user_set('final', err)) then
+            call opts%get_value('final', fstate, err)
+            call write_param('Final electronic state', fstate)
+        else
+            fstate = -1
+            call write_param('Final electronic state', 'automatic')
+        end if
+
+    end subroutine parse_opts
+
+    subroutine write_moldata
+        !! Writes molecular data.
+        !!
+        !! Write some of the molecular data stored in the moldata module
+        !! for mcd_tensor.
+        implicit none
+
+        character(len=:), allocatable :: tag_bfunD, tag_bfunF, tag_open
+
+        1100 format(/, &
+            ' > Number of atoms           : ',i0,/, &
+            ' > Charge                    : ',i0,/, &
+            ' > Multiplicity              : ',i0,/, &
+            ' > Open-/Closed-shell        : ',a,//, &
+            ' > Number of basis functions : ',i0,/, &
+            ' > Type of D functions       : ',a,/, &
+            ' > Type of F functions       : ',a,/, &
+            ' > Number of atomic orbitals : ',i0)
+
+        if (openshell) then
+            tag_open = 'open'
+        else
+            tag_open = 'closed'
+        end if
+
+        if (pureD) then
+            tag_bfunD = 'pure'
+        else
+            tag_bfunD = 'Cartesian'
+        end if
+        if (pureF) then
+            tag_bfunF = 'pure'
+        else
+            tag_bfunF = 'Cartesian'
+        end if
+
+        write(iu_out, 1100) n_at, charge, multip, tag_open, n_basis, &
+            tag_bfunD, tag_bfunF, n_ao
+
+        call sec_header(2, 'Atomic coordinates')
+        call prt_coord(n_at, at_lab, at_crd, at_mas)
+    end subroutine write_moldata
+
+    subroutine write_param_bool(param, status, subparam)
+        !! Writes status for logical-type parameter.
+        !!
+        !! Formats and writes one parameter of simulation with the
+        !! specified status.
+        implicit none
+
+        character(len=*), intent(in) :: param
+        !! Parameter name (with info like unit).
+        logical, intent(in) :: status
+        !! Status
+        logical, intent(in), optional :: subparam
+        !! Parameter is a sub-parameter type
+
+        1000 format(a,1x,"enabled")
+        1010 format(a,1x,"disabled")
+
+        if (status) then
+            write(iu_out, 1000) fmt_param(param, subparam)
+        else
+            write(iu_out, 1010) fmt_param(param, subparam)
+        end if
+    end subroutine write_param_bool
+
+    subroutine write_param_int(param, value, subparam)
+        !! Writes value of integer-type parameter.
+        !!
+        !! Formats and writes one parameter of simulation with the
+        !! indicated value.
+        implicit none
+
+        character(len=*), intent(in) :: param
+        !! Parameter name (with info like unit).
+        integer, intent(in) :: value
+        !! Value associated to parameter
+        logical, intent(in), optional :: subparam
+        !! Parameter is a sub-parameter type
+
+        1000 format(a,1x,i0)
+
+        write(iu_out, 1000) fmt_param(param, subparam), value
+    end subroutine write_param_int
+
+    subroutine write_param_real(param, value, subparam)
+        !! Writes value of real-type parameter.
+        !!
+        !! Formats and writes one parameter of simulation with the
+        !! indicated value.
+        implicit none
+
+        character(len=*), intent(in) :: param
+        !! Parameter name (with info like unit).
+        real(real64), intent(in) :: value
+        !! Value associated to parameter
+        logical, intent(in), optional :: subparam
+        !! Parameter is a sub-parameter type
+
+        1000 format(a,1x,f0.4)
+        1010 format(a,es13.6)
+
+        if (abs(value) < 1.0e-2_real64 .or. abs(value) > 1.0e4_real64) then
+            write(iu_out, 1010) fmt_param(param, subparam), value
+        else
+            write(iu_out, 1000) fmt_param(param, subparam), value
+        end if
+    end subroutine write_param_real
+
+    subroutine write_param_char(param, value, subparam)
+        !! Writes value of character-type parameter.
+        !!
+        !! Formats and writes one parameter of simulation with the
+        !! indicated value.
+        implicit none
+
+        character(len=*), intent(in) :: param
+        !! Parameter name (with info like unit).
+        character(len=*), intent(in) :: value
+        !! Value associated to parameter
+        logical, intent(in), optional :: subparam
+        !! Parameter is a sub-parameter type
+
+        1000 format(a,1x,a)
+
+        write(iu_out, 1000) fmt_param(param, subparam), trim(value)
+    end subroutine write_param_char
+
+    subroutine write_time(label)
+        !! Writes time information.
+        !!
+        !! Writes time data at call time, displaying the label as well.
+        implicit none
+
+        character(len=*), intent(in) :: label
+        !! Label to display in printing information
+
+        integer, dimension(8) :: ia_dtime
+
+        1000 format('Entering: ',a,' - Date: ',i4,'/',i2.2,'/',i2.2,' at ', &
+            i2.2,':',i2.2,':',i2.2)
+        call date_and_time(values=ia_dtime)
+        write(iu_out, 1000) trim(label), ia_dtime(1:3), ia_dtime(5:7)
+    end subroutine write_time
 
 end program mcd_tensor

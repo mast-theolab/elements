@@ -5,6 +5,10 @@ module string
     !! - Conversion to lower case
     !! - Conversion to upper case
     !! - find string in array
+
+    character(len=1), dimension(3), parameter :: labXYZ_1D = ['X', 'Y', 'Z']
+    character(len=2), dimension(6), parameter :: &
+        labXYZ_LT = ['XX', 'XY', 'YY', 'XZ', 'YZ', 'ZZ']
 contains
 
 ! ======================================================================

@@ -511,7 +511,8 @@ end function coef_C2P
 
 ! ======================================================================
 
-subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err)
+subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
+                        debug)
     !! Correct basis sets coefficients to normalize the AOs.
     !!
     !! Checks if atomic orbitals are normalized and otherwise correct
@@ -532,6 +533,8 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err)
     !! Basis set DB
     class(BaseException), allocatable, intent(out) :: err
     !! Error instance
+    logical, intent(in), optional :: debug
+    !! Enable debugging printing
 
     integer, parameter :: &
         dimPa = 24  ! maximum used dimension for Pascal's triangle
@@ -551,9 +554,12 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err)
     real(real64), dimension(:,:), allocatable, target :: c2p_D, c2p_F, c2p_G, &
         c2p_H, c2p_I
     real(real64), dimension(:,:), pointer :: c2pi, c2pj
+    logical :: dbg_print = .false.
     class(BaseException), allocatable :: suberr
 
     err = InitError()
+
+    if (present(debug)) dbg_print = debug
 
     if (.not.allocated(itri_pa)) then
         call build_PascalTriangle(dimPa)
@@ -566,8 +572,10 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err)
     ! build an array of ones as reference for the conversion Cart -> Pure if
     !   primitive already in Cartesian.
 
-    1000 format(1x,i0,' orbitals read on ',i0,' atoms')
-    write(iout, 1000) n_ao, n_at
+    if (dbg_print) then
+        1000 format(1x,i0,' orbitals read on ',i0,' atoms')
+        write(iout, 1000) n_ao, n_at
+    end if
 
     allocate(ao_norms(n_ao), ao_ovlp(max_nxyz,n_ao))
     ao_norms = 0.0_real64
@@ -721,8 +729,10 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err)
         end do
     end do
 
-    write(iout, '(a)') 'atomic orbital norms before normalization:'
-    write(iout, '(6f12.6)') (ao_norms(i),i=1,n_ao)
+    if (dbg_print) then
+        write(iout, '(a)') 'atomic orbital norms before normalization:'
+        write(iout, '(6f12.6)') (ao_norms(i),i=1,n_ao)
+    end if
 
     ! Now normalize
     ia0 = 1

@@ -17,7 +17,7 @@ program mcd_tensor
 
     implicit none
 
-    integer :: fstate, i, iab, istate, ix, jstate, jx, qty_flag
+    integer :: fstate, i, iab, istate, ix, jstate, jx, max_states, qty_flag
     real(real64) :: de, ef, ei
     real(real64) :: e_gamma = 1.0e-4
     real(real64), dimension(3) :: &
@@ -220,11 +220,29 @@ program mcd_tensor
         end select
     end if
     write(iu_out, 1200) n_states, id_state
+
+    call sec_header(2, 'User overrides')
+    exists = .false.
     if (fstate > 0 .and. fstate /= id_state) then
-        write(iu_out, '(/," Changing reference state to state num. ",i0)') &
+        exists = .true.
+        write(iu_out, '(" > New final state, num. ",i0,".")') &
             fstate
         id_state = fstate
     end if
+    if (max_states > n_states) then
+        exists = .true.
+        write(iu_out, '(1x,"NOTE: ",a,/,1x,a)') &
+            'Requested upper bound exceeds available states.', &
+            'Reverting to highest available state.'
+    else if (max_states > 0) then
+        exists = .true.
+        write(iu_out, '(" > Setting highest electronic state to ",i0,".")') &
+            max_states
+        n_states = max_states
+    end if
+    if (.not.exists) &
+        write(iu_out, '(1x,a)') &
+            'No modifications requested. Proceeding with data found.'
 
     ! call prt_mat(g2e_dens(:,:,1,1), n_basis, n_basis)
 
@@ -569,7 +587,7 @@ contains
                 &denominator in the summation with close states (unit: Hartree).',&
             def_value=real(e_gamma), min_value=0.0)
         call opts%add_arg_int( &
-            'scalar', err, longname='--final', &
+            'scalar', err, shortname='-f', longname='--final', &
             help='Final excited electronic state (starting from 1)', &
             min_value=1)
         call opts%add_arg_bool( &
@@ -579,6 +597,10 @@ contains
         call opts%add_arg_bool( &
             'store_true', err, longname='--guvcde', &
             help='Add printing similar to SOS/GUVCDE for control.')
+        call opts%add_arg_int( &
+            'scalar', err, shortname='-m', longname='--max-state', &
+            help='Highest electronic state to include (upper bound of summation)', &
+            min_value=1)
         call opts%add_arg_bool( &
             'store_false', err, longname='--no-giao', &
             help='Include GIAO corrections')
@@ -643,6 +665,14 @@ contains
         else
             fstate = -1
             call write_param('Final electronic state', 'automatic')
+        end if
+
+        if (opts%is_user_set('max-states', err)) then
+            call opts%get_value('max-states', max_states, err)
+            call write_param('Highest excited state', max_states)
+        else
+            max_states = -1
+            call write_param('Highest excited state', 'include all')
         end if
 
     end subroutine parse_opts

@@ -667,8 +667,8 @@ contains
             call write_param('Final electronic state', 'automatic')
         end if
 
-        if (opts%is_user_set('max-states', err)) then
-            call opts%get_value('max-states', max_states, err)
+        if (opts%is_user_set('max-state', err)) then
+            call opts%get_value('max-state', max_states, err)
             call write_param('Highest excited state', max_states)
         else
             max_states = -1

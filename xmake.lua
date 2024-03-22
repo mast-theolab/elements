@@ -45,6 +45,8 @@ target("apidoc")
     end)
 
     set_kind("object")
+    -- deactive from default build --
+    set_default(false)
     set_targetdir("doc/api")
     -- make the test target support the construction rules of the markdown file
     add_rules("ford")
@@ -62,6 +64,7 @@ target("userdoc")
     end)
 
     set_kind("object")
+    -- deactive from default build --
     set_targetdir("doc")
     -- make the test target support the construction rules of the markdown file
     add_rules("adoc")
@@ -114,4 +117,3 @@ target("mcd_tensor")
     add_files("src/prog/gmcd_output.f90")
     add_files("src/prog/gmcd_legacy.f90")
     add_files("src/prog/mcd_tensor.f90")
-

@@ -364,17 +364,17 @@ program mcd_tensor
         if (TIMEIT) call write_time('GIAO terms')
         allocate(r_lk(3,n_states,0:n_states), p_lk(3,n_states,0:n_states), &
                  ov_eiej(0:n_states,0:n_states))
+        ov_eiej(0,0) = 0.0_real64
+        ov_eiej(id_state,0) = ov_eieg(id_state)
+        ov_eiej(0,id_state) = -ov_eieg(id_state)
         do istate = 1, n_states
+            ! This should never be used, since NaN, filled only for display
+            ov_eiej(istate,istate) = 0.0_real64
             ! We exclude id_states so we can treat last and preserve the
             !   prefactors
             if (istate /= id_state) then
-                ei = g2e_energy(istate)
-                if (use_gamma) then
-                    ov_eiej(istate,0) = ei/(ei**2 + e_gamma**2)
-                else
-                    ov_eiej(istate,0) = 1.0_real64/ei
-                end if
-                ov_eiej(0,istate) = - ov_eiej(istate,0)
+                ov_eiej(istate,0) = ov_eieg(istate)
+                ov_eiej(0,istate) = -ov_eieg(istate)
                 pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
                                           t_mo(:,:,:,istate), r_gg_ab, Smo_irj)
                 pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
@@ -387,6 +387,7 @@ program mcd_tensor
                     sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_irj)
                 p_lk(:,istate,0) = &
                     sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_ipj)
+                ei = g2e_energy(istate)
                 do jstate = 1, n_states
                     if (jstate /= istate) then
                         r_lk(:,istate,jstate) = &

@@ -306,7 +306,7 @@ subroutine sos_MCD_tensor_LORG_corr(n_states, n_els, fstate, kstate, r_gg, &
             end if
         end if
         ! Contrib. to T6: <l|r|k> x <f|p|l> / (e_l - e_f)
-        if (kstate /= fstate) then
+        if (lstate /= fstate) then
             t6 = t6 + cross(r_ij(:,lstate,kstate), p_ij(:,fstate,lstate)) &
                 * ov_eiej(lstate,fstate)
         end if

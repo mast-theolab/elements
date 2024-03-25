@@ -803,7 +803,7 @@ module procedure add_argument_char
 
     ! Check argument type and basic pre-processing
     select case (locase(argtype))
-        case('string')
+        case('string', 'scalar')
             is_scalar = .True.
             new_arg => arg_val
         case('list')

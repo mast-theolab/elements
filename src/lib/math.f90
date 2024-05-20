@@ -20,6 +20,7 @@ recursive function factorial(n) result(n1)
     !! Compute the factorial n!
     !!
     !! Given a value n, computes the corresponding factorial
+    implicit none
 
     integer :: n1
     !! factorial
@@ -44,6 +45,7 @@ function dcross(vecA, vecB) result(vecC)
     !!
     !! Computes the cross vector between 2 Cartesian vectors.
     !! @note: double precision version
+    implicit none
 
     real(real64), dimension(3) :: vecA
     !! vector A
@@ -66,6 +68,7 @@ function scross(vecA, vecB) result(vecC)
     !!
     !! Computes the cross vector between 2 Cartesian vectors.
     !! @note: simple precision version
+    implicit none
 
     real(real32), dimension(3) :: vecA
     !! vector A
@@ -88,8 +91,8 @@ subroutine build_PascalTriangle(n, do_real)
     !!
     !! Builds a 2D array with the coefficients of Pascal's triangle
     !!   up to a chosen limit.
-
     implicit none
+
     integer, intent(in) :: n
     !! Size of the triangle
     logical, intent(in), optional :: do_real
@@ -122,8 +125,8 @@ pure function int_xn_e2ax2(n, a) result(res)
     !!
     !! Computes and returns the integral:
     !! \[ \int_{-\infty}^{+\infty} x^n e^{-2 a x^2} dx \]
-
     implicit none
+
     integer, intent(in) :: n
     !! Power of x
     real(real64), intent(in) :: a
@@ -164,8 +167,8 @@ elemental function phii_xn_phij(only_R, ni, xi, ai, nj, xj, aj, nk) result(res)
     !! \[ I = \sqrt{\pi} * R * e^{-a_i a_j * {\delta_{ij}}^2/(a_i + a_j)} \]
     !! with \(\delta_{ij} = x_j - x_i\)
     !! Alternatively, only the R part can be returned.
-
     implicit none
+
     logical, intent(in) :: only_R
     !! Return only R instead of the whole integral
     integer, intent(in) :: ni

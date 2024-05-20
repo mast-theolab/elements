@@ -409,8 +409,7 @@ subroutine sec_header(level, title)
         write(fmt, 1040) ltitle
         write(iu_out, fmt) trim(title)
     case(4:)
-        write(fmt, 1050) ltitle
-        write(iu_out, fmt) trim(title)
+        write(iu_out, 1050) trim(title)
     case default
         print *, 'Unknown header level.  Stopping.'
         stop

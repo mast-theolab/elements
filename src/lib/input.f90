@@ -4,6 +4,7 @@ module input
     !! Contains data and procedures to process input data/options.
     use iso_fortran_env, only: real64
     use string, only: locase
+    use arrays, only: symm_tri_array
     use parsefchk, only: fchkdata, fchkparser
     use basisset, only: build_bset_DB
     use atomic, only: atdata
@@ -317,8 +318,7 @@ subroutine build_transdata_fchk(fname, n_ab, n_basis, err)
     ]
 
     integer :: &
-        i, &
-        ioff, &
+        i,  i_ab, ioff, nbas_lt, &
         lblock_ETran, &  ! Length of a data block for a given state
         NLR              ! indicate if left and right trans. matrix data stored
     real(real64) :: rval
@@ -365,7 +365,20 @@ subroutine build_transdata_fchk(fname, n_ab, n_basis, err)
     allocate(g2e_dens(n_basis,n_basis,2,n_states), &
              exc_dens(n_basis,n_basis,n_ab,n_states))
     g2e_dens = reshape(dbase(8)%rdata, [n_basis,n_basis,2,n_states])
-    exc_dens = reshape(dbase(9)%rdata, [n_basis,n_basis,n_ab,n_states])
+    ! Excited-state densities are stored in lower-triangular forms.
+    ! We need to unpack them.
+    ! They are always stored for both a and b, but in case of closed-shell.
+    nbas_lt = n_basis*(n_basis+1)/2
+    do i = 1, n_states
+        ioff = (i-1)*2*nbas_lt
+        do i_ab = 1, n_ab
+            call symm_tri_array(n_basis, &
+                                dbase(9)%rdata(ioff+(i_ab-1)*nbas_lt+1:), &
+                                linear=.True., lower=.True., &
+                                anti_symm=.False., &
+                                arr_new=exc_dens(:,:,i_ab,i))
+        end do
+    end do
 
 end subroutine build_transdata_fchk
 

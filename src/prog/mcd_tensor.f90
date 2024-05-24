@@ -1,7 +1,7 @@
 program mcd_tensor
     use iso_fortran_env, only: real64, output_unit
     use string, only: labXYZ_1D
-    use input, only: build_moldata, build_transdata
+    use input, only: DataFile
     use parse_cmdline, only: CmdArgDB
     use output, only: iu_out, sec_header, len_int, prt_coord, prt_mat, &
       write_err
@@ -78,28 +78,23 @@ program mcd_tensor
     ! Write title
     call sec_header(-1, 'MCD Tensor Calculator')
 
-    call parse_opts
+    call parse_argopts(infile, outfile, e_gamma, fstate, max_state, &
+        use_gamma, do_giao, do_guvcde, in_mem)
+    dfile = DataFile(infile)
+    if (dfile%has_error()) then
+        call write_err('std', 'Error found while initializing data file', &
+                       dfile%get_error())
+        stop 1
+    end if
 
     call sec_header(1, 'Data on Molecular System')
     if (TIMEIT) call write_time('Molecular data')
-    call build_moldata(fname, err)
-    if (err%raised()) then
-        select type(err)
-            class is (FileError)
-                call write_err('std', 'Error found with input file', err%msg())
-                stop
-            class is (Error)
+    call dfile%build_moldata()
+    if (dfile%has_error()) then
                 call write_err('std', &
-                    'Error found while parsing basic molecular data', &
-                    err%msg() &
-                )
-                stop
-            class default
-                call write_err('gen', &
-                    'Something went wrong while parsing molecular data.' &
-                )
-                stop
-        end select
+            'Error found while parsing molecular data in file', &
+            dfile%get_error())
+            stop 1
     end if
     if (openshell) then
         call write_err('gen', &
@@ -109,7 +104,7 @@ program mcd_tensor
     end if
     call write_moldata
 
-    if (for_guvcde) then
+    if (do_guvcde) then
         if (TIMEIT) call write_time('GUVCDE write control')
         call write_control(iu_out, err)
         if (err%raised()) then
@@ -154,7 +149,7 @@ program mcd_tensor
     ! overlap6
     qty_flag = 2**10 - 1
     ! qty_flag = ibset(qty_flag, 0)
-    call overlap_ao_1e(iu_out, n_at, n_ao, qty_flag, for_guvcde, in_mem, &
+    call overlap_ao_1e(iu_out, n_at, n_ao, qty_flag, do_guvcde, in_mem, &
                        at_crd, nprim_per_at, bset_info, ao_int, err)
     if (err%raised()) then
         select type(err)
@@ -177,7 +172,7 @@ program mcd_tensor
 
     call sec_header(2, 'Definition of Molecular Orbitals')
     ! convert AO -> MO quantities of interest
-    if (for_guvcde) then
+    if (do_guvcde) then
         if (TIMEIT) call write_time('GUVCDE build MOs')
         call build_MOs(n_ab, n_ao, n_mos, coef_mos, .true.)
     endif
@@ -200,24 +195,12 @@ program mcd_tensor
 
     call sec_header(1, 'Transition Data')
     if (TIMEIT) call write_time('Transition data')
-    call build_transdata(fname, n_ab, n_basis, err)
-    if (err%raised()) then
-        select type(err)
-            class is (FileError)
-                call write_err('std', 'Error found with input file', err%msg())
-                stop
-            class is (Error)
+    call dfile%build_excdata()
+    if (dfile%has_error()) then
                 call write_err('std', &
-                    'Error while parsing transition data', &
-                    err%msg() &
-                )
-                stop
-            class default
-                call write_err('gen', &
-                    'Something went wrong while parsing transition data.' &
-                )
-                stop
-        end select
+            'Error found while parsing excited-states data in file', &
+            dfile%get_error())
+            stop 1
     end if
     write(iu_out, 1200) n_states, id_state
 
@@ -229,16 +212,16 @@ program mcd_tensor
             fstate
         id_state = fstate
     end if
-    if (max_states > n_states) then
+    if (max_state > n_states) then
         exists = .true.
         write(iu_out, '(1x,"NOTE: ",a,/,1x,a)') &
             'Requested upper bound exceeds available states.', &
             'Reverting to highest available state.'
-    else if (max_states > 0) then
+    else if (max_state > 0) then
         exists = .true.
         write(iu_out, '(" > Setting highest electronic state to ",i0,".")') &
-            max_states
-        n_states = max_states
+            max_state
+        n_states = max_state
     end if
     if (.not.exists) &
         write(iu_out, '(1x,a)') &
@@ -360,7 +343,7 @@ program mcd_tensor
 
     ! For GIAO, we do some pre-processing by building the combinations
     !   < l | O | k > and < l | O | g > to be used later.
-    if (use_giao) then
+    if (do_giao) then
         if (TIMEIT) call write_time('GIAO terms')
         allocate(r_lk(3,n_states,0:n_states), p_lk(3,n_states,0:n_states), &
                  ov_eiej(0:n_states,0:n_states))
@@ -418,15 +401,7 @@ program mcd_tensor
                               p_gg_ab, Smo_ipj)
     pfac_rxp = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
                                 rxp_gg_ab, Smo_irxpj)
-    if (use_giao) then
-        r_lk(:,id_state,id_state) = &
-            sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,id_state), pfac_r)
-        p_lk(:,id_state,id_state) = &
-            sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,id_state), pfac_p)
-        r_lk(:,id_state,0) = &
-            sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irj)
-        p_lk(:,id_state,0) = &
-            sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_ipj)
+    if (do_giao) then
         do istate = 1, n_states
             if (istate /= id_state) then
                 r_lk(:,id_state,istate) = &
@@ -444,7 +419,7 @@ program mcd_tensor
     ! Compute the transition moment < f | O | g >
     ! we need to correct the sign of p and divided by the energy
     if (TIMEIT) call write_time('Transition moments')
-    if (use_giao) then
+    if (do_giao) then
         r_fg = r_lk(:,id_state,0)
         p_fg = -p_lk(:,id_state,0) / g2e_energy(id_state)
     else
@@ -477,7 +452,7 @@ program mcd_tensor
                         + r_kg(ix)*rxp_fk(jx)*ov_eief(istate)
                 end do
             end do
-            if (use_giao) then
+            if (do_giao) then
                 call sos_MCD_tensor_LORG_corr( &
                     n_states, n_els, id_state, istate, r_gg, r_lk, p_lk, &
                     ov_eieg, ov_eiej, G_if)
@@ -495,7 +470,7 @@ program mcd_tensor
         end do
     end do
     if (TIMEIT) call write_time('LORG correction')
-    if (use_giao) then
+    if (do_giao) then
         call sos_MCD_tensor_LORG_corr( &
             n_states, n_els, id_state, id_state, r_gg, r_lk, p_lk, ov_eieg, &
             ov_eiej, G_if)
@@ -507,7 +482,7 @@ program mcd_tensor
                 - r_gg(ix)*rxp_kg(jx)*ov_eieg(id_state)
         end do
     end do
-    if (use_giao) then
+    if (do_giao) then
         call sos_MCD_tensor_LORG_corr( &
             n_states, n_els, id_state, 0, r_gg, r_lk, p_lk, ov_eieg, ov_eiej, &
             G_if)
@@ -553,15 +528,45 @@ contains
         end if
     end function fmt_param
 
-    subroutine parse_opts
+    subroutine parse_argopts(infile, outfile, e_gamma, f_state, max_state, &
+                             use_gamma, do_giao, do_guvcde, in_mem)
         !! Parses commandline options and updates information.
         !!
         !! Builds options parser and parse user-options, setting
-        !! default values where necessary
+        !! default values where necessary.
         implicit none
 
-        character(len=512) :: outfile
+        character(len=:), allocatable, intent(out) :: infile
+        !! Input filename.
+        character(len=:), allocatable, intent(out) :: outfile
+        !! Optional output filename.
+        real(real64), intent(out) :: e_gamma
+        !! Energy shift to avoid accidental degeneracies in summation.
+        integer, intent(out) :: f_state
+        !! Final state of interest.
+        integer, intent(out) :: max_state
+        !! Highest electronic state to consider in the summations.
+        logical, intent(out) :: use_gamma
+        !! Use energy shift correction gamma.
+        logical, intent(out) :: do_giao
+        !! Include GIAO correction.
+        logical, intent(out) :: do_guvcde
+        !! Add special routines to generate data compatible with GUVCDE.
+        !! This is intended for debugging purpose.
+        logical, intent(out) :: in_mem
+        !! Store integrals in memory (default, alternative NYI)
+
+        character(len=1024) :: string
         class(CmdArgDB), allocatable :: opts
+
+        ! Basic initialization
+        e_gamma = 1.0e-4_real64
+        do_guvcde = .false.  ! No testing.  Code does not try to match SOS/GUVCDE.
+        do_giao = .true.  ! Include GIAO correction
+        in_mem = .true.  ! Store everything in memory
+        use_gamma = .true.  ! Use energy correction gamma
+        f_state = -1  ! Final state is chosen automatically
+        max_state = -1  ! Highest state in summation chosen automatically
 
         ! Build parser and check arguments
         opts = CmdArgDB(progname='mcd_tensor')
@@ -623,8 +628,11 @@ contains
             end select
             stop
         end if
+
+        ! Output file
         if (opts%is_user_set('output', err)) then
-            call opts%get_value('output', outfile, err)
+            call opts%get_value('output', string, err)
+            outfile = trim(string)
             open(newunit=iu_out, file=outfile, action='write')
             call sec_header(-1, 'MCD Tensor Calculator')
         end if
@@ -633,50 +641,57 @@ contains
         if(DEBUG) call write_param("Debugging mode", .true.)
         if(TIMEIT) call write_param("Timer", .true.)
 
-
+        ! Check requirement to use/not use GIAO correction
         if (opts%is_user_set('giao', err) &
             .and. opts%is_user_set('no-giao', err)) then
             write(*, '(" Error: conflicting option for the definition of GIAO")')
             stop
         end if
         
-        if (opts%is_user_set('no-giao', err)) use_giao = .False.
-        call write_param('GIAO correction', use_giao)
+        if (opts%is_user_set('no-giao', err)) then
+            do_giao = .false.
+        else if (opts%is_user_set('giao', err)) then
+            do_giao = .true.
+        end if
+        call write_param('GIAO correction', do_giao)
 
-        if (opts%is_user_set('guvcde', err)) for_guvcde = .True.
-        call write_param('Compatibility mode with GUVCDE', for_guvcde)
+        ! Check requirement for GUVCDE compatibility
+        if (opts%is_user_set('guvcde', err)) do_guvcde = .true.
+        call write_param('Compatibility mode with GUVCDE', do_guvcde)
 
+        ! Check for value of e_gamma
         call opts%get_value('gamma', e_gamma, err)
         use_gamma = abs(e_gamma) > tiny(e_gamma)
         call write_param('Correction term against degeneracies', use_gamma)
         if (use_gamma) &
             call write_param('Value of the term (in Hartrees)', e_gamma, .true.)
 
-        call opts%get_value('filename', fname, err)
-        inquire(file=fname, exist=exists)
+        ! Get input file name
+        call opts%get_value('filename', string, err)
+        infile = trim(string)
+        inquire(file=infile, exist=exists)
         if (.not.exists) then
-            write(*, '("Error: File ",a," does not exist.")') trim(fname)
+            write(*, '("Error: File ",a," does not exist.")') trim(infile)
             stop
         end if
-        call write_param('Input filename', fname)
+        call write_param('Input filename', infile)
 
+        ! Set default final state.
         if (opts%is_user_set('final', err)) then
-            call opts%get_value('final', fstate, err)
-            call write_param('Final electronic state', fstate)
+            call opts%get_value('final', f_state, err)
+            call write_param('Final electronic state', f_state)
         else
-            fstate = -1
             call write_param('Final electronic state', 'automatic')
         end if
 
         if (opts%is_user_set('max-state', err)) then
-            call opts%get_value('max-state', max_states, err)
-            call write_param('Highest excited state', max_states)
+            call opts%get_value('max-state', max_state, err)
+            call write_param('Highest excited state', max_state)
         else
-            max_states = -1
             call write_param('Highest excited state', 'include all')
         end if
 
-    end subroutine parse_opts
+    end subroutine parse_argopts
 
     subroutine write_moldata
         !! Writes molecular data.

@@ -4,7 +4,7 @@ module exception
     !! Module providing types for exception handling in other modules.
     private
     public :: InitError, RaiseError, RaiseAllocateError, RaiseArgError, &
-        RaiseFileError, RaiseTermination, RaiseValueError
+        RaiseFileError, RaiseKeyError, RaiseTermination, RaiseValueError
 
     type, public, abstract :: BaseException
         private
@@ -59,6 +59,13 @@ module exception
         procedure, private :: set_msg => set_file_message
     end type FileError
 
+    type, public, extends(BaseException) :: KeyError
+        character(len=256), public :: key = ' '
+        character(len=64), public :: action = ' '
+    contains
+        procedure, private :: set_msg => set_key_message
+    end type KeyError
+
     type, public, extends(BaseException) :: ArgumentError
         character(len=256), public :: arg = ' '
         character(len=512), public :: reason = ' '
@@ -79,9 +86,9 @@ function InitError() result(err)
     !!   that uses the error system provided by this module to initialize
     !!   the associated variable with an "OK" status for later testing.
     type(NoError), allocatable :: err
-    
+
     allocate(err)
-    
+
     return
 end function InitError
 
@@ -98,7 +105,7 @@ subroutine RaiseError(err, msg)
     !! Message to include in the error
 
     type(Error), allocatable :: newerr
-    
+
     allocate(newerr)
     call newerr%raise(msg)
 
@@ -124,7 +131,7 @@ subroutine RaiseArgError(err, arg, reason)
     !! Reason for the error related to `arg`
 
     type(ArgumentError), allocatable :: newerr
-    
+
     allocate(newerr)
     newerr%arg = trim(arg)
     if (present(reason)) newerr%reason = trim(reason)
@@ -149,7 +156,7 @@ subroutine RaiseTermination(err, msg_)
     !! Message to include in the error
 
     type(Termination), allocatable :: newerr
-    
+
     allocate(newerr)
     if (present(msg_)) then
         call newerr%raise(msg_)
@@ -195,7 +202,7 @@ subroutine RaiseValueError(err, msg, motive)
 
     if (allocated(err)) deallocate(err)
     err = newerr
-    
+
 end subroutine RaiseValueError
 
 ! ======================================================================
@@ -230,13 +237,13 @@ subroutine RaiseAllocateError(err, what, errmsg)
 
     if (allocated(err)) deallocate(err)
     err = newerr
-    
+
 end subroutine RaiseAllocateError
 
 ! ======================================================================
 
 subroutine RaiseFileError(err, file, action, osmsg)
-    !! Sets a file-related error error.
+    !! Sets a file-related error.
     !!
     !! Takes an instance of BaseException and sets it to the
     !!   file-related error.
@@ -268,8 +275,46 @@ subroutine RaiseFileError(err, file, action, osmsg)
 
     if (allocated(err)) deallocate(err)
     err = newerr
-    
+
 end subroutine RaiseFileError
+
+! ======================================================================
+
+subroutine RaiseKeyError(err, key, action, reason)
+    !! Sets a keyword/quantity-related error.
+    !!
+    !! Takes an instance of BaseException and sets it to the
+    !!   key-related error.
+    !!
+    !! Note: action should be as gerund (parsing, searching...)
+    class(BaseException), allocatable, intent(inout) :: err
+    !! Original error, updated on return
+    character(len=*), intent(in) :: key
+    !! Keyword / quantity name.
+    character(len=*), intent(in) :: action
+    !! Action on the key (search/parse...).
+    character(len=*), intent(in), optional :: reason
+    !! Reason for the error.
+
+    type(KeyError), allocatable :: newerr
+
+    allocate(newerr)
+    if (key /= ' ') then
+        newerr%key = '"' // trim(key) // '"'
+    else
+        newerr%key = '<unknown>'
+    end if
+    if (action /= ' ') then
+        newerr%action = trim(action)
+    else
+        newerr%action = 'looking for'
+    end if
+    call newerr%raise(reason)
+
+    if (allocated(err)) deallocate(err)
+    err = newerr
+
+end subroutine RaiseKeyError
 
 ! ======================================================================
 
@@ -336,7 +381,7 @@ end subroutine set_noerror
 ! ======================================================================
 
 subroutine set_error_message(this, msg)
-    !! Set message of a standard error
+    !! Sets message of a standard error.
     !!
     !! Sets a message and changes the status of a basic error
     class(Error) :: this
@@ -357,9 +402,12 @@ end subroutine set_error_message
 ! ======================================================================
 
 subroutine set_allocate_message(this, msg)
-    !! Set message of a standard error
+    !! Sets error message for an AllocateError exception.
     !!
-    !! Sets a message and changes the status of a basic error
+    !! Sets the error message and updates the status of an exception.
+    !! The error message can be set in two ways:
+    !! - by providing directly the msg (no different from BaseException)
+    !! - through the attribute `msg`
     class(AllocateError) :: this
     character(len=*), intent(in), optional :: msg
 
@@ -378,9 +426,12 @@ end subroutine set_allocate_message
 ! ======================================================================
 
 subroutine set_value_message(this, msg)
-    !! Set message of a standard error
+    !! Sets error message for a ValueError exception.
     !!
-    !! Sets a message and changes the status of a basic error
+    !! Sets the error message and updates the status of an exception.
+    !! The error message can be set in two ways:
+    !! - by providing directly the msg (no different from BaseException)
+    !! - through the attribute `msg
     class(ValueError) :: this
     character(len=*), intent(in), optional :: msg
 
@@ -399,9 +450,13 @@ end subroutine set_value_message
 ! ======================================================================
 
 subroutine set_file_message(this, msg)
-    !! Set message of a standard error
+    !! Sets error message for a FileError exception.
     !!
-    !! Sets a message and changes the status of a basic error
+    !! Sets the error message and updates the status of an exception.
+    !! The first part of the message is built from internal attributes
+    !! `file` and `action`.
+    !! An optional second part (the reason) is included if `msg` is
+    !! provided.
     class(FileError) :: this
     character(len=*), intent(in), optional :: msg
 
@@ -414,7 +469,7 @@ subroutine set_file_message(this, msg)
         write(new_msg, '("Error encountered while ",a," file ",a,".")') &
             trim(this%action), trim(this%file)
     end if
-    
+
     call set_status(this, new_msg)
 
     return
@@ -422,8 +477,36 @@ end subroutine set_file_message
 
 ! ======================================================================
 
+subroutine set_key_message(this, msg)
+    !! Sets error message for a KeyError exception.
+    !!
+    !! Sets the error message and updates the status of an exception.
+    !! The first part of the message is built from internal attributes
+    !! `key` and `action`.
+    !! An optional second part (the reason) is included if `msg` is
+    !! provided.
+    class(KeyError) :: this
+    character(len=*), intent(in), optional :: msg
+
+    character(len=1024) :: new_msg
+
+    if (present(msg)) then
+        write(new_msg, '("Error while ",a,1x,a,".",a,"Reason: ",a)') &
+            trim(this%action), trim(this%key), new_line(' '), trim(msg)
+    else
+        write(new_msg, '("Error encountered while ",a,1x,a,".")') &
+            trim(this%action), trim(this%key)
+    end if
+
+    call set_status(this, new_msg)
+
+    return
+end subroutine set_key_message
+
+! ======================================================================
+
 subroutine set_argerr_message(this, msg)
-    !! Set error message for an ArgumentError exception
+    !! Set error message for an ArgumentError exception.
     !!
     !! Sets the error message and updates the status of an exception.
     !! The error message can be set in two ways:

@@ -3,7 +3,8 @@ module parsefchk
     use output, only: iu_out
     private
 
-    integer, parameter :: LHEAD = 42, NCOLS_R = 5, NCOLS_I = 6
+    integer, parameter :: LHEAD = 42, NCOLS_C = 5, NCOLS_R = 5, NCOLS_I = 6, &
+        LFMT_C = 12
     type, public :: fchkdata
         character(len=:), allocatable :: key
         character(len=1) :: dtype
@@ -12,7 +13,7 @@ module parsefchk
         real(real64), dimension(:), allocatable :: rdata
         complex(real64), dimension(:), allocatable :: zdata
         logical, dimension(:), allocatable :: ldata
-        character(len=:), dimension(:), allocatable :: cdata
+        character(len=:), allocatable :: cdata
     end type fchkdata
 
     ! TODO: We could add int_kind, real_kind for more versatile parser
@@ -181,7 +182,8 @@ function readdata(line, unit, key) result(res)
     integer, intent(in) :: unit
     character(len=*), intent(in) :: key, line
 
-    character(len=64) :: string
+    integer :: i
+    character(len=64) :: string, fmt
 
     allocate(character(len=len(key)) :: res%key)
     res%key = key
@@ -195,6 +197,12 @@ function readdata(line, unit, key) result(res)
             case ('I')
                 allocate(res%idata(res%len))
                 read(unit, *) (res%idata(i), i=1, res%len)
+            case ('C')
+                allocate(character(len=LFMT_C*res%len):: res%cdata)
+                write(fmt, '("(a",i0,")")') NCOLS_C*LFMT_C
+                do i = 1, ceiling(res%len/real(NCOLS_C))
+                    read(unit, fmt) res%cdata((i-1)*NCOLS_C*LFMT_C+1:)
+                end do
             case default
                 write(iu_out, '(a)') 'DEVERR: Unsupported data type in FChk'
                 stop

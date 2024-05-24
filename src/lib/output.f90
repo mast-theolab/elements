@@ -293,7 +293,7 @@ subroutine prt_mat_r64(mat, n_row, n_col, iunit_, ncol_by_blk_, prec_, thresh_)
     if (present(iunit_)) then
         iu = iunit_
     else
-        iu = output_unit
+        iu = iu_out
     end if
 
     ! Build formats

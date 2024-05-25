@@ -8,7 +8,7 @@ module output
     !! - print atomic coordinates -> prt_coord
     use iso_fortran_env, only: real32, real64, int32, int64, output_unit
     use string, only: locase
-    use physic, only: PhysFact
+    use physics, only: PhysFact
 
     implicit none
 

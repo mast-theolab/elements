@@ -8,7 +8,7 @@ module gmcd_legacy
     use output, only: iu_out
     use electronic, only: convert_AO2MO
     use moldata
-    use physic, only: PhysFact
+    use physics, only: PhysFact
     use gmcd_output, only: shell_lmxyz
 
 contains

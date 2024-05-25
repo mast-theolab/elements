@@ -1,4 +1,4 @@
-module physic
+module physics
     !! Physics-related constants and functions
     !!
     !! Provides common phyical constants and subroutines.
@@ -129,4 +129,4 @@ end function d_conv_hartree_to_J
 
 ! ======================================================================
 
-end module physic
+end module physics

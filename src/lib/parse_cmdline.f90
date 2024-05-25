@@ -624,7 +624,7 @@ module subroutine get_value_chararr(this, argname, result, err)
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
-    character(len=*), dimension(:), allocatable, intent(out) :: result
+    character(len=:), dimension(:), allocatable, intent(out) :: result
     !! Associated value.
     class(BaseException), allocatable, intent(out) :: err
     !! Error instance

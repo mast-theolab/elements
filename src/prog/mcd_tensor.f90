@@ -18,6 +18,7 @@ program mcd_tensor
     implicit none
 
     type DebugType
+        logical :: user_set ! user has activated some debugging features.
         logical :: print    ! enable debug printing
         logical :: timer    ! add timer
         logical :: add_ijaa ! add <ia||ja> terms in pfac for exc-exc integrals
@@ -95,7 +96,7 @@ program mcd_tensor
     if (debug%timer) call write_time('Molecular data')
     call dfile%build_moldata()
     if (dfile%has_error()) then
-                call write_err('std', &
+        call write_err('std', &
             'Error found while parsing molecular data in file', &
             dfile%get_error())
             stop 1
@@ -204,7 +205,7 @@ program mcd_tensor
     if (debug%timer) call write_time('Transition data')
     call dfile%build_excdata()
     if (dfile%has_error()) then
-                call write_err('std', &
+        call write_err('std', &
             'Error found while parsing excited-states data in file', &
             dfile%get_error())
             stop 1
@@ -584,6 +585,7 @@ contains
         f_state = -1  ! Final state is chosen automatically
         max_state = -1  ! Highest state in summation chosen automatically
         ! Debug mode
+        debug%user_set = .false.
         debug%print = .false.
         debug%timer = .false.
         debug%add_ijaa = .true.
@@ -655,6 +657,7 @@ contains
 
         ! Check debug flags
         if (opts%is_user_set('debug', err)) then
+            debug%user_set = .true.
             call opts%get_value('debug', svalues, err)
             do i = 1, size(svalues)
                 select case(locase(svalues(i)))
@@ -683,9 +686,7 @@ contains
             call sec_header(-1, 'MCD Tensor Calculator')
         end if
         call sec_header(1, 'Simulation Parameters')
-        write(iu_out, '(1x)')
-        if(debug%print) call write_param("Debugging mode", .true.)
-        if(debug%timer) call write_param("Timer", .true.)
+        call sec_header(2, 'Standard parameters')
 
         ! Check requirement to use/not use GIAO correction
         if (opts%is_user_set('giao', err) &
@@ -735,6 +736,14 @@ contains
             call write_param('Highest excited state', max_state)
         else
             call write_param('Highest excited state', 'include all')
+        end if
+
+        ! debugging mode - print information
+        if (debug%user_set) then
+            call sec_header(2, 'Debugging parameters')
+            call write_param("Extra printing", debug%print)
+            call write_param("Add timer", debug%timer)
+            call write_param("include <ia||ja> terms", debug%add_ijaa)
         end if
 
     end subroutine parse_argopts

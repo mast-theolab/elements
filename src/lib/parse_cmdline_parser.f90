@@ -143,6 +143,10 @@ module procedure parse_args_list
         select type (opt)
             class is (ArgIntList)
                 do_append = .True.
+            class is (ArgRealList)
+                do_append = .True.
+            class is (ArgCharList)
+                do_append = .True.
             class default
                 do_append = .False.
         end select

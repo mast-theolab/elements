@@ -6,6 +6,8 @@ module gmcd_output
     use exception, only: BaseException, ArgumentError, InitError, RaiseError, &
         RaiseArgError
 
+    implicit none
+
 contains
 
 ! ======================================================================
@@ -23,6 +25,7 @@ function shell_lmxyz(shelltype, spherical, err) result(comps)
     !! Error instance
     character(len=:), dimension(:), allocatable :: comps
 
+    integer :: i, ix, iy, iz, j, L
     character(len=1) :: lang
     character(len=60) :: fmt
     character(len=2), parameter :: pm_sign = '+-'

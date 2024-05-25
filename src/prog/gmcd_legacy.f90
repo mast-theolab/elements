@@ -11,6 +11,8 @@ module gmcd_legacy
     use physics, only: PhysFact
     use gmcd_output, only: shell_lmxyz
 
+    implicit none
+
 contains
 
 ! ======================================================================
@@ -22,7 +24,6 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
     !!   orbitals and converts them to molecular orbitals.
     !! New scratch files are created to store them.
     !! In addition, txt files can be created.
-    implicit none
     integer, intent(in) :: n_ab
     !! Number of unique MO sets (1 for closed-shell, 2 for open-shell)
     integer, intent(in) :: n_ao
@@ -137,7 +138,6 @@ subroutine write_control(iout, err)
     !!
     !! This subroutine reproduces the behavior of SOS [writecon]
     !! with ndiff = 0
-    implicit none
     integer, intent(in) :: iout
     !! unit for output
     class(BaseException), allocatable, intent(out) :: err

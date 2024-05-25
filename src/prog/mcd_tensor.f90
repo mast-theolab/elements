@@ -1,6 +1,6 @@
 program mcd_tensor
     use iso_fortran_env, only: real64, output_unit
-    use string, only: labXYZ_1D
+    use string, only: labXYZ_1D, locase
     use input, only: DataFile
     use parse_cmdline, only: CmdArgDB
     use output, only: iu_out, sec_header, len_int, prt_coord, prt_mat, &
@@ -17,7 +17,14 @@ program mcd_tensor
 
     implicit none
 
-    integer :: fstate, i, iab, istate, ix, jstate, jx, max_states, qty_flag
+    type DebugType
+        logical :: print    ! enable debug printing
+        logical :: timer    ! add timer
+        logical :: add_ijaa ! add <ia||ja> terms in pfac for exc-exc integrals
+    end type DebugType
+
+    integer :: fstate, i, iab, istate, ispin_gs, ix, jstate, jx, max_state, &
+        qty_flag
     real(real64) :: de, ef, ei
     real(real64) :: e_gamma = 1.0e-4
     real(real64), dimension(3) :: &
@@ -54,17 +61,14 @@ program mcd_tensor
         Smo_irj, &   ! MO-basis integral < i | r | j >
         Smo_irxpj    ! MO-basis integral < i | r x p | j >
     real(real64), allocatable :: tmp_ao_arr1(:,:), tmp_ao_arrN(:,:,:)
-    ! for_guvcde = true to print information to compare with SOS/GUVCDE
-    logical, parameter :: DEBUG = .False., TIMEIT = .False.
-    logical :: &
-        for_guvcde = .False.,  & ! Code behavior matches SOS/GUVCDE for testing
-        use_gamma = .True., &    ! Use gamma to "fuzzy" singularity condition
-        use_giao = .True., &     ! Use GIAO
-        in_mem = .True., &       ! Store integrals in memory
-        exists
-    character(len=512) :: fmt_elstate, fname
+    ! logical, parameter :: DEBUG = .true., TIMEIT = .false.
+    logical :: do_giao, do_guvcde, exists, forbid, in_mem, use_gamma
+    character(len=512) :: fmt_elstate
+    character(len=:), allocatable :: infile, outfile
+    type(DataFile) :: dfile
     class(ovij_1e), allocatable :: ao_int
     class(BaseException), allocatable :: err
+    type(DebugType) :: debug
 
     interface write_param
         procedure write_param_bool, write_param_int, write_param_real, &
@@ -79,7 +83,7 @@ program mcd_tensor
     call sec_header(-1, 'MCD Tensor Calculator')
 
     call parse_argopts(infile, outfile, e_gamma, fstate, max_state, &
-        use_gamma, do_giao, do_guvcde, in_mem)
+        use_gamma, do_giao, do_guvcde, in_mem, debug)
     dfile = DataFile(infile)
     if (dfile%has_error()) then
         call write_err('std', 'Error found while initializing data file', &
@@ -88,7 +92,7 @@ program mcd_tensor
     end if
 
     call sec_header(1, 'Data on Molecular System')
-    if (TIMEIT) call write_time('Molecular data')
+    if (debug%timer) call write_time('Molecular data')
     call dfile%build_moldata()
     if (dfile%has_error()) then
                 call write_err('std', &
@@ -105,7 +109,7 @@ program mcd_tensor
     call write_moldata
 
     if (do_guvcde) then
-        if (TIMEIT) call write_time('GUVCDE write control')
+        if (debug%timer) call write_time('GUVCDE write control')
         call write_control(iu_out, err)
         if (err%raised()) then
             select type(err)
@@ -125,9 +129,9 @@ program mcd_tensor
     end if
 
     ! normalization coeffs
-    if (TIMEIT) call write_time('Check AO normalization')
+    if (debug%timer) call write_time('Check AO normalization')
     call fix_norm_AOs(iu_out, n_at, n_ao, at_crd, nprim_per_at, bset_info, &
-                      err, DEBUG)
+                      err, debug%print)
     if (err%raised()) then
         select type(err)
             class is (Error)
@@ -145,7 +149,7 @@ program mcd_tensor
     end if
 
     call sec_header(2, 'Computation of one-electron integrals')
-    if (TIMEIT) call write_time('1-e AO integral')
+    if (debug%timer) call write_time('1-e AO integral')
     ! overlap6
     qty_flag = 2**10 - 1
     ! qty_flag = ibset(qty_flag, 0)
@@ -173,28 +177,29 @@ program mcd_tensor
     call sec_header(2, 'Definition of Molecular Orbitals')
     ! convert AO -> MO quantities of interest
     if (do_guvcde) then
-        if (TIMEIT) call write_time('GUVCDE build MOs')
+        if (debug%timer) call write_time('GUVCDE build MOs')
         call build_MOs(n_ab, n_ao, n_mos, coef_mos, .true.)
     endif
     ! call convert_AO2MO(n_ao, n_mo, coef_mos(1), ao_int%i_j, Smo_ij)
     allocate(Smo_irj(3,n_mo,n_mo,n_ab), Smo_ipj(3,n_mo,n_mo,n_ab), &
              Smo_irxpj(3,n_mo,n_mo,n_ab))
     allocate(tmp_ao_arr1(n_ao,n_ao), tmp_ao_arrN(3,n_ao,n_ao))
-    if (TIMEIT) call write_time('AO to MO conversion')
+    if (debug%timer) call write_time('AO to MO conversion')
     do iab = 1, n_ab
+        if (debug%timer) call write_time('<i|r|j>')
         call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_r_j, &
                            Smo_irj(:,:,:,iab), tmp_ao_arrN)
-        if (TIMEIT) call write_time('<i|p|j>')
+        if (debug%timer) call write_time('<i|p|j>')
         call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_p_j, &
                            Smo_ipj(:,:,:,iab), tmp_ao_arrN)
-        if (TIMEIT) call write_time('<i|rxp|j>')
+        if (debug%timer) call write_time('<i|rxp|j>')
         call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), &
                            ao_int%i_rxp_j, Smo_irxpj(:,:,:,iab), tmp_ao_arrN)
     end do
     ! call convert_AO2MO(n_ao, n_mo, coef_mos(1), ao_int%i_j)
 
     call sec_header(1, 'Transition Data')
-    if (TIMEIT) call write_time('Transition data')
+    if (debug%timer) call write_time('Transition data')
     call dfile%build_excdata()
     if (dfile%has_error()) then
                 call write_err('std', &
@@ -230,7 +235,7 @@ program mcd_tensor
     ! call prt_mat(g2e_dens(:,:,1,1), n_basis, n_basis)
 
     call sec_header(2, 'Definition of Transition Amplitudes')
-    if (TIMEIT) call write_time('Build trans. amplitudes')
+    if (debug%timer) call write_time('Build trans. amplitudes')
     allocate(t_mo(n_mo, n_mo, n_ab, n_states))
     ! "Now doing state num. ",i3," out of 123
     write(fmt_elstate, '("('' Now doing state num. '',i",i0,",'' out of '',&
@@ -262,7 +267,7 @@ program mcd_tensor
     call sec_header(1, 'Computation of Properties')
     call sec_header(2, 'Ground-state properties')
 
-    if (TIMEIT) call write_time('Ground-state moments')
+    if (debug%timer) call write_time('Ground-state moments')
     p_gg_ab = 0.0_real64
     r_gg_ab = 0.0_real64
     rxp_gg_ab = 0.0_real64
@@ -297,7 +302,7 @@ program mcd_tensor
     edip_nuc(2) = sum(at_crd(2,:)*at_chg)
     edip_nuc(3) = sum(at_crd(3,:)*at_chg)
 
-    if (DEBUG) then
+    if (debug%print) then
         write(iu_out, '(a)') 'Electric dipole'
         write(iu_out, '("Nucl.: X = ",f12.6,", Y = ",f12.6,", Z = ",f12.6,/&
             &"Elec.: X = ",f12.6,", Y = ",f12.6,", Z = ",f12.6,/,&
@@ -308,7 +313,7 @@ program mcd_tensor
 
     call sec_header(2, 'Transition Energies Factors')
 
-    if (TIMEIT) call write_time('Transition energies')
+    if (debug%timer) call write_time('Transition energies')
     allocate(ov_eieg(n_states), ov_eief(n_states))
     ef = g2e_energy(id_state)
     do istate = 1, n_states
@@ -344,7 +349,7 @@ program mcd_tensor
     ! For GIAO, we do some pre-processing by building the combinations
     !   < l | O | k > and < l | O | g > to be used later.
     if (do_giao) then
-        if (TIMEIT) call write_time('GIAO terms')
+        if (debug%timer) call write_time('GIAO terms')
         allocate(r_lk(3,n_states,0:n_states), p_lk(3,n_states,0:n_states), &
                  ov_eiej(0:n_states,0:n_states))
         ov_eiej(0,0) = 0.0_real64
@@ -394,7 +399,7 @@ program mcd_tensor
     ! The prefactor are used to compute < f | O | e_i > and < f | O | g >
     !   (the latter for GIAO)
     ! For this reason, they are pre-computed once to speed up later
-    if (TIMEIT) call write_time('Prefactors')
+    if (debug%timer) call write_time('Prefactors')
     pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
                               r_gg_ab, Smo_irj)
     pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
@@ -418,7 +423,7 @@ program mcd_tensor
 
     ! Compute the transition moment < f | O | g >
     ! we need to correct the sign of p and divided by the energy
-    if (TIMEIT) call write_time('Transition moments')
+    if (debug%timer) call write_time('Transition moments')
     if (do_giao) then
         r_fg = r_lk(:,id_state,0)
         p_fg = -p_lk(:,id_state,0) / g2e_energy(id_state)
@@ -430,14 +435,10 @@ program mcd_tensor
     rxp_fg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irxpj)
 
     G_if = 0.0_real64
-    if (DEBUG) write(iu_out, '(a)') 'NOW ON G_IF'
+    if (debug%print) write(iu_out, '(a)') 'NOW ON G_IF'
     do istate = 1, n_states
         if (istate /= id_state) then
-            r_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_irj)
-            rxp_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_irxpj)
-            r_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_r)
-            rxp_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_rxp)
-            if (DEBUG) then
+            if (debug%print) then
                 write(iu_out, '(i4,"r_kg   ",3f12.6)') istate, r_kg
                 write(iu_out, '(4x,"rxp_kg ",3f12.6)') rxp_kg
                 write(iu_out, '(4x,"r_fk   ",3f12.6)') r_fk
@@ -469,7 +470,7 @@ program mcd_tensor
                 + r_fk(ix)*rxp_kg(jx)*ov_eieg(id_state)
         end do
     end do
-    if (TIMEIT) call write_time('LORG correction')
+    if (debug%timer) call write_time('LORG correction')
     if (do_giao) then
         call sos_MCD_tensor_LORG_corr( &
             n_states, n_els, id_state, id_state, r_gg, r_lk, p_lk, ov_eieg, &
@@ -529,7 +530,7 @@ contains
     end function fmt_param
 
     subroutine parse_argopts(infile, outfile, e_gamma, f_state, max_state, &
-                             use_gamma, do_giao, do_guvcde, in_mem)
+                             use_gamma, do_giao, do_guvcde, in_mem, debug)
         !! Parses commandline options and updates information.
         !!
         !! Builds options parser and parse user-options, setting
@@ -555,8 +556,12 @@ contains
         !! This is intended for debugging purpose.
         logical, intent(out) :: in_mem
         !! Store integrals in memory (default, alternative NYI)
+        type(DebugType), intent(out) :: debug
+        !! Debug flags
 
+        integer :: i
         character(len=1024) :: string
+        character(len=:), dimension(:), allocatable :: svalues
         class(CmdArgDB), allocatable :: opts
 
         ! Basic initialization
@@ -567,6 +572,10 @@ contains
         use_gamma = .true.  ! Use energy correction gamma
         f_state = -1  ! Final state is chosen automatically
         max_state = -1  ! Highest state in summation chosen automatically
+        ! Debug mode
+        debug%print = .false.
+        debug%timer = .false.
+        debug%add_ijaa = .true.
 
         ! Build parser and check arguments
         opts = CmdArgDB(progname='mcd_tensor')
@@ -614,8 +623,12 @@ contains
             'string', err, label='output', shortname='-o', longname='--output', &
             help='Name of the file to store the output. Existing content will &
             &be overwritten.')
+        call opts%add_arg_char( &
+            'list', err, label='debug', longname='--debug', &
+            help='Debug flags. Supported: "print", "no_ijaa", "add_ijaa"')
+        call opts%add_arg_int( &
+            'list', err, label='jj', longname='--jj', help='jj')
         
-        if (TIMEIT) call write_time('Option parser')
         call opts%parse_args(err)
         if (err%raised()) then
             select type (err)
@@ -629,6 +642,28 @@ contains
             stop
         end if
 
+        ! Check debug flags
+        if (opts%is_user_set('debug', err)) then
+            call opts%get_value('debug', svalues, err)
+            do i = 1, size(svalues)
+                select case(locase(svalues(i)))
+                    case ('print')
+                        debug%print = .true.
+                    case ('noprint')
+                        debug%print = .false.
+                    case ('timer')
+                        debug%timer = .true.
+                    case ('notimer')
+                        debug%timer = .false.
+                    case ('ijaa')
+                        debug%add_ijaa = .true.
+                    case ('noijaa')
+                        debug%add_ijaa = .false.
+                end select
+            end do
+        end if
+        if (debug%timer) call write_time('Option parser')
+
         ! Output file
         if (opts%is_user_set('output', err)) then
             call opts%get_value('output', string, err)
@@ -638,8 +673,8 @@ contains
         end if
         call sec_header(1, 'Simulation Parameters')
         write(iu_out, '(1x)')
-        if(DEBUG) call write_param("Debugging mode", .true.)
-        if(TIMEIT) call write_param("Timer", .true.)
+        if(debug%print) call write_param("Debugging mode", .true.)
+        if(debug%timer) call write_param("Timer", .true.)
 
         ! Check requirement to use/not use GIAO correction
         if (opts%is_user_set('giao', err) &

@@ -1,0 +1,101 @@
+ /----------------------------------------------------------------------------\
+ |                                                                            |
+ |                           MCD Tensor Calculator                            |
+ |                                                                            |
+ \----------------------------------------------------------------------------/
+
+
+ Simulation Parameters
+ =====================
+
+ Standard parameters
+ -------------------
+ - GIAO correction ------------------------> disabled
+ - Compatibility mode with GUVCDE ---------> disabled
+ - Correction term against degeneracies ---> enabled
+   > Value of the term (in Hartrees)       : 1.000000E-04
+ - Input filename -------------------------> HOF.vac.UB3LYP.321G.TD.GDV.fchk
+ - Final electronic state -----------------> automatic
+ - Highest excited state ------------------> include all
+
+
+ Data on Molecular System
+ ========================
+
+ > Number of atoms           : 3
+ > Charge                    : 0
+ > Multiplicity              : 1
+ > Open-/Closed-shell        : open
+
+ > Number of basis functions : 20
+ > Type of D functions       : Cartesian
+ > Type of F functions       : pure
+ > Number of atomic orbitals : 20
+
+ Atomic coordinates
+ ------------------
+ ===== ============ ========================================
+ Atom      Mass             X            Y            Z
+ ----- ------------ ----------------------------------------
+  O       15.9949        0.055603     0.738149     0.000000
+  H        1.0078       -0.945248     0.856640    -0.000000
+  F       18.9984        0.055603    -0.751315    -0.000000
+ ===== ============ ========================================
+
+ Computation of one-electron integrals
+ -------------------------------------
+ Entering overlap_ao_1e
+
+ Definition of Molecular Orbitals
+ --------------------------------
+
+
+ Transition Data
+ ===============
+
+ > Number of excited states : 4
+ > Reference excited state  : 1
+
+ User overrides
+ --------------
+ No modifications requested. Proceeding with data found.
+
+ Definition of Transition Amplitudes
+ -----------------------------------
+ Now doing state num. 1 out of 4.
+ Now doing state num. 2 out of 4.
+ Now doing state num. 3 out of 4.
+ Now doing state num. 4 out of 4.
+
+
+ Computation of Properties
+ =========================
+
+ Ground-state properties
+ -----------------------
+
+ Transition Energies Factors
+ ---------------------------
+
+
+ MCD Tensor
+ ==========
+
+ Computing tensor G_if:
+           --      <f|u|k><k|m|i>    --       <f|m|k><k|u|i>
+    G_if = \       --------------  + \        --------------
+           /_ k!=i    E_k - E_i      /_ k!=f     E_k - E_f
+
+    i:   initial state
+    f:   final state
+    k:   intermediate state
+    u:   electric dipole
+    m:   magnetic dipole
+    E_i: energy of state i
+
+ Final Value
+ -----------
+          X              Y              Z
+ X   4.081878E-17   1.750504E-17   2.623903E-17
+ Y   5.423096E-16  -1.105345E-15   1.417899E-16
+ Z  -2.986587E-16  -1.468048E-15  -1.856290E-17

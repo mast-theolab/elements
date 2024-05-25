@@ -116,8 +116,54 @@ target("mcd_tensor")
     add_files("src/prog/gmcd_output.f90")
     add_files("src/prog/gmcd_legacy.f90")
     add_files("src/prog/mcd_tensor.f90")
+    set_rundir("$(projectdir)/tests")
+    -- Check that input data are consistent with formchk from G16/GDV
+    add_tests("HOF:default with G16 fchk",
+              {runargs = {"HOF.vac.B3LYP.321G.TD.G16.fchk", "--no-giao",
+                          "-o", "mcd_hof_default_g16.txt"}})
+    add_tests("HOF:default with GDV fchk",
+              {runargs = {"HOF.vac.B3LYP.321G.TD.GDV.fchk", "--no-giao",
+                          "-o", "mcd_hof_default_gdv.txt"}})
+    -- Check that unrestricted and closed-shell 50-50 singlet-triplet are
+    --   consistent, GIAO correction deactivated (transition S0 -> T1).
+    add_tests("HOF:openshell, final=T1, no GIAO",
+              {runargs = {"HOF.vac.UB3LYP.321G.TD.GDV.fchk", "--no-giao",
+                          "-o", "mcd_hof_openshell_no-GIAO.txt"}})
+    add_tests("HOF:closed 50-50, final=T1, no GIAO",
+              {runargs = {"HOF.vac.B3LYP.321G.TD.GDV.5050.fchk", "--no-giao",
+                          "-o", "mcd_hof_closed_50-50_no-GIAO.txt"}})
+    -- Check that unrestricted and closed-shell 50-50 are consistent (S0->S1)
+    add_tests("HOF:openshell, final=S1, no GIAO",
+              {runargs = {"HOF.vac.UB3LYP.321G.TD.GDV.fchk", "--no-giao",
+                          "-o", "mcd_hof_openshell_no-GIAO_S1.txt",
+                          "--final=2", "--debug=ijaa"}})
+    add_tests("HOF:closed 50-50, final=S1, no GIAO",
+              {runargs = {"HOF.vac.B3LYP.321G.TD.GDV.5050.fchk", "--no-giao",
+                          "-o", "mcd_hof_closed_50-50_no-GIAO_S1.txt",
+                          "--final=2", "--debug=ijaa"}})
+    -- Same as before but deactivates the component <ia|ja> in the prefactor
+    --   as done in GUVCDE for closed-shells but not open-shells calculations.
+    add_tests("HOF:openshell, final=S1, no GIAO, no <ia|ja>",
+              {runargs = {"HOF.vac.UB3LYP.321G.TD.GDV.fchk", "--no-giao",
+                          "-o", "mcd_hof_openshell_no-GIAO_no-ijaa_S1.txt",
+                          "--final=2", "--debug=noijaa"}})
+    add_tests("HOF:closed 50-50, final=S1, no GIAO, no <ia|ja>",
+              {runargs = {"HOF.vac.B3LYP.321G.TD.GDV.5050.fchk", "--no-giao",
+                          "-o", "mcd_hof_closed_50-50_no-GIAO_no-ijaa_S1.txt",
+                          "--final=2", "--debug=noijaa"}})
+    -- Check that unrestricted and closed-shell 50-50 are consistent with GIAO
+    add_tests("HOF:openshell, final=S1, GIAO",
+              {runargs = {"HOF.vac.UB3LYP.321G.TD.GDV.fchk",
+                          "-o", "mcd_hof_openshell_S1.txt",
+                          "--final=2"}})
+    add_tests("HOF:closed 50-50, final=S1, GIAO",
+              {runargs = {"HOF.vac.B3LYP.321G.TD.GDV.5050.fchk",
+                          "-o", "mcd_hof_closed_50-50_S1.txt",
+                          "--final=2"}})
+
 
 target("tcd_cube")
+    set_default(false)
     set_kind("binary")
     add_packages("openmp")
     add_deps("corelib")

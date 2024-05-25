@@ -20,13 +20,15 @@ contains
 
 ! ======================================================================
 
-function sos_eiOg(ldim, n_ab, n_mos, t_mo, O_ij) result(res)
+function sos_eiOg(ldim, n_ab, n_mos, t_mo, O_ij, forbid) result(res)
     !! Compute < e_i | O | g > using the SOS formalism
     !!
     !! Computes the ground-to-excited integral < e_i | O | g > using the
     !!   summation over molecular orbitals, where O is an arbitrary
     !!   operator.
     !! The function expects all quantities wrt molecular orbitals.
+    !! If forbid is true, the transition is forbidden in standard
+    !!   theory, for instance singlet-triplet transitions.
     implicit none
 
     integer, intent(in) :: ldim
@@ -39,6 +41,8 @@ function sos_eiOg(ldim, n_ab, n_mos, t_mo, O_ij) result(res)
     !! Electronic transition amplitudes
     real(real64), dimension(:,:,:,:), intent(in) :: O_ij
     !! MO-integrals for the quantity/property of interest
+    logical, intent(in), optional :: forbid
+    !! Transition is forbidden (transition moment = 0).
     real(real64), dimension(:), allocatable :: res
     !! Integral < e_j | O | g >
     
@@ -47,6 +51,9 @@ function sos_eiOg(ldim, n_ab, n_mos, t_mo, O_ij) result(res)
     allocate(res(ldim))
 
     res = 0.0_real64
+    if (present(forbid)) then
+        if (forbid) return
+    end if
     do iab = 1, n_ab
         do ia = 1, n_mos(iab)
             do ib = 1, n_mos(iab)
@@ -61,12 +68,14 @@ end function sos_eiOg
 
 ! ======================================================================
 
-function sos_ejOei(ldim, n_ab, n_mos, t_mo, prefac) result(res) ! dodjk
+function sos_ejOei(ldim, n_ab, n_mos, t_mo, prefac, forbid) result(res) ! dodjk
     !! Compute < e_j | O | e_i > using the SOS formalism
     !!
     !! Computes the excited-to-excited integral < e_j | O | e_i > using
     !!   the summation over molecular orbitals.
     !! The function expects all quantities wrt molecular orbitals.
+    !! If forbid is true, the transition is forbidden in standard
+    !!   theory, for instance singlet-triplet transitions.
     implicit none
 
     integer, intent(in) :: ldim
@@ -79,6 +88,8 @@ function sos_ejOei(ldim, n_ab, n_mos, t_mo, prefac) result(res) ! dodjk
     !! Electronic transition amplitudes
     real(real64), dimension(:,:,:,:), intent(in) :: prefac
     !! Prefactor, computed by [sos_prefac_ejOei]
+    logical, intent(in), optional :: forbid
+    !! Transition is forbidden (transition moment = 0).
     real(real64), dimension(:), allocatable :: res
     !! Integral < e_j | O | e_i >
 
@@ -87,6 +98,9 @@ function sos_ejOei(ldim, n_ab, n_mos, t_mo, prefac) result(res) ! dodjk
     allocate(res(ldim))
     
     res = 0.0_real64
+    if (present(forbid)) then
+        if (forbid) return
+    end if
     do iab = 1, n_ab
         do ia = 1, n_mos(iab)
             do ib = 1, n_mos(iab)

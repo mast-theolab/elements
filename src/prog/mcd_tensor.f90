@@ -100,13 +100,15 @@ program mcd_tensor
             dfile%get_error())
             stop 1
     end if
-    if (openshell) then
-        call write_err('gen', &
-            'Sorry, open-shell systems not yet supported.  Working on it.' &
-            )
-        stop
-    end if
+    ! if (openshell) then
+    !     call write_err('gen', &
+    !         'Sorry, open-shell systems not yet supported.  Working on it.' &
+    !         )
+    !     stop
+    ! end if
     call write_moldata
+    ! Post-processing to build additional data
+    ispin_gs = multip - 1
 
     if (do_guvcde) then
         if (debug%timer) call write_time('GUVCDE write control')
@@ -244,24 +246,15 @@ program mcd_tensor
         write(iu_out, fmt_elstate) istate, n_states
         t_mo(:,:,:,istate) = eltrans_amp(n_ab, n_ao, n_mos, ao_int%i_j, &
                                          g2e_dens(:,:,:,istate), tmp_ao_arr1, &
-                                         .True., coef_mos)
-        ! ! call prt_mat(transpose(g2e_dens(:,:,1,istate)), n_ao, n_ao)
-        ! do i = 1, n_basis
-        !     do j = 1, n_basis
-        !         tmp(j,i) = 0.0_real64
-        !         do k = 1, n_basis
-        !             do l = 1, n_basis
-        !                 tmp(j,i) = tmp(j,i) + &
-        !                     ao_int%i_j(j,k)*g2e_dens(l,k,1,istate)*ao_int%i_j(l,i)
-        !             end do
-        !         end do
-        !     end do
-        ! end do
-        ! ! call prt_mat(tmp, n_ao, n_ao, thresh_=1.0e-6_real64)
-        ! call convert_AO2MO(n_ao, n_mo, coef_a_mo, tmp, g2e_MOs)
-        ! call prt_mat(t_mo(:,:,1,istate), n_mos(1), n_mos(1), &
-        !              thresh_=1.0e-6_real64)
-
+                                         .true., coef_mos)
+        ! call prt_mat(g2e_dens(:,:,1,istate), n_ao, n_ao, thresh_=1.0e-8_real64)
+        ! write(iu_out, '(1x,a)') 'Transition amplitudes'
+        ! write(iu_out, '(1x,a)') 'Spin ALPHA'
+        ! call prt_mat(t_mo(:,:,1,istate), n_mo, n_mo, thresh_=1.0e-6_real64)
+        ! write(iu_out, '(1x,a)') 'Spin BETA'
+        ! call prt_mat(t_mo(:,:,n_ab,istate), n_mo, n_mo, thresh_=1.0e-6_real64)
+        if (.not.openshell) &
+            t_mo(:,:,:,istate) = t_mo(:,:,:,istate)*sqrt(2.0_real64)
     end do
 
     call sec_header(1, 'Computation of Properties')
@@ -366,24 +359,25 @@ program mcd_tensor
                 pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
                                           t_mo(:,:,:,istate), r_gg_ab, Smo_irj)
                 pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
-                                          t_mo(:,:,:,istate), p_gg_ab, Smo_ipj)
-                r_lk(:,istate,istate) = &
-                    sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_r)
-                p_lk(:,istate,istate) = &
-                    sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_p)
-                r_lk(:,istate,0) = &
-                    sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_irj)
-                p_lk(:,istate,0) = &
-                    sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_ipj)
+                r_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, &
+                    t_mo(:,:,:,istate), pfac_r)
+                p_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, &
+                    t_mo(:,:,:,istate), pfac_p)
+                forbid = .not.openshell .and. &
+                    ispin_exc(istate) /= ispin_gs
+                r_lk(:,istate,0) =  sos_eiOg(3, n_ab, n_mos, &
+                    t_mo(:,:,:,istate), Smo_irj, forbid)
+                p_lk(:,istate,0) = sos_eiOg(3, n_ab, n_mos, &
+                    t_mo(:,:,:,istate), Smo_ipj, forbid)
                 ei = g2e_energy(istate)
                 do jstate = 1, n_states
                     if (jstate /= istate) then
-                        r_lk(:,istate,jstate) = &
-                            sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,jstate), &
-                                      pfac_r)
-                        p_lk(:,istate,jstate) = &
-                            sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,jstate), &
-                                      pfac_p)
+                        forbid = .not.openshell .and. &
+                            ispin_exc(jstate) /= ispin_exc(istate)
+                        r_lk(:,istate,jstate) = sos_ejOei(3, n_ab, n_mos, &
+                            t_mo(:,:,:,jstate), pfac_r, forbid)
+                        p_lk(:,istate,jstate) = sos_ejOei(3, n_ab, n_mos, &
+                            t_mo(:,:,:,jstate), pfac_p, forbid)
                         de = ei - g2e_energy(jstate)
                         if (use_gamma) then
                             ov_eiej(istate,jstate) = de/(de**2 + e_gamma**2)
@@ -407,14 +401,22 @@ program mcd_tensor
     pfac_rxp = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
                                 rxp_gg_ab, Smo_irxpj)
     if (do_giao) then
+        r_lk(:,id_state,id_state) = sos_ejOei(3, n_ab, n_mos, &
+            t_mo(:,:,:,id_state), pfac_r)
+        p_lk(:,id_state,id_state) = sos_ejOei(3, n_ab, n_mos, &
+            t_mo(:,:,:,id_state), pfac_p)
+        r_lk(:,id_state,0) = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), &
+            Smo_irj)
+        p_lk(:,id_state,0) =  sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), &
+            Smo_ipj)
         do istate = 1, n_states
             if (istate /= id_state) then
-                r_lk(:,id_state,istate) = &
-                    sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), &
-                                pfac_r)
-                p_lk(:,id_state,istate) = &
-                    sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), &
-                                pfac_p)
+                forbid = .not.openshell .and. &
+                         ispin_exc(istate) /= ispin_exc(id_state)
+                r_lk(:,id_state,istate) = sos_ejOei(3, n_ab, n_mos, &
+                    t_mo(:,:,:,istate), pfac_r, forbid)
+                p_lk(:,id_state,istate) = sos_ejOei(3, n_ab, n_mos, &
+                    t_mo(:,:,:,istate), pfac_p, forbid)
                 ov_eiej(istate,id_state) = ov_eief(istate)
                 ov_eiej(id_state,istate) = - ov_eief(istate)
             end if
@@ -424,20 +426,27 @@ program mcd_tensor
     ! Compute the transition moment < f | O | g >
     ! we need to correct the sign of p and divided by the energy
     if (debug%timer) call write_time('Transition moments')
+    forbid = .not.openshell .and. ispin_exc(id_state) /= ispin_gs
     if (do_giao) then
         r_fg = r_lk(:,id_state,0)
         p_fg = -p_lk(:,id_state,0) / g2e_energy(id_state)
     else
-        r_fg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irj)
-        p_fg = -sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_ipj) &
-            / g2e_energy(id_state)
+        r_fg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irj, forbid)
+        p_fg = -sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_ipj, &
+                         forbid) / g2e_energy(id_state)
     endif
-    rxp_fg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irxpj)
+    rxp_fg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irxpj, forbid)
 
     G_if = 0.0_real64
     if (debug%print) write(iu_out, '(a)') 'NOW ON G_IF'
     do istate = 1, n_states
         if (istate /= id_state) then
+            forbid = .not.openshell .and. ispin_exc(istate) /= ispin_gs
+            r_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_irj, forbid)
+            rxp_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_irxpj, forbid)
+            forbid = .not.openshell .and. ispin_exc(istate) /= ispin_exc(id_state)
+            r_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_r, forbid)
+            rxp_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_rxp, forbid)
             if (debug%print) then
                 write(iu_out, '(i4,"r_kg   ",3f12.6)') istate, r_kg
                 write(iu_out, '(4x,"rxp_kg ",3f12.6)') rxp_kg
@@ -461,8 +470,9 @@ program mcd_tensor
         end if
     end do
     ! Add special cases for k=g or k=f
-    rxp_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irxpj)
-    r_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,id_state), pfac_r)
+    forbid = .not.openshell .and. ispin_exc(id_state) /= ispin_gs
+    rxp_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irxpj, forbid)
+    r_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,id_state), pfac_r, forbid)
     ! Add case k=f for first term of G
     do jx = 1, 3
         do ix = 1, 3

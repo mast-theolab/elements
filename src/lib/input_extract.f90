@@ -362,6 +362,9 @@ subroutine build_excdata_fchk(dfile)
     id_state = dbase(4)%idata(5)
     lblock_ETran = dbase(4)%idata(2)
 
+    ! Extract excited-states data
+    ispin_exc = dbase(5)%idata
+
     ! Extract transition data values
     allocate(g2e_energy(n_states), g2e_eldip(3,n_states), &
              g2e_magdip(3,n_states))

@@ -113,8 +113,8 @@ end function sos_ejOei
 
 ! ======================================================================
 
-function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij) &
-         result(prefac)
+function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij, &
+                          add_ijaa) result(prefac)
     !! Prefactor to < e_j | O | e_i > for the SOS formalism
     !!
     !! Computes the prefactor term for < e_j | O | e_i > in the SOS
@@ -123,47 +123,58 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij) &
     implicit none
 
     integer, intent(in) :: ldim
-    !! Leading dimension / number of components of O
+    !! Leading dimension / number of components of O.
     integer, intent(in) :: n_ab
-    !! Number of unique MO sets (1 for closed-shell, 2 for open-shell)
+    !! Number of unique MO sets (1 for closed-shell, 2 for open-shell).
     integer, dimension(:), intent(in) :: n_mos
     !! Number of molecular orbitals.
     integer, dimension(:), intent(in) :: n_els
     !! Number of electrons in the molecular orbitals.
     real(real64), dimension(:,:,:), intent(in) :: t_mo
-    !! Electronic transition amplitudes
+    !! Electronic transition amplitudes.
     real(real64), dimension(:,:), intent(in) :: O_gg
-    !! Ground-state moment of the quantity/property
+    !! Ground-state moment of the quantity/property.
     real(real64), dimension(:,:,:,:), intent(in) :: O_ij
-    !! MO-integrals for the quantity/property of interest
+    !! MO-integrals for the quantity/property of interest.
+    logical, intent(in) :: add_ijaa
+    !! Include <ia|ja> terms.
     real(real64), dimension(:,:,:,:), allocatable :: prefac
-    !! Returned prefactor
+    !! Returned prefactor.
 
     integer :: ia, iab, ib, ic, n_mo
-    real(real64), dimension(:), allocatable :: x
-
+    real(real64), dimension(:), allocatable :: x, u_gg
 
     n_mo = maxval(n_mos(:n_ab))
     allocate(prefac(ldim,n_mo,n_mo,n_ab), x(ldim))
+
     prefac = 0.0_real64
 
     if (n_ab == 1) then
-        ! closed shell
-        !$omp parallel private(x)
-        !$omp do collapse(2)
-        do ia = 1, n_mo
-            do ib = 1, n_mo
-                x = t_mo(ia,ib,1) &
-                    * (O_gg(:,1) - O_ij(:,ia,ia,1) + O_ij(:,ib,ib,1))
-                do ic = n_els(1)+1, n_mo
-                    if (ic /= ib) &
-                        x = x + t_mo(ia,ic,1)*O_ij(:,ib,ic,1)
+        u_gg = O_gg(:,1)
+    else
+        u_gg = O_gg(:,1) + O_gg(:,2)
+    end if
+
+    if (add_ijaa) then
+        do iab = 1, n_ab
+            !$omp parallel private(x)
+            !$omp do collapse(2)
+            do ia = 1, n_mos(iab)
+                do ib = 1, n_mos(iab)
+                    x = t_mo(ia,ib,iab) &
+                        * (u_gg - O_ij(:,ia,ia,iab) + O_ij(:,ib,ib,iab))
+                    do ic = 1, n_els(iab)
+                        if (ic /= ia) x = x + t_mo(ic,ib,iab)*O_ij(:,ic,ia,iab)
+                    end do
+                    do ic = n_els(iab)+1, n_mos(iab)
+                        if (ic /= ib) x = x + t_mo(ia,ic,iab)*O_ij(:,ic,ib,iab)
+                    end do
+                    prefac(:,ia,ib,iab) = x
                 end do
-                prefac(:,ia,ib,1) = x
             end do
+            !$omp end do
+            !$omp end parallel
         end do
-        !$omp end do
-        !$omp end parallel
     else
         do iab = 1, n_ab
             !$omp parallel private(x)
@@ -171,12 +182,7 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij) &
             do ia = 1, n_mos(iab)
                 do ib = 1, n_mos(iab)
                     x = t_mo(ia,ib,iab) &
-                        * (O_gg(:,1) + O_gg(:,2) - O_ij(:,ia,ia,iab) &
-                           + O_ij(:,ib,ib,iab))
-                    do ic = 1, n_els(iab)
-                        if (ic /= ia) &
-                            x = x + t_mo(ic,ib,iab)*O_ij(:,ic,ia,iab)
-                    end do
+                        * (u_gg - O_ij(:,ia,ia,iab) + O_ij(:,ib,ib,iab))
                     do ic = n_els(iab)+1, n_mos(iab)
                         if (ic /= ib) &
                             x = x + t_mo(ia,ic,iab)*O_ij(:,ic,ib,iab)
@@ -187,8 +193,52 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij) &
             !$omp end do
             !$omp end parallel
         end do
-
     end if
+    ! if (n_ab == 1) then
+    !     ! closed shell
+    !     !$omp parallel private(x)
+    !     !$omp do collapse(2)
+    !     do ia = 1, n_mo
+    !         do ib = 1, n_mo
+    !             x = t_mo(ia,ib,1) &
+    !                 * (O_gg(:,1) - O_ij(:,ia,ia,1) + O_ij(:,ib,ib,1))
+    !             do ic = n_els(1)+1, n_mo
+    !                 if (ic /= ib) &
+    !                     x = x + t_mo(ia,ic,1)*O_ij(:,ic,ib,1)
+    !             end do
+    !             prefac(:,ia,ib,1) = x
+    !         end do
+    !     end do
+    !     !$omp end do
+    !     !$omp end parallel
+    ! else
+    !     do iab = 1, n_ab
+    !         !$omp parallel private(x)
+    !         !$omp do collapse(2)
+    !         do ia = 1, n_mos(iab)
+    !             do ib = 1, n_mos(iab)
+    !                 ! x = t_mo(ia,ib,iab) &
+    !                 !     * (O_gg(:,1) + O_gg(:,2) - O_ij(:,ia,ia,iab) &
+    !                 !        + O_ij(:,ib,ib,iab))
+    !                 x = t_mo(ia,ib,iab) &
+    !                     * (O_gg(:,iab) - O_ij(:,ia,ia,iab) &
+    !                        + O_ij(:,ib,ib,iab))
+    !                 do ic = 1, n_els(iab)
+    !                     if (ic /= ia) &
+    !                         x = x + t_mo(ic,ib,iab)*O_ij(:,ic,ia,iab)
+    !                 end do
+    !                 do ic = n_els(iab)+1, n_mos(iab)
+    !                     if (ic /= ib) &
+    !                         x = x + t_mo(ia,ic,iab)*O_ij(:,ic,ib,iab)
+    !                 end do
+    !                 prefac(:,ia,ib,iab) = x
+    !             end do
+    !         end do
+    !         !$omp end do
+    !         !$omp end parallel
+    !     end do
+
+    ! end if
 
 end function sos_prefac_ejOei
 

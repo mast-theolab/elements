@@ -357,8 +357,9 @@ program mcd_tensor
                 ov_eiej(istate,0) = ov_eieg(istate)
                 ov_eiej(0,istate) = -ov_eieg(istate)
                 pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
-                                          t_mo(:,:,:,istate), r_gg_ab, Smo_irj)
+                    t_mo(:,:,:,istate), r_gg_ab, Smo_irj, debug%add_ijaa)
                 pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
+                    t_mo(:,:,:,istate), p_gg_ab, Smo_ipj, debug%add_ijaa)
                 r_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, &
                     t_mo(:,:,:,istate), pfac_r)
                 p_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, &
@@ -395,11 +396,11 @@ program mcd_tensor
     ! For this reason, they are pre-computed once to speed up later
     if (debug%timer) call write_time('Prefactors')
     pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-                              r_gg_ab, Smo_irj)
+                              r_gg_ab, Smo_irj, debug%add_ijaa)
     pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-                              p_gg_ab, Smo_ipj)
+                              p_gg_ab, Smo_ipj, debug%add_ijaa)
     pfac_rxp = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-                                rxp_gg_ab, Smo_irxpj)
+                                rxp_gg_ab, Smo_irxpj, debug%add_ijaa)
     if (do_giao) then
         r_lk(:,id_state,id_state) = sos_ejOei(3, n_ab, n_mos, &
             t_mo(:,:,:,id_state), pfac_r)

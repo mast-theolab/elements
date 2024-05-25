@@ -1,5 +1,7 @@
 submodule (parse_cmdline) parse_cmdline_addarg
 
+    implicit none
+
 contains
 
 ! ======================================================================
@@ -28,8 +30,6 @@ module procedure set_arg_names
     !! Optional arguments (starting with "prefixes") can be set as
     !!   required with `required` set to True (it is automatic by
     !!   default).
-    implicit none
-
     integer :: i, larg
     character(len=1) :: prefix
     character(len=:), allocatable :: label_
@@ -143,7 +143,6 @@ module procedure set_arg_helpmsg
     !! Set the help message for the argument.
     !!
     !! Sets the help message to be displayed for a given argument.
-    implicit none
 
     err = InitError()
 
@@ -170,7 +169,6 @@ module procedure add_argument_int
     !! - 'counter': scalar integer, incremented each time
     !! - 'list': list of integers
     !! - 'range': special list, which expect 1 to 3 elements
-    implicit none
 
     integer(int64) :: ival
     logical :: is_scalar
@@ -274,7 +272,7 @@ module procedure add_argument_int
     ! Setup of the parameters
     if (is_scalar) then
         if (present(def_value)) then
-            if (is_number(def_value)) then    
+            if (is_number(def_value)) then
                 arg_val%value = to_int64(def_value)
                 arg_val%is_set = 1
             else
@@ -424,7 +422,6 @@ module procedure add_argument_real
     !! - 'counter': scalar real, incremented each time
     !! - 'list': list of reals
     !! - 'range': special list, which expect 1 to 3 elements
-    implicit none
 
     integer :: ival
     real(real64) :: rval
@@ -529,7 +526,7 @@ module procedure add_argument_real
     ! Setup of the parameters
     if (is_scalar) then
         if (present(def_value)) then
-            if (is_number(def_value)) then    
+            if (is_number(def_value)) then
                 arg_val%value = to_real64(def_value)
                 arg_val%is_set = 1
             else
@@ -677,7 +674,6 @@ module procedure add_argument_bool
     !! Supported type of arguments:
     !! - 'store_true': store True when found.
     !! - 'store_false': store False when found.
-    implicit none
 
     character(len=1024) :: errmsg
     character(len=MAX_ARGLEN) :: argname
@@ -787,7 +783,6 @@ module procedure add_argument_char
     !! Supported type of arguments:
     !! - 'string': scalar character string
     !! - 'list': list of strings
-    implicit none
 
     integer :: ival
     logical :: is_scalar

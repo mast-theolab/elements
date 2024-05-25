@@ -1,5 +1,8 @@
 module numeric
     use iso_fortran_env, only: int16, int32, int64, real32, real64
+
+    implicit none
+
 contains
 
 ! ======================================================================
@@ -8,8 +11,6 @@ function is_integer(arg) result(res)
     !! Check that argument is an integer.
     !!
     !! Checks that argument arg is a valid integer.
-    implicit none
-
     class(*), intent(in) :: arg
     !! Argument to check.
     logical :: res
@@ -34,8 +35,6 @@ function is_real(arg) result(res)
     !! Check that argument is a real number.
     !!
     !! Checks that argument arg is a valid real number.
-    implicit none
-
     class(*), intent(in) :: arg
     !! Argument to check.
     logical :: res
@@ -58,8 +57,6 @@ function is_number(arg) result(res)
     !! Check that argument is a number.
     !!
     !! Checks that argument arg is a valid number.
-    implicit none
-
     class(*), intent(in) :: arg
     !! Argument to check.
     logical :: res
@@ -88,8 +85,6 @@ function to_int64(arg) result(res)
     !! Convert to integer.
     !!
     !! Converts argument `arg` to integer.
-    implicit none
-
     class(*), intent(in) :: arg
     !! Argument to check.
     integer(int64) :: res
@@ -118,8 +113,6 @@ function to_real64(arg) result(res)
     !! Convert to real.
     !!
     !! Converts argument `arg` to real.
-    implicit none
-
     class(*), intent(in) :: arg
     !! Argument to check.
     real(real64) :: res

@@ -5,6 +5,7 @@ module string
     !! - Conversion to lower case
     !! - Conversion to upper case
     !! - find string in array
+    implicit none
 
     character(len=1), dimension(3), parameter :: labXYZ_1D = ['X', 'Y', 'Z']
     character(len=2), dimension(6), parameter :: &
@@ -76,7 +77,6 @@ function findstr(array, string) result(pos)
     !!
     !! Returns the position of `string` in `array`, 0 otherwise.
     !! Array is expected to be 1D.
-    implicit none
 
     character(len=*), dimension(:), intent(in) :: array
     !! Array of strings to search.

@@ -2,6 +2,9 @@ module exception
     !! Module for exception handling
     !!
     !! Module providing types for exception handling in other modules.
+
+    implicit none
+    
     private
     public :: InitError, RaiseError, RaiseAllocateError, RaiseArgError, &
         RaiseFileError, RaiseKeyError, RaiseTermination, RaiseValueError

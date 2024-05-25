@@ -6,6 +6,9 @@ module physic
     !! - PhysFact : derived-type with physical conversion factors
     !! - PhysConst : derived-typw with physical constants 
     use iso_fortran_env, only: real32, real64
+
+    implicit none
+    
     private
 
     real(real64), parameter, public :: &

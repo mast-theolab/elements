@@ -5,6 +5,8 @@ module input
     use iso_fortran_env, only: real64
     use exception, only: BaseException
 
+    implicit none
+
     private
     public :: build_moldata, build_excdata
 

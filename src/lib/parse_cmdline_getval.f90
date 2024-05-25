@@ -1,5 +1,7 @@
 submodule (parse_cmdline) parse_cmdline_getval
 
+    implicit none
+
 contains
 
 ! ======================================================================
@@ -8,7 +10,6 @@ module procedure argval_set_by_user
     !! Return True is value set by user.
     !!
     !! Checks if value set by user and returns True in that case.
-    implicit none
 
     integer :: iarg
 
@@ -30,7 +31,6 @@ module procedure get_value_int32val
     !! Get value for a scalar integer-type option.
     !!
     !! Gets value related to a scalar integer-type option.
-    implicit none
 
     integer :: iarg
 
@@ -68,7 +68,6 @@ module procedure get_value_int64val
     !! Get value for a scalar integer-type option.
     !!
     !! Gets value related to a scalar integer-type option.
-    implicit none
 
     integer :: iarg
 
@@ -100,7 +99,6 @@ module procedure get_value_int32arr
     !! Get list of integer-type values from argname.
     !!
     !! Gets values related to a scalar integer-type option.
-    implicit none
 
     integer :: i, iarg
 
@@ -139,7 +137,6 @@ module procedure get_value_int64arr
     !! Get list of integer-type values from argname.
     !!
     !! Gets values related to a scalar integer-type option.
-    implicit none
 
     integer :: iarg
 
@@ -171,7 +168,6 @@ module procedure get_value_real32val
     !! Get value for a scalar real-type option.
     !!
     !! Gets value related to a scalar real-type option.
-    implicit none
 
     integer :: iarg
 
@@ -209,7 +205,6 @@ module procedure get_value_real64val
     !! Get value for a scalar real-type option.
     !!
     !! Gets value related to a scalar real-type option.
-    implicit none
 
     integer :: iarg
 
@@ -241,7 +236,6 @@ module procedure get_value_real32arr
     !! Get list of real-type values from argname.
     !!
     !! Gets values related to a scalar real-type option.
-    implicit none
 
     integer :: i, iarg
 
@@ -280,7 +274,6 @@ module procedure get_value_real64arr
     !! Get list of real-type values from argname.
     !!
     !! Gets values related to a scalar real-type option.
-    implicit none
 
     integer :: iarg
 
@@ -312,7 +305,6 @@ module procedure get_value_boolval
     !! Get value for a scalar logical-type option.
     !!
     !! Gets value related to a scalar logical-type option.
-    implicit none
 
     integer :: iarg
 
@@ -344,7 +336,6 @@ module procedure get_value_charval
     !! Get value for a scalar character-type option.
     !!
     !! Gets value related to a scalar character-type option.
-    implicit none
 
     integer :: iarg
 
@@ -376,7 +367,6 @@ module procedure get_value_chararr
     !! Get list of character-type values from argname.
     !!
     !! Gets values related to a list character-type option.
-    implicit none
 
     integer :: iarg
 

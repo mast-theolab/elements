@@ -1,6 +1,9 @@
 module parsefchk
     use iso_fortran_env, only: int64, real64
     use output, only: iu_out
+
+    implicit none
+
     private
 
     integer, parameter :: LHEAD = 42, NCOLS_C = 5, NCOLS_R = 5, NCOLS_I = 6, &
@@ -40,7 +43,6 @@ contains
 
 function init_fchk(fname, break) result(fchk)
     ! Pseudo-constructor for fchkparser
-    implicit none
     type(fchkparser) :: fchk
     character(len=*), intent(in) :: fname
     logical, intent(in), optional :: break
@@ -132,7 +134,7 @@ function readitems(this, keys) result(res)
     class(fchkparser) :: this
     character(len=*), dimension(:) :: keys
 
-    integer :: idx, ios, nkeys
+    integer :: i, idx, ios, nkeys
     integer, dimension(:), allocatable :: indexes ! store indexes still to find
     logical :: status
     character(len=256) :: line

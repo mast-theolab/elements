@@ -9,6 +9,8 @@ module basisset
         RaiseArgError
     use output, only: iu_out, len_int
 
+    implicit none
+
     integer, parameter :: max_nxyz = 28
     type, public :: PrimitiveFunction
         !! primitive basis function.
@@ -53,7 +55,6 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
     !!
     !! Builds a list of the basis functions sorted by atoms and
     !!   primitives.
-    implicit none
     integer, intent(in) :: n_at
     !! Number of atoms
     integer, intent(in) :: n_shells
@@ -222,7 +223,6 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
     !!
     !! Computes and returned the unique normalized coefficients relevant
     !!   for a given primitive shell
-    implicit none
     character(len=*), intent(in) :: shtype
     !! Shell type
     real(real64), intent(in) :: coef
@@ -384,7 +384,6 @@ subroutine coef_transfo_P2C(L_ang, Ncart, Npure, coef2P, coef2C)
     !!
     !! Generates the coefficients to transform between normalized Cart.
     !!   Gaussians and normalized spherical harmonics (pure).
-    implicit none
     integer, intent(in) :: L_ang
     !! Angular momentum to transform
     integer, intent(in) :: Ncart
@@ -453,7 +452,6 @@ function coef_C2P(L, M, Lx, Ly) result(coef)
     !! Calculates the coefficient for the conversion from the normalized
     !!   Cartesian component Lx,Ly,Lz=L-Lx-Ly to the spherical harmonics
     !!   component L,M
-    implicit none
     real(real64) :: coef
     integer, intent(in) :: L
     !! Angular moment
@@ -517,8 +515,6 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
     !!
     !! Checks if atomic orbitals are normalized and otherwise correct
     !!   the coefficients to ensure the normalization.
-    implicit none
-
     integer, intent(in) :: iout
     !! Unit for output
     integer, intent(in) :: n_at
@@ -896,7 +892,6 @@ function transfo_cart2pure(L_ang) result(convmat)
     !! @Warning: The function does not check explicitly if the shell is
     !!           supported. Calling procedure should check if the array is
     !!           allocated on exit.
-    implicit none
     integer, intent(in) :: L_ang
     !! Angular momentum for the shell of interest
     real(real64), dimension(:,:), allocatable :: convmat
@@ -979,8 +974,6 @@ subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh_)
     !!
     !! Checks any redundancy within basis set functions.
     !!
-    implicit none
-
     integer, intent(in) :: n_ao
     !! Number of atomic orbitals
     real(real64), dimension(n_ao,n_ao), intent(in) :: ovint_i_j

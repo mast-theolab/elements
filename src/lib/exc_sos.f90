@@ -15,7 +15,9 @@ module exc_sos
 
     use exception, only: ArgumentError, BaseException, InitError, &
         RaiseArgError, RaiseError
-    
+
+    implicit none
+
 contains
 
 ! ======================================================================
@@ -29,8 +31,6 @@ function sos_eiOg(ldim, n_ab, n_mos, t_mo, O_ij, forbid) result(res)
     !! The function expects all quantities wrt molecular orbitals.
     !! If forbid is true, the transition is forbidden in standard
     !!   theory, for instance singlet-triplet transitions.
-    implicit none
-
     integer, intent(in) :: ldim
     !! Leading dimension / number of components of O
     integer, intent(in) :: n_ab
@@ -45,7 +45,7 @@ function sos_eiOg(ldim, n_ab, n_mos, t_mo, O_ij, forbid) result(res)
     !! Transition is forbidden (transition moment = 0).
     real(real64), dimension(:), allocatable :: res
     !! Integral < e_j | O | g >
-    
+
     integer :: ia, iab, ib
 
     allocate(res(ldim))
@@ -76,8 +76,6 @@ function sos_ejOei(ldim, n_ab, n_mos, t_mo, prefac, forbid) result(res) ! dodjk
     !! The function expects all quantities wrt molecular orbitals.
     !! If forbid is true, the transition is forbidden in standard
     !!   theory, for instance singlet-triplet transitions.
-    implicit none
-
     integer, intent(in) :: ldim
     !! Leading dimension / number of components of O
     integer, intent(in) :: n_ab
@@ -96,7 +94,7 @@ function sos_ejOei(ldim, n_ab, n_mos, t_mo, prefac, forbid) result(res) ! dodjk
     integer :: ia, iab, ib
 
     allocate(res(ldim))
-    
+
     res = 0.0_real64
     if (present(forbid)) then
         if (forbid) return
@@ -120,8 +118,6 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij, &
     !! Computes the prefactor term for < e_j | O | e_i > in the SOS
     !!   formalism to accelerate calculations.
     !! The function expects all quantities wrt molecular orbitals.
-    implicit none
-
     integer, intent(in) :: ldim
     !! Leading dimension / number of components of O.
     integer, intent(in) :: n_ab
@@ -248,7 +244,7 @@ subroutine sos_MCD_tensor_LORG_corr(n_states, n_els, fstate, kstate, r_gg, &
                                     r_ij, p_ij, ov_eieg, ov_eiej, G_gf)
     !! Apply a LORG-like correction to SOS MCD tensor for a given state
     !!
-    !! The subroutine applies a LORG-like[^ref:LORG] correction to 
+    !! The subroutine applies a LORG-like[^ref:LORG] correction to
     !!   remove the origin dependence of the MCD tensor G computed with
     !!   the SOS approach as described in Ref. [^ref:MCD_SOS_GIAO].
     !! The correction is applied for a specific state in the summation.
@@ -306,15 +302,13 @@ subroutine sos_MCD_tensor_LORG_corr(n_states, n_els, fstate, kstate, r_gg, &
     !!
     !! @endtodo
     !!
-    !! [^ref:LORG]: A.E. Hansen, T.D. Bouman, _J. Chem. Phys._ 1985, 
+    !! [^ref:LORG]: A.E. Hansen, T.D. Bouman, _J. Chem. Phys._ 1985,
     !!         **82**, 5035 (https://doi.org/10.1063/1.448625);
     !!         A.E. Hansen, T.D. Bouman, _J. Chem. Phys._ 1986,
     !!         **84**, 2433 (https://doi.org/10.1063/1.450857).
     !! [^ref:MCD_SOS_GIAO]: P. Štětepánek, P. Bouř, _J. Comput. Chem._
     !!         2015, **36**, 723 (https://doi.org/10.1002/jcc.23845)
     use math, only: cross
-
-    implicit none
 
     integer, intent(in) :: n_states
     !! Number of excited electronic states
@@ -340,7 +334,7 @@ subroutine sos_MCD_tensor_LORG_corr(n_states, n_els, fstate, kstate, r_gg, &
     integer :: ix, jx, lstate
     real(real64) :: ov_2Ne
     real(real64), dimension(3) :: t2, t3, t5, t6
-    
+
     t2 = 0.0_real64
     t3 = 0.0_real64
     t5 = 0.0_real64

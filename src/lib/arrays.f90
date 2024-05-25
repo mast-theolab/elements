@@ -1,9 +1,11 @@
 module arrays
     use iso_fortran_env, only: int32, int64, real32, real64
 
-interface symm_tri_array
-    module procedure symm_tri_arr_r32, symm_tri_arr_r64
-end interface symm_tri_array
+    implicit none
+
+    interface symm_tri_array
+        module procedure symm_tri_arr_r32, symm_tri_arr_r64
+    end interface symm_tri_array
 
 contains
 
@@ -15,8 +17,6 @@ subroutine symm_tri_arr_r32(N, arr, linear, lower, anti_symm, arr_new)
     !! Symmetrizes/antisymmetrizes array `arr` based on the lower or
     !! upper triangular content, stored in linear form or not.
     !! If arr_new is provided, the new array is returned in arr_new.
-    implicit none
-
     integer, intent(in) :: N
     !! number of rows/columns of the final square matrix
     real(real32), dimension(:), intent(inout) :: arr
@@ -227,8 +227,6 @@ subroutine symm_tri_arr_r64(N, arr, linear, lower, anti_symm, arr_new)
     !! Symmetrizes/antisymmetrizes array `arr` based on the lower or
     !! upper triangular content, stored in linear form or not.
     !! If arr_new is provided, the new array is returned in arr_new.
-    implicit none
-
     integer, intent(in) :: N
     !! number of rows/columns of the final square matrix
     real(real64), dimension(:), intent(inout) :: arr

@@ -1,6 +1,8 @@
 module atomic
     use iso_fortran_env, only: real64
 
+    implicit none
+    
     type, private :: atom
         character(len=2) :: symbol
         real(real64) :: mass

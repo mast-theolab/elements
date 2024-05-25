@@ -7,6 +7,8 @@ module parse_cmdline
     use numeric, only: is_number, to_int64, to_real64
     use string, only: findstr, locase, upcase
 
+    implicit none
+
     integer, parameter, private :: &
         MAX_ARGS = 400, &
         MAX_ARGLEN = 256
@@ -104,7 +106,7 @@ module parse_cmdline
         procedure :: set_arg_scalar => set_argreal_list_str
         procedure :: set_arg_array => set_argreal_list_arr
     end type ArgRealList
-    
+
     type, private, extends(ArgObj) :: ArgBool
         logical :: value
         logical :: const
@@ -713,7 +715,6 @@ function init_args_db(add_help, prefixes, progname) result(db)
     !!   options in the commandline and extract/process data.
     !! The system expects short-name optional argument to be preceded by
     !!   1 prefix character, long names by 2 identical characters.
-    implicit none
 
     logical, intent(in), optional :: add_help
     !! Add help keywords: -h/--help
@@ -727,7 +728,7 @@ function init_args_db(add_help, prefixes, progname) result(db)
     integer :: i, istat, n_prefix
     logical :: add_help_
     character(len=1) :: prefix
-    
+
     db%error = InitError()
 
     if (present(prefixes)) then
@@ -788,7 +789,6 @@ function chk_argname_overlap(this, new_arg, argname) result(res)
     !!   long name, label) overlaps with arguments already inserted into
     !!   the arguments DB.
     !! Returns True if an overlap exist.
-    implicit none
 
     class(CmdArgDB), intent(in) :: this
     !! Arguments database object
@@ -800,7 +800,7 @@ function chk_argname_overlap(this, new_arg, argname) result(res)
     !! Result of the check
 
     integer :: iarg
-    
+
     argname = ' '
     res = .False.
     if (allocated(new_arg%short_name)) then
@@ -850,7 +850,6 @@ function get_argname_id(this, argname) result(ind)
     !!
     !! Returns the index of `argname` in database `this`.
     !! Returns 0 if not found.
-    implicit none
 
     class(CmdArgDB), intent(in) :: this
     !! Arguments database object.
@@ -878,7 +877,6 @@ subroutine print_help(this)
     !!
     !! Builds and prints the help message.
     !! The subroutine then terminates any execution
-    implicit none
 
     class(CmdArgDB), intent(in) :: this
     !! Arguments database object.
@@ -984,14 +982,14 @@ subroutine build_val_list(arg, argline, l_argline)
             character(len=len(string)) :: tostring
         end function tostring
     end interface
-    
+
     class(ArgObj), intent(in) :: arg
     !! Argument object.
     character(len=*), intent(inout) :: argline
     !! Line with description of argument call, already containing argument.
     integer, intent(inout) :: l_argline
     !! Length actually used in `argline`, updated on output.
-    
+
     integer :: i
     procedure(tostring), pointer :: convert
 

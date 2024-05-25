@@ -1,5 +1,7 @@
 submodule (parse_cmdline) parse_cmdline_parser
 
+    implicit none
+
 contains
 
 ! ======================================================================
@@ -9,7 +11,6 @@ module procedure parse_args_list
     !!
     !! Parses a list of arguments from the commandline or alternatively
     !!   from a list given in argument to the subroutine.
-    implicit none
 
     integer :: i, iarg, iarg_pos, iargDB, ierr, ioff, ios, isep, j, nargs, &
         nargs_opt, nargs_pos, nvals

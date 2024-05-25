@@ -14,6 +14,8 @@ module electronic
     use basisset, only: max_nxyz, PrimitiveFunction, set_primC_comp, &
         transfo_cart2pure
 
+    implicit none
+
     type, public :: ovij_1e
         integer :: n_ao = 0
         !! number of atomic orbitals
@@ -64,8 +66,6 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     !! * < i | (r-(Rj+Ri)/2) x p | j >  (alt. form for angular momentum)
     !! * < i | Ri x r | j >  (GIAO-like form)
     !! * < i | Rj x r | j >  (GIAO-like form)
-    implicit none
-
     integer, intent(in) :: iout
     !! Unit for output
     integer, intent(in) :: n_at
@@ -610,7 +610,6 @@ subroutine convert_AO2MO_1(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !! Takes a quantity in atomic orbitals (`q_ao`) to molecular orbitals
     !!   (`q_mo`).
     !! Note: The quantity must be scalar (see convert_AO2MO_N otherwise)
-    implicit none
     integer, intent(in) :: n_ao
     !! Number of atomic orbitals
     integer, intent(in) :: n_mo
@@ -658,7 +657,6 @@ subroutine convert_AO2MO_N(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !! Takes a quantity in atomic orbitals (`q_ao`) to molecular orbitals
     !!   (`q_mo`).
     !! Note: The quantity is expected to be a vector.
-    implicit none
     integer, intent(in) :: n_ao
     !! Number of atomic orbitals
     integer, intent(in) :: n_mo
@@ -708,7 +706,6 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
     !!   from the electronic transition density matrix of a given
     !!   transition.  The amplitudes are returned as a array.
     !! Default is to return in AO basis.
-    implicit none
     integer, intent(in) :: n_ab
     !! Number of unique MO sets (1 for closed-shell, 2 for open-shell)
     integer, intent(in) :: n_ao

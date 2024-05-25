@@ -10,6 +10,8 @@ module output
     use string, only: locase
     use physic, only: PhysFact
 
+    implicit none
+
     integer :: iu_out = output_unit
     type(PhysFact), private :: phys
 
@@ -34,8 +36,6 @@ integer function len_int32(num) result(lnum)
     !!
     !! Returns the minimum number of characters necessary to store
     !!    `num`.
-    implicit none
-
     integer(int32), intent(in) :: num
 
     lnum = floor(log10(abs(real(num, kind=real64)))) + 1
@@ -50,8 +50,6 @@ integer function len_int64(num) result(lnum)
     !!
     !! Returns the minimum number of characters necessary to store
     !!    `num`.
-    implicit none
-
     integer(int64), intent(in) :: num
 
     lnum = floor(log10(abs(real(num, kind=real64)))) + 1
@@ -66,8 +64,6 @@ subroutine prt_coord_r32(n_at, at_lab, at_crd, at_mass_, iunit_)
     !!
     !! Prints the atomic coordinates as a table, optionally with the
     !! atomic masses included.
-    implicit none
-
     integer, intent(in) :: n_at
     !! Number of atoms
     character(len=*), dimension(n_at), intent(in) :: at_lab
@@ -122,8 +118,6 @@ subroutine prt_coord_r64(n_at, at_lab, at_crd, at_mass_, iunit_)
     !!
     !! Prints the atomic coordinates as a table, optionally with the
     !! atomic masses included.
-    implicit none
-
     integer, intent(in) :: n_at
     !! Number of atoms
     character(len=*), dimension(n_at), intent(in) :: at_lab
@@ -181,8 +175,6 @@ subroutine prt_mat_r32(mat, n_row, n_col, iunit_, ncol_by_blk_, prec_, thresh_)
     !! Print a real32 matrix
     !!
     !! Prints a real matrix with precision real32.
-    implicit none
-
     real(real32), dimension(:,:), intent(in) :: mat
     !! Matrix to display
     integer, intent(in) :: n_row
@@ -267,8 +259,6 @@ subroutine prt_mat_r64(mat, n_row, n_col, iunit_, ncol_by_blk_, prec_, thresh_)
     !! Print a real64 matrix
     !!
     !! Prints a real matrix with precision real64.
-    implicit none
-
     real(real64), dimension(:,:), intent(in) :: mat
     !! Matrix to display
     integer, intent(in) :: n_row
@@ -358,8 +348,6 @@ subroutine sec_header(level, title)
     !!  2. Subsection / Header2
     !!  3. Subsubsection / Header3
     !!  4. Paragraph / Header4
-    implicit none
-
     integer, intent(in) :: level
     !! Header level
     character(len=*), intent(in) :: title
@@ -427,8 +415,6 @@ subroutine write_err(nature, msg, error_)
     !!   of the error:
     !! * Generic/gen: generic error
     !! * Basic/std: basic/standard error
-    implicit none
-
     character(len=*), intent(in) :: nature
     !! Nature of the error
     character(len=*), intent(in) :: msg

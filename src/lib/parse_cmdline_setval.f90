@@ -1,5 +1,7 @@
 submodule (parse_cmdline) parse_cmdline_setval
 
+    implicit none
+
 contains
 
 ! ======================================================================
@@ -10,7 +12,6 @@ function set_real_bound_msg(val_min, val_max) result(msg)
     !! Builds and returns a string containing a message on accepted
     !!   values.
     !! The message is adapted based on provided bounds.
-    implicit none
 
     real(real64), intent(in), optional :: val_min
     !! Minimum accepted value.
@@ -84,7 +85,6 @@ module procedure upd_argint_value
     !!   internal constants or the content of string.
     !! The update can be an increment or an assignment based on
     !!   the internal logic of the argument.
-    implicit none
 
     integer :: ios
     integer(int64) :: value
@@ -145,7 +145,6 @@ module procedure set_argint_list_str
     !!   by `sep`.
     !! The list needs to be built in one step to allow the proper
     !!   allocation of the space.
-    implicit none
 
     integer :: i0, i1, ios, N
     integer(int64) :: value
@@ -243,7 +242,6 @@ module procedure set_argint_list_arr
     !!   that would be themselves character-separated lists.
     !!   Each string must be a separate number.
     !! @endnote
-    implicit none
 
     integer :: i, ios, N
     integer(int64) :: value
@@ -298,7 +296,6 @@ module procedure upd_argreal_value
     !!   internal constants or the content of string.
     !! The update can be an increment or an assignment based on
     !!   the internal logic of the argument.
-    implicit none
 
     integer :: ios
     real(real64) :: value
@@ -357,7 +354,6 @@ module procedure set_argreal_list_str
     !!   by `sep`.
     !! The list needs to be built in one step to allow the proper
     !!   allocation of the space.
-    implicit none
 
     integer :: i0, i1, ios, N
     real(real64) :: value
@@ -456,7 +452,6 @@ module procedure set_argreal_list_arr
     !!   that would be themselves character-separated lists.
     !!   Each string must be a separate number.
     !! @endnote
-    implicit none
 
     integer :: i, ios, N
     real(real64) :: value
@@ -512,7 +507,6 @@ module procedure upd_argbool_value
     !!   internal constants or the content of string.
     !! The update can be an increment or an assignment based on
     !!   the internal logic of the argument.
-    implicit none
 
     err = InitError()
 
@@ -530,7 +524,6 @@ module procedure upd_argchar_value
     !!   internal constants or the content of string.
     !! The update can be an increment or an assignment based on
     !!   the internal logic of the argument.
-    implicit none
 
     err = InitError()
 
@@ -557,7 +550,6 @@ module procedure set_argchar_list_str
     !!   `string`.
     !! The list needs to be built in one step to allow the proper
     !!   allocation of the space.
-    implicit none
 
     integer :: N
     character(len=256) :: msg
@@ -594,7 +586,6 @@ module procedure set_argchar_list_arr
     !! Builds a list of strings stored as character strings `strings`.
     !! The list needs to be built in one step to allow the proper
     !!   allocation of the space.
-    implicit none
 
     integer :: i, lmax, lstr, N
     character(len=256) :: msg
@@ -632,7 +623,6 @@ module procedure upd_noarrayI
     !! Update value from array - dummy version
     !!
     !! Dummy version of a procedure to build value from array of strings.
-    implicit none
 
     err = InitError()
 
@@ -646,7 +636,6 @@ module procedure upd_noarrayR
     !! Update value from array - dummy version
     !!
     !! Dummy version of a procedure to build value from array of strings.
-    implicit none
 
     err = InitError()
 
@@ -660,7 +649,6 @@ module procedure upd_noarrayB
     !! Update value from array - dummy version
     !!
     !! Dummy version of a procedure to build value from array of strings.
-    implicit none
 
     err = InitError()
 
@@ -674,7 +662,6 @@ module procedure upd_noarrayC
     !! Update value from array - dummy version
     !!
     !! Dummy version of a procedure to build value from array of strings.
-    implicit none
 
     err = InitError()
 
@@ -688,7 +675,6 @@ module procedure upd_noscalar
     !! Update value from scalar - dummy version
     !!
     !! Dummy version of a procedure to build value from string.
-    implicit none
 
     err = InitError()
 
@@ -702,7 +688,6 @@ module procedure upd_noarray
     !! Update value from array - dummy version
     !!
     !! Dummy version of a procedure to build value from string.
-    implicit none
 
     err = InitError()
 

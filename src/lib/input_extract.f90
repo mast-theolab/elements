@@ -151,20 +151,21 @@ subroutine build_moldata_fchk(dfile)
         'Number of independent functions      ', &  !  8.
         'Number of contracted shells          ', &  !  9.
         'Current cartesian coordinates        ', &  ! 10.
-        'Nuclear charges                      ', &  ! 11.
-        'Real atomic weights                  ', &  ! 12.
-        'Alpha MO coefficients                ', &  ! 13.
-        'Beta MO coefficients                 ', &  ! 14.
-        'Alpha Orbital Energies               ', &  ! 15.
-        'Beta Orbital Energies                ', &  ! 16.
-        'Shell types                          ', &  ! 17.
-        'Number of primitives per shell       ', &  ! 18.
-        'Shell to atom map                    ', &  ! 19.
-        'Primitive exponents                  ', &  ! 20.
-        'Contraction coefficients             ', &  ! 21.
-        'P(S=P) Contraction coefficients      ', &  ! 22.
-        'Pure/Cartesian d shells              ', &  ! 23.
-        'Pure/Cartesian f shells              '  &  ! 24.
+        'Atomic numbers                       ', &  ! 11.
+        'Nuclear charges                      ', &  ! 12.
+        'Real atomic weights                  ', &  ! 13.
+        'Alpha MO coefficients                ', &  ! 14.
+        'Beta MO coefficients                 ', &  ! 15.
+        'Alpha Orbital Energies               ', &  ! 16.
+        'Beta Orbital Energies                ', &  ! 17.
+        'Shell types                          ', &  ! 18.
+        'Number of primitives per shell       ', &  ! 19.
+        'Shell to atom map                    ', &  ! 20.
+        'Primitive exponents                  ', &  ! 21.
+        'Contraction coefficients             ', &  ! 22.
+        'P(S=P) Contraction coefficients      ', &  ! 23.
+        'Pure/Cartesian d shells              ', &  ! 24.
+        'Pure/Cartesian f shells              '  &  ! 25.
     ]
 
     integer :: i, ia, ij, j
@@ -195,14 +196,15 @@ subroutine build_moldata_fchk(dfile)
 
     ! Molecule information
     n_at = dbase(1)%idata(1)
-    allocate(at_chg(n_at), at_lab(n_at))
+    allocate(at_chg(n_at), at_lab(n_at), at_num(n_at))
     do ia = 1, n_at
-        at_chg(ia) = dbase(11)%rdata(ia)
-        at_lab(ia) = atdata(int(at_chg(ia)))%symbol
+        at_num(ia) = dbase(11)%idata(ia)
+        at_chg(ia) = dbase(12)%rdata(ia)
+        at_lab(ia) = atdata(at_num(ia))%symbol
     end do
-    at_mas = dbase(12)%rdata
+    at_mas = dbase(13)%rdata
     at_crd = reshape(dbase(10)%rdata, [3, n_at])
-    deallocate(dbase(10)%rdata, dbase(11)%rdata, dbase(12)%rdata)
+    deallocate(dbase(10)%rdata, dbase(12)%rdata, dbase(11)%idata, dbase(13)%rdata)
     charge = dbase(2)%idata(1)
     multip = dbase(3)%idata(1)
 
@@ -219,11 +221,11 @@ subroutine build_moldata_fchk(dfile)
     n_shells = dbase(9)%idata(1)
 
     ! Molecular orbitals
-    n_mos(1) = dbase(15)%len
-    if (dbase(16)%dtype /= '0') then
+    n_mos(1) = dbase(16)%len
+    if (dbase(17)%dtype /= '0') then
         n_ab = 2
         openshell = .True.
-        n_mos(2) = dbase(16)%len
+        n_mos(2) = dbase(17)%len
     else
         n_ab = 1
         openshell = .False.
@@ -231,11 +233,11 @@ subroutine build_moldata_fchk(dfile)
     n_mo = maxval(n_mos(:n_ab))
     ! -- Save orbital energies and clear redundant memory
     allocate(en_mos(n_mo,n_ab))
-    en_mos(:,1) = dbase(15)%rdata
-    deallocate(dbase(15)%rdata)
+    en_mos(:,1) = dbase(16)%rdata
+    deallocate(dbase(16)%rdata)
     if (openshell) then
-        en_mos(:,2) = dbase(16)%rdata
-        deallocate(dbase(16)%rdata)
+        en_mos(:,2) = dbase(17)%rdata
+        deallocate(dbase(17)%rdata)
     end if
     ! -- Save orbital coefficients and clear redundant memory
     allocate(coef_mos(n_mo,n_ao,n_ab))
@@ -243,35 +245,35 @@ subroutine build_moldata_fchk(dfile)
     do i = 1, n_mos(1)
         do j = 1, n_ao
             ij = ij + 1
-            coef_mos(i,j,1) = dbase(13)%rdata(ij)
+            coef_mos(i,j,1) = dbase(14)%rdata(ij)
         end do
     end do
-    deallocate(dbase(13)%rdata)
+    deallocate(dbase(14)%rdata)
     if (openshell) then
         ij = 0
         do i = 1, n_mos(2)
             do j = 1, n_ao
                 ij = ij + 1
-                coef_mos(i,j,2) = dbase(14)%rdata(ij)
+                coef_mos(i,j,2) = dbase(15)%rdata(ij)
             end do
         end do
-        deallocate(dbase(14)%rdata)
+        deallocate(dbase(15)%rdata)
     end if
 
     ! Basis function and shells
-    pureD = dbase(23)%idata(1) == 0
-    pureF = dbase(24)%idata(1) == 0
-    shell_types = dbase(17)%idata
-    prim_per_sh = dbase(18)%idata
-    shell_to_at = dbase(19)%idata
-    deallocate(dbase(17)%idata, dbase(18)%idata, dbase(19)%idata)
-    prim_exp = dbase(20)%rdata
-    deallocate(dbase(20)%rdata)
-    coef_contr = dbase(21)%rdata
+    pureD = dbase(24)%idata(1) == 0
+    pureF = dbase(25)%idata(1) == 0
+    shell_types = dbase(18)%idata
+    prim_per_sh = dbase(19)%idata
+    shell_to_at = dbase(20)%idata
+    deallocate(dbase(18)%idata, dbase(19)%idata, dbase(20)%idata)
+    prim_exp = dbase(21)%rdata
     deallocate(dbase(21)%rdata)
-    if (dbase(22)%dtype /= '0') then
-        coef_contrSP = dbase(22)%rdata
-        deallocate(dbase(22)%rdata)
+    coef_contr = dbase(22)%rdata
+    deallocate(dbase(22)%rdata)
+    if (dbase(23)%dtype /= '0') then
+        coef_contrSP = dbase(23)%rdata
+        deallocate(dbase(23)%rdata)
     end if
 
     ! Build DB of basis functions

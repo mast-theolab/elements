@@ -16,8 +16,10 @@ module moldata
     integer, dimension(2) :: &  ! n_ab elements are expected to be set
         n_mos = [0, 0], &   ! number of alpha/beta molecular orbitals
         n_els = [0, 0]      ! number of alpha/beta electrons
+    integer, dimension(:), allocatable :: &
+        at_num           ! atomic numbers
     integer(int32), dimension(:), allocatable :: &
-        nprim_per_at ! number of primitive basis funcs / atom
+        nprim_per_at     ! number of primitive basis funcs / atom
     real(real64), dimension(:,:), allocatable :: &  ! last dim depend on n_ab
         en_mos           ! energies of alpha/beta orbitals
     real(real64), dimension(:), allocatable :: &

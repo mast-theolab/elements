@@ -180,7 +180,7 @@ module procedure add_argument_int
     class(BaseException), allocatable :: suberr
 
     ! Initialize error
-    err = InitError()
+    this%error = InitError()
 
     ! Check argument type and basic pre-processing
     select case (locase(argtype))
@@ -195,7 +195,8 @@ module procedure add_argument_int
                 if (is_number(const_value)) then
                     arg_val%const = to_int64(const_value)
                 else
-                    call RaiseArgError(err, 'const_value', 'Not a number')
+                    call RaiseArgError(this%error, 'const_value', &
+                                       'Not a number')
                     return
                 end if
             else
@@ -212,7 +213,8 @@ module procedure add_argument_int
             is_scalar = .False.
             new_arg => arg_arr
         case default
-            call RaiseArgError(err, 'argtype', 'Unrecognized argument type')
+            call RaiseArgError(this%error, 'argtype', &
+                               'Unrecognized argument type')
             return
     end select
 
@@ -225,10 +227,10 @@ module procedure add_argument_int
                 write(errmsg, '(a,a," Source error: ",a)') &
                     'Error encountered in definition of argument', &
                     new_line(' '), trim(suberr%msg())
-                call RaiseError(err, errmsg)
+                call RaiseError(this%error, errmsg)
                 return
             class default
-                call RaiseError(err, &
+                call RaiseError(this%error, &
                     'Unknown error met in argument definition')
                 return
         end select
@@ -236,7 +238,7 @@ module procedure add_argument_int
 
     if (this%chk_name_overlap(new_arg, argname)) then
         write(errmsg, '("''",a,"'' has already been defined.")') trim(argname)
-        call RaiseArgError(err, 'names', errmsg)
+        call RaiseArgError(this%error, 'names', errmsg)
         return
     end if
 
@@ -244,7 +246,7 @@ module procedure add_argument_int
     this%nargs = this%nargs + 1
     if (this%nargs > MAX_ARGS) then
         errmsg = 'Number of arguments exceeds available storage in DB.'
-        call RaiseError(err, errmsg)
+        call RaiseError(this%error, errmsg)
         return
     end if
 
@@ -257,10 +259,10 @@ module procedure add_argument_int
                     write(errmsg, '(a,a,"Source error:",a)') &
                         'Error encountered in setup of help message', &
                         new_line(' '), trim(suberr%msg())
-                    call RaiseArgError(err, errmsg)
+                    call RaiseArgError(this%error, errmsg)
                     return
                 class default
-                    call RaiseError(err, &
+                    call RaiseError(this%error, &
                         'Unknown error met while setting up the help message')
                     return
             end select
@@ -276,7 +278,7 @@ module procedure add_argument_int
                 arg_val%value = to_int64(def_value)
                 arg_val%is_set = 1
             else
-                call RaiseArgError(err, 'def_value', 'Not a number')
+                call RaiseArgError(this%error, 'def_value', 'Not a number')
                 return
             end if
         end if
@@ -284,7 +286,7 @@ module procedure add_argument_int
             if (is_number(min_value)) then
                 arg_val%min_ok = to_int64(min_value)
             else
-                call RaiseArgError(err, 'min_value', 'Not a number')
+                call RaiseArgError(this%error, 'min_value', 'Not a number')
                 return
             end if
         end if
@@ -292,13 +294,13 @@ module procedure add_argument_int
             if (is_number(max_value)) then
                 arg_val%max_ok = to_int64(max_value)
             else
-                call RaiseArgError(err, 'max_value', 'Not a number')
+                call RaiseArgError(this%error, 'max_value', 'Not a number')
                 return
             end if
         end if
         if (present(const_value)) then
             if (.not.is_number(const_value)) then
-                call RaiseArgError(err, 'const_value', 'Not a number')
+                call RaiseArgError(this%error, 'const_value', 'Not a number')
                 return
             end if
             ival = to_int64(const_value)
@@ -306,7 +308,7 @@ module procedure add_argument_int
                 .or. ival > arg_val%max_ok) then
                 errmsg = 'Constant value inconsistent with values permitted &
                     &for argument'
-                call RaiseArgError(err, 'const_value', errmsg)
+                call RaiseArgError(this%error, 'const_value', errmsg)
                 return
             end if
             arg_val%const = ival
@@ -321,7 +323,7 @@ module procedure add_argument_int
             if (is_number(min_value)) then
                 arg_arr%min_ok = to_int64(min_value)
             else
-                call RaiseArgError(err, 'min_value', 'Not a number')
+                call RaiseArgError(this%error, 'min_value', 'Not a number')
                 return
             end if
         end if
@@ -329,19 +331,19 @@ module procedure add_argument_int
             if (is_number(max_value)) then
                 arg_arr%max_ok = to_int64(max_value)
             else
-                call RaiseArgError(err, 'max_value', 'Not a number')
+                call RaiseArgError(this%error, 'max_value', 'Not a number')
                 return
             end if
         end if
         if (present(min_nvals)) then
             if (.not.is_number(min_nvals)) then
-                call RaiseArgError(err, 'min_nvals', 'Not a number')
+                call RaiseArgError(this%error, 'min_nvals', 'Not a number')
                 return
             end if
             ival = to_int64(min_nvals)
             if (ival <= 0) then
                 errmsg = 'Minimum number of values cannot be negative.'
-                call RaiseArgError(err, 'min_nvals', errmsg)
+                call RaiseArgError(this%error, 'min_nvals', errmsg)
                 return
             end if
             arg_arr%min_num = ival
@@ -350,14 +352,14 @@ module procedure add_argument_int
             if (is_number(max_nvals)) then
                 arg_arr%max_num = to_int64(max_nvals)
             else
-                call RaiseArgError(err, 'max_nvals', 'Not a number')
+                call RaiseArgError(this%error, 'max_nvals', 'Not a number')
                 return
             end if
         end if
         if (arg_arr%min_num > arg_arr%max_num) then
             errmsg = 'Minimum number of values expected larger than the &
                 &maximum'
-            call RaiseArgError(err, 'nvals', errmsg)
+            call RaiseArgError(this%error, 'nvals', errmsg)
             return
         end if
         this%args(this%nargs)%arg = arg_arr
@@ -377,7 +379,7 @@ contains
 
         this%nargs_pos = this%nargs_pos + 1
         if (this%nargs_pos > MAX_ARGS) then
-            call RaiseError(err, 'Too many positional arguments')
+            call RaiseError(this%error, 'Too many positional arguments')
             return
         end if
 
@@ -394,7 +396,7 @@ contains
                 if (this%iargs_pos(3,iarg) < 0) then
                     errmsg = 'Only one positional argument with a variable &
                         &number of values allowed in the DB.'
-                    call RaiseError(err, errmsg)
+                    call RaiseError(this%error, errmsg)
                     return
                 end if
             end do
@@ -434,7 +436,7 @@ module procedure add_argument_real
     class(BaseException), allocatable :: suberr
 
     ! Initialize error
-    err = InitError()
+    this%error = InitError()
 
     ! Check argument type and basic pre-processing
     select case (locase(argtype))
@@ -449,7 +451,8 @@ module procedure add_argument_real
                 if (is_number(const_value)) then
                     arg_val%const = to_real64(const_value)
                 else
-                    call RaiseArgError(err, 'const_value', 'Not a number')
+                    call RaiseArgError(this%error, 'const_value', &
+                                       'Not a number')
                     return
                 end if
             else
@@ -466,7 +469,8 @@ module procedure add_argument_real
             is_scalar = .False.
             new_arg => arg_arr
         case default
-            call RaiseArgError(err, 'argtype', 'Unrecognized argument type')
+            call RaiseArgError(this%error, 'argtype', &
+                               'Unrecognized argument type')
             return
     end select
 
@@ -479,10 +483,10 @@ module procedure add_argument_real
                 write(errmsg, '(a,a," Source error: ",a)') &
                     'Error encountered in definition of argument', &
                     new_line(' '), trim(suberr%msg())
-                call RaiseError(err, errmsg)
+                call RaiseError(this%error, errmsg)
                 return
             class default
-                call RaiseError(err, &
+                call RaiseError(this%error, &
                     'Unknown error met in argument definition')
                 return
         end select
@@ -490,7 +494,7 @@ module procedure add_argument_real
 
     if (this%chk_name_overlap(new_arg, argname)) then
         write(errmsg, '("''",a,"'' has already been defined.")') trim(argname)
-        call RaiseArgError(err, 'names', errmsg)
+        call RaiseArgError(this%error, 'names', errmsg)
         return
     end if
 
@@ -498,7 +502,7 @@ module procedure add_argument_real
     this%nargs = this%nargs + 1
     if (this%nargs > MAX_ARGS) then
         errmsg = 'Number of arguments exceeds available storage in DB.'
-        call RaiseError(err, errmsg)
+        call RaiseError(this%error, errmsg)
         return
     end if
 
@@ -511,10 +515,10 @@ module procedure add_argument_real
                     write(errmsg, '(a,a,"Source error:",a)') &
                         'Error encountered in setup of help message', &
                         new_line(' '), trim(suberr%msg())
-                    call RaiseArgError(err, errmsg)
+                    call RaiseArgError(this%error, errmsg)
                     return
                 class default
-                    call RaiseError(err, &
+                    call RaiseError(this%error, &
                         'Unknown error met while setting up the help message')
                     return
             end select
@@ -530,7 +534,7 @@ module procedure add_argument_real
                 arg_val%value = to_real64(def_value)
                 arg_val%is_set = 1
             else
-                call RaiseArgError(err, 'def_value', 'Not a number')
+                call RaiseArgError(this%error, 'def_value', 'Not a number')
                 return
             end if
         end if
@@ -538,7 +542,7 @@ module procedure add_argument_real
             if (is_number(min_value)) then
                 arg_val%min_ok = to_real64(min_value)
             else
-                call RaiseArgError(err, 'min_value', 'Not a number')
+                call RaiseArgError(this%error, 'min_value', 'Not a number')
                 return
             end if
         end if
@@ -546,13 +550,13 @@ module procedure add_argument_real
             if (is_number(max_value)) then
                 arg_val%max_ok = to_real64(max_value)
             else
-                call RaiseArgError(err, 'max_value', 'Not a number')
+                call RaiseArgError(this%error, 'max_value', 'Not a number')
                 return
             end if
         end if
         if (present(const_value)) then
             if (.not.is_number(const_value)) then
-                call RaiseArgError(err, 'const_value', 'Not a number')
+                call RaiseArgError(this%error, 'const_value', 'Not a number')
                 return
             end if
             rval = to_real64(const_value)
@@ -560,7 +564,7 @@ module procedure add_argument_real
                 .or. rval > arg_val%max_ok) then
                 errmsg = 'Constant value inconsistent with values permitted &
                     &for argument'
-                call RaiseArgError(err, 'const_value', errmsg)
+                call RaiseArgError(this%error, 'const_value', errmsg)
                 return
             end if
             arg_val%const = rval
@@ -575,7 +579,7 @@ module procedure add_argument_real
             if (is_number(min_value)) then
                 arg_arr%min_ok = to_real64(min_value)
             else
-                call RaiseArgError(err, 'min_value', 'Not a number')
+                call RaiseArgError(this%error, 'min_value', 'Not a number')
                 return
             end if
         end if
@@ -583,19 +587,19 @@ module procedure add_argument_real
             if (is_number(max_value)) then
                 arg_arr%max_ok = to_real64(max_value)
             else
-                call RaiseArgError(err, 'max_value', 'Not a number')
+                call RaiseArgError(this%error, 'max_value', 'Not a number')
                 return
             end if
         end if
         if (present(min_nvals)) then
             if (.not.is_number(min_nvals)) then
-                call RaiseArgError(err, 'min_nvals', 'Not a number')
+                call RaiseArgError(this%error, 'min_nvals', 'Not a number')
                 return
             end if
             ival = to_int64(min_nvals)
             if (ival <= 0) then
                 errmsg = 'Minimum number of values cannot be negative.'
-                call RaiseArgError(err, 'min_nvals', errmsg)
+                call RaiseArgError(this%error, 'min_nvals', errmsg)
                 return
             end if
             arg_arr%min_num = ival
@@ -604,14 +608,14 @@ module procedure add_argument_real
             if (is_number(max_nvals)) then
                 arg_arr%max_num = to_int64(max_nvals)
             else
-                call RaiseArgError(err, 'max_nvals', 'Not a number')
+                call RaiseArgError(this%error, 'max_nvals', 'Not a number')
                 return
             end if
         end if
         if (arg_arr%min_num > arg_arr%max_num) then
             errmsg = 'Minimum number of values expected larger than the &
                 &maximum'
-            call RaiseArgError(err, 'nvals', errmsg)
+            call RaiseArgError(this%error, 'nvals', errmsg)
             return
         end if
         this%args(this%nargs)%arg = arg_arr
@@ -631,7 +635,7 @@ contains
 
         this%nargs_pos = this%nargs_pos + 1
         if (this%nargs_pos > MAX_ARGS) then
-            call RaiseError(err, 'Too many positional arguments')
+            call RaiseError(this%error, 'Too many positional arguments')
             return
         end if
 
@@ -648,7 +652,7 @@ contains
                 if (this%iargs_pos(3,iarg) < 0) then
                     errmsg = 'Only one positional argument with a variable &
                         &number of values allowed in the DB.'
-                    call RaiseError(err, errmsg)
+                    call RaiseError(this%error, errmsg)
                     return
                 end if
             end do
@@ -682,7 +686,7 @@ module procedure add_argument_bool
     class(BaseException), allocatable :: suberr
 
     ! Initialize error
-    err = InitError()
+    this%error = InitError()
 
     ! Check argument type and basic pre-processing
     select case (locase(argtype))
@@ -691,7 +695,8 @@ module procedure add_argument_bool
         case('store_false')
             arg_val%const = .False.
         case default
-            call RaiseArgError(err, 'argtype', 'Unrecognized argument type')
+            call RaiseArgError(this%error, 'argtype', &
+                               'Unrecognized argument type')
             return
     end select
     new_arg => arg_val
@@ -700,7 +705,7 @@ module procedure add_argument_bool
     arg_val%is_pos = .False.
 
     if (.not.present(shortname) .and. .not.present(longname)) then
-        call RaiseArgError(err, 'names', &
+        call RaiseArgError(this%error, 'names', &
                            'Boolean arguments cannot be positional')
         return
     end if
@@ -714,10 +719,10 @@ module procedure add_argument_bool
                 write(errmsg, '(a,a," Source error: ",a)') &
                     'Error encountered in definition of argument', &
                     new_line(' '), trim(suberr%msg())
-                call RaiseError(err, errmsg)
+                call RaiseError(this%error, errmsg)
                 return
             class default
-                call RaiseError(err, &
+                call RaiseError(this%error, &
                     'Unknown error met in argument definition')
                 return
         end select
@@ -725,7 +730,7 @@ module procedure add_argument_bool
 
     if (this%chk_name_overlap(new_arg, argname)) then
         write(errmsg, '("''",a,"'' has already been defined.")') trim(argname)
-        call RaiseArgError(err, 'names', errmsg)
+        call RaiseArgError(this%error, 'names', errmsg)
         return
     end if
 
@@ -734,7 +739,7 @@ module procedure add_argument_bool
     this%nargs = this%nargs + 1
     if (this%nargs > MAX_ARGS) then
         errmsg = 'Number of arguments exceeds available storage in DB.'
-        call RaiseError(err, errmsg)
+        call RaiseError(this%error, errmsg)
         return
     end if
 
@@ -749,10 +754,10 @@ module procedure add_argument_bool
                     write(errmsg, '(a,a,"Source error:",a)') &
                         'Error encountered in setup of help message', &
                         new_line(' '), trim(suberr%msg())
-                    call RaiseArgError(err, errmsg)
+                    call RaiseArgError(this%error, errmsg)
                     return
                 class default
-                    call RaiseError(err, &
+                    call RaiseError(this%error, &
                         'Unknown error met while setting up the help message')
                     return
             end select
@@ -794,7 +799,7 @@ module procedure add_argument_char
     class(BaseException), allocatable :: suberr
 
     ! Initialize error
-    err = InitError()
+    this%error = InitError()
 
     ! Check argument type and basic pre-processing
     select case (locase(argtype))
@@ -806,7 +811,8 @@ module procedure add_argument_char
             is_scalar = .False.
             new_arg => arg_arr
         case default
-            call RaiseArgError(err, 'argtype', 'Unrecognized argument type')
+            call RaiseArgError(this%error, 'argtype', &
+                               'Unrecognized argument type')
             return
     end select
 
@@ -819,10 +825,10 @@ module procedure add_argument_char
                 write(errmsg, '(a,a," Source error: ",a)') &
                     'Error encountered in definition of argument', &
                     new_line(' '), trim(suberr%msg())
-                call RaiseError(err, errmsg)
+                call RaiseError(this%error, errmsg)
                 return
             class default
-                call RaiseError(err, &
+                call RaiseError(this%error, &
                     'Unknown error met in argument definition')
                 return
         end select
@@ -830,7 +836,7 @@ module procedure add_argument_char
 
     if (this%chk_name_overlap(new_arg, argname)) then
         write(errmsg, '("''",a,"'' has already been defined.")') trim(argname)
-        call RaiseArgError(err, 'names', errmsg)
+        call RaiseArgError(this%error, 'names', errmsg)
         return
     end if
 
@@ -839,7 +845,7 @@ module procedure add_argument_char
     this%nargs = this%nargs + 1
     if (this%nargs > MAX_ARGS) then
         errmsg = 'Number of arguments exceeds available storage in DB.'
-        call RaiseError(err, errmsg)
+        call RaiseError(this%error, errmsg)
         return
     end if
 
@@ -852,10 +858,10 @@ module procedure add_argument_char
                     write(errmsg, '(a,a,"Source error:",a)') &
                         'Error encountered in setup of help message', &
                         new_line(' '), trim(suberr%msg())
-                    call RaiseArgError(err, errmsg)
+                    call RaiseArgError(this%error, errmsg)
                     return
                 class default
-                    call RaiseError(err, &
+                    call RaiseError(this%error, &
                         'Unknown error met while setting up the help message')
                     return
             end select
@@ -872,13 +878,13 @@ module procedure add_argument_char
     else
         if (present(min_nvals)) then
             if (.not.is_number(min_nvals)) then
-                call RaiseArgError(err, 'min_nvals', 'Not a number')
+                call RaiseArgError(this%error, 'min_nvals', 'Not a number')
                 return
             end if
             ival = to_int64(min_nvals)
             if (ival <= 0) then
                 errmsg = 'Minimum number of values cannot be negative.'
-                call RaiseArgError(err, 'min_nvals', errmsg)
+                call RaiseArgError(this%error, 'min_nvals', errmsg)
                 return
             end if
             arg_arr%min_num = ival
@@ -887,14 +893,14 @@ module procedure add_argument_char
             if (is_number(max_nvals)) then
                 arg_arr%max_num = to_int64(max_nvals)
             else
-                call RaiseArgError(err, 'max_nvals', 'Not a number')
+                call RaiseArgError(this%error, 'max_nvals', 'Not a number')
                 return
             end if
         end if
         if (arg_arr%min_num > arg_arr%max_num) then
             errmsg = 'Minimum number of values expected larger than the &
                 &maximum'
-            call RaiseArgError(err, 'nvals', errmsg)
+            call RaiseArgError(this%error, 'nvals', errmsg)
             return
         end if
         this%args(this%nargs)%arg = arg_arr
@@ -914,7 +920,7 @@ contains
 
         this%nargs_pos = this%nargs_pos + 1
         if (this%nargs_pos > MAX_ARGS) then
-            call RaiseError(err, 'Too many positional arguments')
+            call RaiseError(this%error, 'Too many positional arguments')
             return
         end if
 
@@ -931,7 +937,7 @@ contains
                 if (this%iargs_pos(3,iarg) < 0) then
                     errmsg = 'Only one positional argument with a variable &
                         &number of values allowed in the DB.'
-                    call RaiseError(err, errmsg)
+                    call RaiseError(this%error, errmsg)
                     return
                 end if
             end do

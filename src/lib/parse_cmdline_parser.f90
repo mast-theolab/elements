@@ -15,7 +15,7 @@ module procedure parse_args_list
     integer :: i, iarg, iarg_pos, iargDB, ierr, ioff, ios, isep, j, nargs, &
         nargs_opt, nargs_pos, nvals
     real :: rval
-    logical :: do_append, found, ignore_next
+    logical :: do_append, found
     logical, dimension(:), allocatable :: todo
     character(len=MAX_ARGLEN) :: arg, key, val
     character(len=2) :: shortarg
@@ -23,7 +23,7 @@ module procedure parse_args_list
     character(len=MAX_ARGLEN), dimension(:), allocatable :: arg_vals
     class(BaseException), allocatable :: suberr
 
-    err = InitError()
+    this%error = InitError()
 
     ! Find number of arguments and initialize arrays
     if (present(arglist)) then
@@ -32,7 +32,7 @@ module procedure parse_args_list
         nargs = command_argument_count()
     end if
     allocate(todo(nargs), arg_vals(nargs))
-    todo = .True. ; arg_vals = ' '
+    todo = .true. ; arg_vals = ' '
 
     ! Preprocessing: check some information in the argument list:
     ! - presence of '--' to stop optional arguments
@@ -45,7 +45,7 @@ module procedure parse_args_list
         if (ierr /= 0) then
             write(errmsg, '("Error encountered while reading command-line &
                 &argument num. ",i0)') iarg
-            call RaiseError(err, errmsg)
+            call RaiseError(this%error, errmsg)
             return
         end if
         if (this%iarg_help > 0) then
@@ -78,15 +78,15 @@ module procedure parse_args_list
                             write(errmsg, &
                                   '("Error while parsing ''",a,"'': ",a)') &
                                 shortarg, trim(suberr%msg())
-                            call RaiseError(err, errmsg)
+                            call RaiseError(this%error, errmsg)
                             return
                         class is (ValueError)
-                            call RaiseValueError(err, suberr%msg())
+                            call RaiseValueError(this%error, suberr%msg())
                             return
                         class default
                             write(errmsg, '("Unknown error while parsing &
                                 &'',a,'': ",a)') shortarg, trim(suberr%msg())
-                            call RaiseError(err, errmsg)
+                            call RaiseError(this%error, errmsg)
                             return
                     end select
                 end if
@@ -103,17 +103,18 @@ module procedure parse_args_list
                                         '("Error while parsing ''",a,"'':&
                                         & ",a)') &
                                         shortarg, trim(suberr%msg())
-                                    call RaiseError(err, errmsg)
+                                    call RaiseError(this%error, errmsg)
                                     return
                                 class is (ValueError)
-                                    call RaiseValueError(err, suberr%msg())
+                                    call RaiseValueError(this%error, &
+                                                         suberr%msg())
                                     return
                                 class default
                                     write(errmsg, &
                                         '("Unknown error while parsing &
                                         &'',a,'': ", a)') shortarg, &
                                         trim(suberr%msg())
-                                    call RaiseError(err, errmsg)
+                                    call RaiseError(this%error, errmsg)
                                     return
                             end select
                         end if
@@ -121,7 +122,7 @@ module procedure parse_args_list
                         write(errmsg, '("Argument num. ",i0," mixes options &
                             &that require values and others not.",a,&
                             &"They cannot be merged.")') iarg, new_line(' ')
-                        call RaiseError(err, errmsg)
+                        call RaiseError(this%error, errmsg)
                         return
                     end if
                 end do
@@ -170,7 +171,7 @@ module procedure parse_args_list
                     if (len_trim(arg) == 1) then
                         write(errmsg, '("Wrong argument in position ",i0)') &
                             iarg
-                        call RaiseError(err, errmsg)
+                        call RaiseError(this%error, errmsg)
                         return
                     end if
                     isep = index(arg, '=')
@@ -193,7 +194,7 @@ module procedure parse_args_list
                         if (opt%max_num == 0) then
                             write(errmsg, '("Argument ''",a,"'' does not &
                                 &accept values")') trim(key)
-                            call RaiseError(err, errmsg)
+                            call RaiseError(this%error, errmsg)
                             return
                         end if
                         val = arg(isep+1:)
@@ -214,17 +215,18 @@ module procedure parse_args_list
                                     write(errmsg, &
                                         '("Error while parsing ''",a,"'':&
                                         & ",a)') trim(key), trim(suberr%msg())
-                                    call RaiseError(err, errmsg)
+                                    call RaiseError(this%error, errmsg)
                                     return
                                 class is (ValueError)
-                                    call RaiseValueError(err, suberr%msg())
+                                    call RaiseValueError(this%error, &
+                                                         suberr%msg())
                                     return
                                 class default
                                     write(errmsg, &
                                         '("Unknown error while parsing &
                                         &''",a,"'': ",a)') trim(key), &
                                         trim(suberr%msg())
-                                    call RaiseError(err, errmsg)
+                                    call RaiseError(this%error, errmsg)
                                     return
                             end select
                         end if
@@ -244,16 +246,16 @@ module procedure parse_args_list
                         write(errmsg, &
                             '("Error while parsing values for ''",a,"''")') &
                                 trim(opt%label)
-                        call RaiseError(err, errmsg)
+                        call RaiseError(this%error, errmsg)
                         return
                     class is (ValueError)
-                        call RaiseValueError(err, suberr%msg())
+                        call RaiseValueError(this%error, suberr%msg())
                         return
                     class default
                         write(errmsg, &
                             '("Unknown error while parsing values for &
                             &''",a,"''")') trim(opt%label)
-                        call RaiseError(err, errmsg)
+                        call RaiseError(this%error, errmsg)
                         return
                 end select
             end if
@@ -274,7 +276,7 @@ module procedure parse_args_list
                     key = arg(:2)
                 end if
                 write(errmsg, '("Unknown argument: ",a)') trim(key)
-                call RaiseError(err, errmsg)
+                call RaiseError(this%error, errmsg)
                 return
             else
                 nargs_pos = nargs_pos + 1
@@ -302,19 +304,19 @@ module procedure parse_args_list
                     write(errmsg(i:), '(", ",a)') trim(arg_vals(iarg))
                 end do
             end if
-            call RaiseError(err, errmsg)
+            call RaiseError(this%error, errmsg)
             return
         else if (nargs_pos < abs(this%iargs_pos(3,this%nargs_pos))) then
             write(errmsg, '("Not enough positional arguments: at least ",i0,&
                 &" expected, ",i0," given.")') &
                 abs(this%iargs_pos(3,this%nargs_pos)), nargs_pos
-            call RaiseError(err, errmsg)
+            call RaiseError(this%error, errmsg)
             return
         else
-            found = .False. ! Found variable length of arguments
+            found = .false. ! Found variable length of arguments
             do i = 1, this%nargs_pos
                 if (this%iargs_pos(3,i) < 0) then
-                    found = .True.
+                    found = .true.
                     exit
                 end if
             end do
@@ -323,7 +325,7 @@ module procedure parse_args_list
                     write(errmsg, '("Mismatch in number of positional &
                         &arguments: at least ",i0," expected, ",i0," &
                         &given.")') this%iargs_pos(3,this%nargs_pos), nargs_pos
-                    call RaiseError(err, errmsg)
+                    call RaiseError(this%error, errmsg)
                     return
                 end if
             end if
@@ -342,7 +344,7 @@ module procedure parse_args_list
                         &Up to ",i0," can be given.")') &
                         trim(this%args(iargDB)%arg%label), &
                         this%args(iargDB)%arg%max_num
-                    Call RaiseError(err, errmsg)
+                    Call RaiseError(this%error, errmsg)
                     return
                 end if
                 j = ioff + abs(j)
@@ -358,16 +360,16 @@ module procedure parse_args_list
                         write(errmsg, &
                             '("Error while parsing values for ''",a,"''")') &
                                 this%args(iargDB)%arg%label
-                        call RaiseError(err, errmsg)
+                        call RaiseError(this%error, errmsg)
                         return
                     class is (ValueError)
-                        call RaiseValueError(err, suberr%msg())
+                        call RaiseValueError(this%error, suberr%msg())
                         return
                     class default
                         write(errmsg, &
                             '("Unknown error while parsing &
                             &''",a,"''")') this%args(iargDB)%arg%label
-                        call RaiseError(err, errmsg)
+                        call RaiseError(this%error, errmsg)
                         return
                 end select
             end if
@@ -381,7 +383,7 @@ module procedure parse_args_list
             write(errmsg, &
                   '("Error: Option ''",a,"'' is required and missing.")') &
                 trim(opt%label)
-            call RaiseError(err, errmsg)
+            call RaiseError(this%error, errmsg)
         end if
         end associate
     end do
@@ -428,7 +430,7 @@ contains
         if (.not.found) then
             write(errmsg, '("Unknown option as argument num. ",i0,": ",a)') &
                 iarg
-            call RaiseError(err, errmsg)
+            call RaiseError(this%error, errmsg)
             iargDB = 0
         end if
     end function chk_shortarg

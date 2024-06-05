@@ -154,7 +154,7 @@ module parse_cmdline
         integer :: nargs = 0, nargs_pos = 0
         ! Stores error status, that can be updated if needed
         ! The first time, contains the initialization status
-        class(BaseException), allocatable, public :: error
+        class(BaseException), allocatable :: error
     contains
         procedure, private :: get_value_int32val, get_value_int64val, &
             get_value_int32arr, get_value_int64arr, &
@@ -177,6 +177,9 @@ module parse_cmdline
             get_value_charval, get_value_chararr
         procedure :: parse_args => parse_args_list
         procedure :: print_help => print_help
+        procedure :: has_error => check_argDB_error_status
+        procedure :: get_error => get_argDB_error_msg
+        procedure :: exception => get_argDB_error
     end type CmdArgDB
 
     interface CmdArgDB
@@ -187,25 +190,21 @@ interface
 
 ! ----------------------------------------------------------------------
 
-module subroutine parse_args_list(this, err, arglist)
+module subroutine parse_args_list(this, arglist)
     class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance.
     character(len=*), dimension(:), intent(in), optional :: arglist
 end subroutine parse_args_list
 
 ! ----------------------------------------------------------------------
 
-module subroutine add_argument_int(this, argtype, err, shortname, longname, &
-    label, help, required, def_value, min_value, max_value, &
-    const_value, add_value, min_nvals, max_nvals)
+module subroutine add_argument_int(this, argtype, shortname, longname, label, &
+    help, required, def_value, min_value, max_value, const_value, add_value, &
+    min_nvals, max_nvals)
     class(CmdArgDB), intent(inout) :: this
     !! Arguments database object
     character(len=*), intent(in) :: argtype
     !! Type of argument.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance.
     character(len=*), intent(in), optional :: shortname
     !! Short argument name (as `-o`).
     character(len=*), intent(in), optional :: longname
@@ -234,15 +233,13 @@ end subroutine add_argument_int
 
 ! ----------------------------------------------------------------------
 
-module subroutine add_argument_real(this, argtype, err, shortname, &
-    longname, label, help, required, def_value, min_value, &
-    max_value, const_value, add_value, min_nvals, max_nvals)
+module subroutine add_argument_real(this, argtype, shortname, longname, &
+    label, help, required, def_value, min_value, max_value, const_value, &
+    add_value, min_nvals, max_nvals)
     class(CmdArgDB), intent(inout) :: this
     !! Arguments database object
     character(len=*), intent(in) :: argtype
     !! Type of argument.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance.
     character(len=*), intent(in), optional :: shortname
     !! Short argument name (as `-o`).
     character(len=*), intent(in), optional :: longname
@@ -271,14 +268,12 @@ end subroutine add_argument_real
 
 ! ----------------------------------------------------------------------
 
-module subroutine add_argument_bool(this, argtype, err, shortname, &
-    longname, label, help, required, def_value)
+module subroutine add_argument_bool(this, argtype, shortname, longname, &
+    label, help, required, def_value)
     class(CmdArgDB), intent(inout) :: this
     !! Arguments database object
     character(len=*), intent(in) :: argtype
     !! Type of argument.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance.
     character(len=*), intent(in), optional :: shortname
     !! Short argument name (as `-o`).
     character(len=*), intent(in), optional :: longname
@@ -295,14 +290,12 @@ end subroutine add_argument_bool
 
 ! ----------------------------------------------------------------------
 
-module subroutine add_argument_char(this, argtype, err, shortname, &
-    longname, label, help, required, def_value, min_nvals, max_nvals)
+module subroutine add_argument_char(this, argtype, shortname, longname, &
+    label, help, required, def_value, min_nvals, max_nvals)
     class(CmdArgDB), intent(inout) :: this
     !! Arguments database object
     character(len=*), intent(in) :: argtype
     !! Type of argument.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance.
     character(len=*), intent(in), optional :: shortname
     !! Short argument name (as `-o`).
     character(len=*), intent(in), optional :: longname
@@ -478,158 +471,134 @@ end function set_argchar_list_arr
 
 ! ----------------------------------------------------------------------
 
-module function argval_set_by_user(this, argname, err) result(res)
-    class(CmdArgDB), intent(in) :: this
+module function argval_set_by_user(this, argname) result(res)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
     logical :: res
     !! Boolean stating if value set by user.
 end function argval_set_by_user
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_int32val(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_int32val(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     integer(int32), intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_int32val
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_int64val(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_int64val(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     integer(int64), intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_int64val
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_int32arr(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_int32arr(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     integer(int32), dimension(:), allocatable, intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_int32arr
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_int64arr(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_int64arr(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     integer(int64), dimension(:), allocatable, intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_int64arr
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_real32val(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_real32val(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     real(real32), intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_real32val
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_real64val(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_real64val(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     real(real64), intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_real64val
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_real32arr(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_real32arr(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     real(real32), dimension(:), allocatable, intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_real32arr
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_real64arr(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_real64arr(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     real(real64), dimension(:), allocatable, intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_real64arr
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_boolval(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_boolval(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     logical, intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_boolval
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_charval(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_charval(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     character(len=*), intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_charval
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_chararr(this, argname, result, err)
-    class(CmdArgDB), intent(in) :: this
+module subroutine get_value_chararr(this, argname, result)
+    class(CmdArgDB), intent(inout) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     character(len=:), dimension(:), allocatable, intent(out) :: result
     !! Associated value.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
 end subroutine get_value_chararr
 
 ! ----------------------------------------------------------------------
@@ -773,12 +742,53 @@ function init_args_db(add_help, prefixes, progname) result(db)
     end if
 
     if (add_help_) then
-        call db%add_arg_bool('store_true', db%error, '-h', '--help', &
+        call db%add_arg_bool('store_true', '-h', '--help', &
                              help='Print this help message', &
-                             def_value=.False.)
+                             def_value=.false.)
     end if
 
 end function init_args_db
+
+! ======================================================================
+
+function get_argDB_error(argDB) result(error)
+    !! Return error attribute stored in CmdArgDB instance.
+    !!
+    !! Returns the error attribute currently stored in CmdArgDB.
+    !! This is mostly intended for testing, for instance with select
+    !! type constructs.
+    class(CmdArgDB), intent(in) :: argDB
+    !! CmdArgDB instance
+    class(BaseException), allocatable :: error
+    !! Error instance
+
+    error = argDB%error
+
+end function get_argDB_error
+
+! ======================================================================
+
+function check_argDB_error_status(argDB) result(raised)
+    class(CmdArgDB), intent(in) :: argDB
+    !! CmdArgDB instance.
+    logical :: raised
+    !! Status of the error
+
+    raised = argDB%error%raised()
+
+end function check_argDB_error_status
+
+! ======================================================================
+
+function get_argDB_error_msg(argDB) result(msg)
+    class(CmdArgDB), intent(in) :: argDB
+    !! CmdArgDB instance.
+    character(len=:), allocatable :: msg
+    !! Error instance.
+
+    msg = argDB%error%msg()
+
+end function get_argDB_error_msg
 
 ! ======================================================================
 

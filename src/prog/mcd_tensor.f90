@@ -592,9 +592,9 @@ contains
 
         ! Build parser and check arguments
         opts = CmdArgDB(progname='mcd_tensor')
-        if (opts%error%raised()) then
+        if (opts%has_error()) then
             write(*, '(a)') 'Failed to initialize the command-line parser'
-            select type (err => opts%error)
+            select type (err => opts%exception())
                 class is (AllocateError)
                     write(*, '(a)') trim(err%msg())
                 class is (ArgumentError)
@@ -607,48 +607,48 @@ contains
             stop
         end if
         call opts%add_arg_char( &
-            'string', err, label='filename', &
+            'string', label='filename', &
             help='Gaussian formatted checkpoint file')
         call opts%add_arg_real( &
-            'real', err, longname='--gamma', &
+            'real', longname='--gamma', &
             help='Include a shift term, gamma, to avoid a divergence of the &
                 &denominator in the summation with close states (unit: Hartree).',&
             def_value=real(e_gamma), min_value=0.0)
         call opts%add_arg_int( &
-            'scalar', err, shortname='-f', longname='--final', &
+            'scalar', shortname='-f', longname='--final', &
             help='Final excited electronic state (starting from 1)', &
             min_value=1)
         call opts%add_arg_bool( &
-            'store_true', err, longname='--giao', &
+            'store_true', longname='--giao', &
             help='Include GIAO corrections (default)', &
             def_value=.True.)
         call opts%add_arg_bool( &
-            'store_true', err, longname='--guvcde', &
+            'store_true', longname='--guvcde', &
             help='Add printing similar to SOS/GUVCDE for control.')
         call opts%add_arg_int( &
-            'scalar', err, shortname='-m', longname='--max-state', &
+            'scalar', shortname='-m', longname='--max-state', &
             help='Highest electronic state to include (upper bound of summation)', &
             min_value=1)
         call opts%add_arg_bool( &
-            'store_false', err, longname='--no-giao', &
+            'store_false', longname='--no-giao', &
             help='Include GIAO corrections')
         call opts%add_arg_char( &
-            'string', err, label='output', shortname='-o', longname='--output', &
+            'string', label='output', shortname='-o', longname='--output', &
             help='Name of the file to store the output. Existing content will &
             &be overwritten.')
         call opts%add_arg_char( &
-            'list', err, label='debug', longname='--debug', &
+            'list', label='debug', longname='--debug', &
             help='Debug flags. Supported: "print", "no_ijaa", "add_ijaa"')
         call opts%add_arg_int( &
-            'list', err, label='jj', longname='--jj', help='jj')
+            'list', label='jj', longname='--jj', help='jj')
         
-        call opts%parse_args(err)
-        if (err%raised()) then
-            select type (err)
+        call opts%parse_args()
+        if (opts%has_error()) then
+            select type (err => opts%exception())
                 class is (ValueError)
-                    write(*, '(a)') trim(err%msg())
+                    write(*, '(a)') trim(opts%get_error())
                 class is (Error)
-                    write(*, '(a)') trim(err%msg())
+                    write(*, '(a)') trim(opts%get_error())
                 class default
                     write(*, '(a)') 'Unknown error while reading "gamma"'
             end select
@@ -656,9 +656,9 @@ contains
         end if
 
         ! Check debug flags
-        if (opts%is_user_set('debug', err)) then
+        if (opts%is_user_set('debug')) then
             debug%user_set = .true.
-            call opts%get_value('debug', svalues, err)
+            call opts%get_value('debug', svalues)
             do i = 1, size(svalues)
                 select case(locase(svalues(i)))
                     case ('print')
@@ -679,8 +679,8 @@ contains
         if (debug%timer) call write_time('Option parser')
 
         ! Output file
-        if (opts%is_user_set('output', err)) then
-            call opts%get_value('output', string, err)
+        if (opts%is_user_set('output')) then
+            call opts%get_value('output', string)
             outfile = trim(string)
             open(newunit=iu_out, file=outfile, action='write')
             call sec_header(-1, 'MCD Tensor Calculator')
@@ -689,32 +689,32 @@ contains
         call sec_header(2, 'Standard parameters')
 
         ! Check requirement to use/not use GIAO correction
-        if (opts%is_user_set('giao', err) &
-            .and. opts%is_user_set('no-giao', err)) then
+        if (opts%is_user_set('giao') &
+            .and. opts%is_user_set('no-giao')) then
             write(*, '(" Error: conflicting option for the definition of GIAO")')
             stop
         end if
         
-        if (opts%is_user_set('no-giao', err)) then
+        if (opts%is_user_set('no-giao')) then
             do_giao = .false.
-        else if (opts%is_user_set('giao', err)) then
+        else if (opts%is_user_set('giao')) then
             do_giao = .true.
         end if
         call write_param('GIAO correction', do_giao)
 
         ! Check requirement for GUVCDE compatibility
-        if (opts%is_user_set('guvcde', err)) do_guvcde = .true.
+        if (opts%is_user_set('guvcde')) do_guvcde = .true.
         call write_param('Compatibility mode with GUVCDE', do_guvcde)
 
         ! Check for value of e_gamma
-        call opts%get_value('gamma', e_gamma, err)
+        call opts%get_value('gamma', e_gamma)
         use_gamma = abs(e_gamma) > tiny(e_gamma)
         call write_param('Correction term against degeneracies', use_gamma)
         if (use_gamma) &
             call write_param('Value of the term (in Hartrees)', e_gamma, .true.)
 
         ! Get input file name
-        call opts%get_value('filename', string, err)
+        call opts%get_value('filename', string)
         infile = trim(string)
         inquire(file=infile, exist=exists)
         if (.not.exists) then
@@ -724,15 +724,15 @@ contains
         call write_param('Input filename', infile)
 
         ! Set default final state.
-        if (opts%is_user_set('final', err)) then
-            call opts%get_value('final', f_state, err)
+        if (opts%is_user_set('final')) then
+            call opts%get_value('final', f_state)
             call write_param('Final electronic state', f_state)
         else
             call write_param('Final electronic state', 'automatic')
         end if
 
-        if (opts%is_user_set('max-state', err)) then
-            call opts%get_value('max-state', max_state, err)
+        if (opts%is_user_set('max-state')) then
+            call opts%get_value('max-state', max_state)
             call write_param('Highest excited state', max_state)
         else
             call write_param('Highest excited state', 'include all')

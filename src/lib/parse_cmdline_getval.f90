@@ -13,11 +13,11 @@ module procedure argval_set_by_user
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
@@ -34,29 +34,29 @@ module procedure get_value_int32val
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgInt)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             if (abs(opt%value) > huge(1_int32)) then
-                call RaiseError(err, &
+                call RaiseError(this%error, &
                     'Cannot represent value with current precision')
                 return
             else
-                result = opt%value
+                result = int(opt%value, int32)
             end if
         class default
-            call RaiseError(err, 'Argument is not a scalar integer.')
+            call RaiseError(this%error, 'Argument is not a scalar integer.')
             return
     end select
 
@@ -71,23 +71,23 @@ module procedure get_value_int64val
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgInt)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             result = opt%value
         class default
-            call RaiseError(err, 'Argument is not a scalar integer.')
+            call RaiseError(this%error, 'Argument is not a scalar integer.')
             return
     end select
 
@@ -102,30 +102,30 @@ module procedure get_value_int32arr
 
     integer :: i, iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgIntList)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             do i = 1, size(opt%values)
                 if (abs(opt%values(i)) > huge(1_int32)) then
-                    call RaiseError(err, &
+                    call RaiseError(this%error, &
                         'Cannot represent value with current precision')
                     return
                 end if
             end do
-            result = opt%values
+            result = int(opt%values, int32)
         class default
-            call RaiseError(err, 'Argument is not a list of integers.')
+            call RaiseError(this%error, 'Argument is not a list of integers.')
             return
     end select
 
@@ -140,23 +140,23 @@ module procedure get_value_int64arr
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgIntList)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             result = opt%values
         class default
-            call RaiseError(err, 'Argument is not a list of integers.')
+            call RaiseError(this%error, 'Argument is not a list of integers.')
             return
     end select
 
@@ -171,29 +171,29 @@ module procedure get_value_real32val
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgReal)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             if (abs(opt%value) > huge(1_real32)) then
-                call RaiseError(err, &
+                call RaiseError(this%error, &
                     'Cannot represent value with current precision')
                 return
             else
-                result = opt%value
+                result = real(opt%value, real32)
             end if
         class default
-            call RaiseError(err, 'Argument is not a scalar integer.')
+            call RaiseError(this%error, 'Argument is not a scalar integer.')
             return
     end select
 
@@ -208,23 +208,23 @@ module procedure get_value_real64val
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgReal)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             result = opt%value
         class default
-            call RaiseError(err, 'Argument is not a scalar real.')
+            call RaiseError(this%error, 'Argument is not a scalar real.')
             return
     end select
 
@@ -239,30 +239,30 @@ module procedure get_value_real32arr
 
     integer :: i, iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgRealList)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             do i = 1, size(opt%values)
                 if (abs(opt%values(i)) > huge(1_real32)) then
-                    call RaiseError(err, &
+                    call RaiseError(this%error, &
                         'Cannot represent value with current precision')
                     return
                 end if
             end do
-            result = opt%values
+            result = real(opt%values, real32)
         class default
-            call RaiseError(err, 'Argument is not a list of integers.')
+            call RaiseError(this%error, 'Argument is not a list of integers.')
             return
     end select
 
@@ -277,23 +277,23 @@ module procedure get_value_real64arr
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgRealList)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             result = opt%values
         class default
-            call RaiseError(err, 'Argument is not a list of integers.')
+            call RaiseError(this%error, 'Argument is not a list of integers.')
             return
     end select
 
@@ -308,23 +308,23 @@ module procedure get_value_boolval
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgBool)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             result = opt%value
         class default
-            call RaiseError(err, 'Argument is not a scalar logical.')
+            call RaiseError(this%error, 'Argument is not a scalar logical.')
             return
     end select
 
@@ -339,23 +339,23 @@ module procedure get_value_charval
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgChar)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             result = opt%value
         class default
-            call RaiseError(err, 'Argument is not a scalar character.')
+            call RaiseError(this%error, 'Argument is not a scalar character.')
             return
     end select
 
@@ -370,23 +370,23 @@ module procedure get_value_chararr
 
     integer :: iarg
 
-    err = InitError()
+    this%error = InitError()
 
     iarg = this%get_argname_id(argname)
     if (iarg == 0) then
-        call RaiseError(err, 'Unknown argument name.')
+        call RaiseError(this%error, 'Unknown argument name.')
         return
     end if
 
     select type (opt => this%args(iarg)%arg)
         class is (ArgCharList)
             if (opt%is_set == 0) then
-                call RaiseError(err, 'Unset argument')
+                call RaiseError(this%error, 'Unset argument')
                 return
             end if
             result = opt%values
         class default
-            call RaiseError(err, 'Argument is not a list of strings.')
+            call RaiseError(this%error, 'Argument is not a list of strings.')
             return
     end select
 

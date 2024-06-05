@@ -638,10 +638,8 @@ contains
             &be overwritten.')
         call opts%add_arg_char( &
             'list', label='debug', longname='--debug', &
-            help='Debug flags. Supported: "print", "no_ijaa", "add_ijaa"')
-        call opts%add_arg_int( &
-            'list', label='jj', longname='--jj', help='jj')
-        
+            help='Debug flags. Supported: "print", "ijaa", "ijaa", "timer".  Use "no" before keyword to deactivate.')
+
         call opts%parse_args()
         if (opts%has_error()) then
             select type (err => opts%exception())

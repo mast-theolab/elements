@@ -65,6 +65,8 @@ target("userdoc")
 
     set_kind("object")
     -- deactive from default build --
+    set_default(false)
+    -- deactive from default build --
     set_targetdir("doc")
     -- make the test target support the construction rules of the markdown file
     add_rules("adoc")

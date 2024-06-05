@@ -161,16 +161,6 @@ target("mcd_tensor")
                           "-o", "mcd_hof_closed_50-50_S1.txt",
                           "--final=2"}})
 
-
-target("tcd_cube")
-    set_default(false)
-    set_kind("binary")
-    add_packages("openmp")
-    add_deps("corelib")
-    add_deps("parselib")
-    add_deps("datalib")
-    add_files("src/prog/tcd_cube.f90")
-
 target("test_symm_array")
     set_default(false)
     set_rundir("$(projectdir)/tests")

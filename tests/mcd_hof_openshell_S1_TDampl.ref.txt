@@ -10,14 +10,14 @@
 
  Standard parameters
  -------------------
- - GIAO correction ------------------------> disabled
+ - GIAO correction ------------------------> enabled
  - Compatibility mode with GUVCDE ---------> disabled
  - Correction term against degeneracies ---> enabled
    > Value of the term (in Hartrees)       : 1.000000E-04
- - Input filename -------------------------> HOF.vac.B3LYP.321G.TD.G16.fchk
- - Final electronic state -----------------> automatic
+ - Input filename -------------------------> HOF.vac.UB3LYP.321G.TD.GDV.fchk
+ - Final electronic state -----------------> 2
  - Highest excited state ------------------> include all
- - Model for SOS excitations --------------> Hybrid model
+ - Model for SOS excitations --------------> TD amplitudes
 
 
  Data on Molecular System
@@ -26,7 +26,7 @@
  > Number of atoms           : 3
  > Charge                    : 0
  > Multiplicity              : 1
- > Open-/Closed-shell        : closed
+ > Open-/Closed-shell        : open
 
  > Number of basis functions : 20
  > Type of D functions       : Cartesian
@@ -39,8 +39,8 @@
  Atom      Mass             X            Y            Z
  ----- ------------ ----------------------------------------
   O       15.9949        0.055603     0.738149     0.000000
-  H        1.0078       -0.945248     0.856640     0.000000
-  F       18.9984        0.055603    -0.751315     0.000000
+  H        1.0078       -0.945248     0.856640    -0.000000
+  F       18.9984        0.055603    -0.751315    -0.000000
  ===== ============ ========================================
 
  Computation of one-electron integrals
@@ -54,21 +54,19 @@
  Transition Data
  ===============
 
- > Number of excited states : 6
+ > Number of excited states : 4
  > Reference excited state  : 1
 
  User overrides
  --------------
- No modifications requested. Proceeding with data found.
+ > New final state, num. 2.
 
  Definition of Transition Amplitudes
  -----------------------------------
- Now doing state num. 1 out of 6.
- Now doing state num. 2 out of 6.
- Now doing state num. 3 out of 6.
- Now doing state num. 4 out of 6.
- Now doing state num. 5 out of 6.
- Now doing state num. 6 out of 6.
+ Now doing state num. 1 out of 4.
+ Now doing state num. 2 out of 4.
+ Now doing state num. 3 out of 4.
+ Now doing state num. 4 out of 4.
 
 
  Computation of Properties
@@ -99,6 +97,6 @@
  Final Value
  -----------
           X              Y              Z
- X   7.485323E-02   3.430569E-02   1.156851E-14
- Y   1.280892E+00  -5.362496E-01  -1.411556E-14
- Z  -1.969522E-15  -6.127327E-15  -4.117539E-02
+ X  -3.042882E-02   9.444429E-04  -5.276419E-18
+ Y  -1.244449E-01   9.023410E-04  -1.503823E-17
+ Z  -1.859568E-33  -1.812215E-35  -7.494301E-46

@@ -162,6 +162,39 @@ target("mcd_tensor")
               {runargs = {"HOF.vac.B3LYP.321G.TD.GDV.5050.fchk",
                           "-o", "mcd_hof_closed_50-50_S1.txt",
                           "--final=2"}})
+    -- Test pure Slater model for excitations
+    add_tests("HOF:openshell, final=S1, Slater",
+              {runargs = {"HOF.vac.UB3LYP.321G.TD.GDV.fchk",
+                          "--exc-model=slater",
+                          "-o", "mcd_hof_openshell_S1_Slater.txt",
+                          "--final=2"}})
+    add_tests("HOF:closed 50-50, final=S1, Slater",
+              {runargs = {"HOF.vac.B3LYP.321G.TD.GDV.5050.fchk",
+                          "--exc-model=slater",
+                          "-o", "mcd_hof_closed_50-50_S1_Slater.txt",
+                          "--final=2"}})
+    -- Test model relying purely on TD amplitudes for excitations
+    add_tests("HOF:openshell, final=S1, TD amplitudes",
+              {runargs = {"HOF.vac.UB3LYP.321G.TD.GDV.fchk",
+                          "--exc-model=amplitudes",
+                          "-o", "mcd_hof_openshell_S1_TDampl.txt",
+                          "--final=2"}})
+    add_tests("HOF:closed 50-50, final=S1, TD amplitudes",
+              {runargs = {"HOF.vac.B3LYP.321G.TD.GDV.5050.fchk",
+                          "--exc-model=amplitudes",
+                          "-o", "mcd_hof_closed_50-50_S1_TDampl.txt",
+                          "--final=2"}})
+    -- Test using hybrid model for excitations
+    add_tests("HOF:openshell, final=S1, TD hybrid model",
+              {runargs = {"HOF.vac.UB3LYP.321G.TD.GDV.fchk",
+                          "--exc-model=hybrid",
+                          "-o", "mcd_hof_openshell_S1_hybrid-exc.txt",
+                          "--final=2"}})
+    add_tests("HOF:closed 50-50, final=S1, TD hybrid model",
+              {runargs = {"HOF.vac.B3LYP.321G.TD.GDV.5050.fchk",
+                          "--exc-model=hybrid",
+                          "-o", "mcd_hof_closed_50-50_S1_hybrid-exc.txt",
+                          "--final=2"}})
 
 target("test_symm_array")
     set_default(false)

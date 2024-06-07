@@ -17,6 +17,7 @@
  - Input filename -------------------------> HOF.vac.B3LYP.321G.TD.GDV.5050.fchk
  - Final electronic state -----------------> automatic
  - Highest excited state ------------------> include all
+ - Model for SOS excitations --------------> Hybrid model
 
 
  Data on Molecular System

@@ -22,7 +22,8 @@ contains
 
 ! ======================================================================
 
-function sos_eiOg(ldim, n_ab, n_mos, t_mo, O_ij, forbid) result(res)
+function sos_eiOg(ldim, n_ab, n_mos, n_els, t_mo, O_ij, forbid, model) &
+    result(res)
     !! Compute < e_i | O | g > using the SOS formalism
     !!
     !! Computes the ground-to-excited integral < e_i | O | g > using the
@@ -37,12 +38,19 @@ function sos_eiOg(ldim, n_ab, n_mos, t_mo, O_ij, forbid) result(res)
     !! Number of unique MO sets (1 for closed-shell, 2 for open-shell)
     integer, dimension(:), intent(in) :: n_mos
     !! Number of molecular orbitals.
+    integer, dimension(:), intent(in) :: n_els
+    !! Number of electrons in the molecular orbitals.
     real(real64), dimension(:,:,:), intent(in) :: t_mo
     !! Electronic transition amplitudes
     real(real64), dimension(:,:,:,:), intent(in) :: O_ij
     !! MO-integrals for the quantity/property of interest
     logical, intent(in), optional :: forbid
     !! Transition is forbidden (transition moment = 0).
+    integer, intent(in), optional :: model
+    !! SOS model
+    !! 1: use pure TD-DFT amplitudes
+    !! 2: use pure Slater determinants
+    !! 3: hybrid, all TD-DFT amplitudes + Slater permutations
     real(real64), dimension(:), allocatable :: res
     !! Integral < e_j | O | g >
 
@@ -54,21 +62,33 @@ function sos_eiOg(ldim, n_ab, n_mos, t_mo, O_ij, forbid) result(res)
     if (present(forbid)) then
         if (forbid) return
     end if
-    do iab = 1, n_ab
-        do ia = 1, n_mos(iab)
-            do ib = 1, n_mos(iab)
-                ! res = res + t_mo(ia,ib,iab)*O_ij(:,ib,ia,iab)
-                res = res + t_mo(ia,ib,iab)*O_ij(:,ia,ib,iab)
+    if (model == 2) then
+        do iab = 1, n_ab
+            do ia = 1, n_els(iab)
+                do ib = n_els(iab)+1, n_mos(iab)
+                    ! res = res + t_mo(ia,ib,iab)*O_ij(:,ib,ia,iab)
+                    res = res + t_mo(ia,ib,iab)*O_ij(:,ia,ib,iab)
+                end do
             end do
         end do
-    end do
+    else
+        do iab = 1, n_ab
+            do ia = 1, n_mos(iab)
+                do ib = 1, n_mos(iab)
+                    ! res = res + t_mo(ia,ib,iab)*O_ij(:,ib,ia,iab)
+                    res = res + t_mo(ia,ib,iab)*O_ij(:,ia,ib,iab)
+                end do
+            end do
+        end do
+    end if
     if (n_ab == 1) res = res*sqrt(2.0_real64)
 
 end function sos_eiOg
 
 ! ======================================================================
 
-function sos_ejOei(ldim, n_ab, n_mos, t_mo, prefac, forbid) result(res) ! dodjk
+function sos_ejOei(ldim, n_ab, n_mos, n_els, t_mo, prefac, forbid, model) &
+    result(res)
     !! Compute < e_j | O | e_i > using the SOS formalism
     !!
     !! Computes the excited-to-excited integral < e_j | O | e_i > using
@@ -82,12 +102,19 @@ function sos_ejOei(ldim, n_ab, n_mos, t_mo, prefac, forbid) result(res) ! dodjk
     !! Number of unique MO sets (1 for closed-shell, 2 for open-shell)
     integer, dimension(:), intent(in) :: n_mos
     !! Number of molecular orbitals.
+    integer, dimension(:), intent(in) :: n_els
+    !! Number of electrons in the molecular orbitals.
     real(real64), dimension(:,:,:), intent(in) :: t_mo
     !! Electronic transition amplitudes
     real(real64), dimension(:,:,:,:), intent(in) :: prefac
     !! Prefactor, computed by [sos_prefac_ejOei]
     logical, intent(in), optional :: forbid
     !! Transition is forbidden (transition moment = 0).
+    integer, intent(in), optional :: model
+    !! SOS model
+    !! 1: use pure TD-DFT amplitudes
+    !! 2: use pure Slater determinants
+    !! 3: hybrid, all TD-DFT amplitudes + Slater permutations
     real(real64), dimension(:), allocatable :: res
     !! Integral < e_j | O | e_i >
 
@@ -99,20 +126,30 @@ function sos_ejOei(ldim, n_ab, n_mos, t_mo, prefac, forbid) result(res) ! dodjk
     if (present(forbid)) then
         if (forbid) return
     end if
-    do iab = 1, n_ab
-        do ia = 1, n_mos(iab)
-            do ib = 1, n_mos(iab)
-                res = res + t_mo(ia,ib,iab)*prefac(:,ia,ib,iab)
+    if (model == 2) then
+        do iab = 1, n_ab
+            do ia = 1, n_els(iab)
+                do ib = n_els(iab)+1, n_mos(iab)
+                    res = res + t_mo(ia,ib,iab)*prefac(:,ia,ib,iab)
+                end do
             end do
         end do
-    end do
+    else
+        do iab = 1, n_ab
+            do ia = 1, n_mos(iab)
+                do ib = 1, n_mos(iab)
+                    res = res + t_mo(ia,ib,iab)*prefac(:,ia,ib,iab)
+                end do
+            end do
+        end do
+    end if
 
 end function sos_ejOei
 
 ! ======================================================================
 
 function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij, &
-                          add_ijaa) result(prefac)
+                          model, add_ijaa) result(prefac)
     !! Prefactor to < e_j | O | e_i > for the SOS formalism
     !!
     !! Computes the prefactor term for < e_j | O | e_i > in the SOS
@@ -132,6 +169,11 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij, &
     !! Ground-state moment of the quantity/property.
     real(real64), dimension(:,:,:,:), intent(in) :: O_ij
     !! MO-integrals for the quantity/property of interest.
+    integer, intent(in), optional :: model
+    !! SOS model
+    !! 1: use pure TD-DFT amplitudes
+    !! 2: use pure Slater determinants
+    !! 3: hybrid, all TD-DFT amplitudes + Slater permutations
     logical, intent(in) :: add_ijaa
     !! Include <ia|ja> terms.
     real(real64), dimension(:,:,:,:), allocatable :: prefac
@@ -151,44 +193,105 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij, &
         u_gg = O_gg(:,1) + O_gg(:,2)
     end if
 
-    if (add_ijaa) then
+    if (model == 1) then
+        !! Use pure TD-DFT transition amplitudes
         do iab = 1, n_ab
             !$omp parallel private(x)
             !$omp do collapse(2)
             do ia = 1, n_mos(iab)
                 do ib = 1, n_mos(iab)
-                    x = t_mo(ia,ib,iab) &
+                    prefac(:,ia,ib,iab) = t_mo(ia,ib,iab) &
                         * (u_gg - O_ij(:,ia,ia,iab) + O_ij(:,ib,ib,iab))
-                    do ic = 1, n_els(iab)
-                        if (ic /= ia) x = x + t_mo(ic,ib,iab)*O_ij(:,ic,ia,iab)
-                    end do
-                    do ic = n_els(iab)+1, n_mos(iab)
-                        if (ic /= ib) x = x + t_mo(ia,ic,iab)*O_ij(:,ic,ib,iab)
-                    end do
-                    prefac(:,ia,ib,iab) = x
                 end do
             end do
             !$omp end do
             !$omp end parallel
         end do
-    else
-        do iab = 1, n_ab
-            !$omp parallel private(x)
-            !$omp do collapse(2)
-            do ia = 1, n_mos(iab)
-                do ib = 1, n_mos(iab)
-                    x = t_mo(ia,ib,iab) &
-                        * (u_gg - O_ij(:,ia,ia,iab) + O_ij(:,ib,ib,iab))
-                    do ic = n_els(iab)+1, n_mos(iab)
-                        if (ic /= ib) &
-                            x = x + t_mo(ia,ic,iab)*O_ij(:,ic,ib,iab)
+    else if (model == 2) then
+        !! Use pure Slater determinants
+        if (add_ijaa) then
+            do iab = 1, n_ab
+                !$omp parallel private(x)
+                !$omp do collapse(2)
+                do ia = 1, n_els(iab)
+                    do ib = n_els(iab)+1, n_mos(iab)
+                        x = t_mo(ia,ib,iab) &
+                            * (u_gg - O_ij(:,ia,ia,iab) + O_ij(:,ib,ib,iab))
+                        do ic = 1, n_els(iab)
+                            if (ic /= ia) &
+                                x = x + t_mo(ic,ib,iab)*O_ij(:,ic,ia,iab)
+                        end do
+                        do ic = n_els(iab)+1, n_mos(iab)
+                            if (ic /= ib) &
+                                x = x + t_mo(ia,ic,iab)*O_ij(:,ic,ib,iab)
+                        end do
+                        prefac(:,ia,ib,iab) = x
                     end do
-                    prefac(:,ia,ib,iab) = x
                 end do
+                !$omp end do
+                !$omp end parallel
             end do
-            !$omp end do
-            !$omp end parallel
-        end do
+        else
+            do iab = 1, n_ab
+                !$omp parallel private(x)
+                !$omp do collapse(2)
+                do ia = 1, n_els(iab)
+                    do ib = n_els(iab)+1, n_mos(iab)
+                        x = t_mo(ia,ib,iab) &
+                            * (u_gg - O_ij(:,ia,ia,iab) + O_ij(:,ib,ib,iab))
+                        do ic = n_els(iab)+1, n_mos(iab)
+                            if (ic /= ib) &
+                                x = x + t_mo(ia,ic,iab)*O_ij(:,ic,ib,iab)
+                        end do
+                        prefac(:,ia,ib,iab) = x
+                    end do
+                end do
+                !$omp end do
+                !$omp end parallel
+            end do
+        end if
+    else if (model == 3) then
+        if (add_ijaa) then
+            do iab = 1, n_ab
+                !$omp parallel private(x)
+                !$omp do collapse(2)
+                do ia = 1, n_mos(iab)
+                    do ib = 1, n_mos(iab)
+                        x = t_mo(ia,ib,iab) &
+                            * (u_gg - O_ij(:,ia,ia,iab) + O_ij(:,ib,ib,iab))
+                        do ic = 1, n_els(iab)
+                            if (ic /= ia) &
+                                x = x + t_mo(ic,ib,iab)*O_ij(:,ic,ia,iab)
+                        end do
+                        do ic = n_els(iab)+1, n_mos(iab)
+                            if (ic /= ib) &
+                                x = x + t_mo(ia,ic,iab)*O_ij(:,ic,ib,iab)
+                        end do
+                        prefac(:,ia,ib,iab) = x
+                    end do
+                end do
+                !$omp end do
+                !$omp end parallel
+            end do
+        else
+            do iab = 1, n_ab
+                !$omp parallel private(x)
+                !$omp do collapse(2)
+                do ia = 1, n_mos(iab)
+                    do ib = 1, n_mos(iab)
+                        x = t_mo(ia,ib,iab) &
+                            * (u_gg - O_ij(:,ia,ia,iab) + O_ij(:,ib,ib,iab))
+                        do ic = n_els(iab)+1, n_mos(iab)
+                            if (ic /= ib) &
+                                x = x + t_mo(ia,ic,iab)*O_ij(:,ic,ib,iab)
+                        end do
+                        prefac(:,ia,ib,iab) = x
+                    end do
+                end do
+                !$omp end do
+                !$omp end parallel
+            end do
+        end if
     end if
     ! if (n_ab == 1) then
     !     ! closed shell

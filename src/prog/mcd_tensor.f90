@@ -25,7 +25,7 @@ program mcd_tensor
     end type DebugType
 
     integer :: fstate, i, iab, istate, ispin_gs, ix, jstate, jx, max_state, &
-        qty_flag
+        model_sos, qty_flag
     real(real64) :: de, ef, ei
     real(real64) :: e_gamma = 1.0e-4
     real(real64), dimension(3) :: &
@@ -84,7 +84,7 @@ program mcd_tensor
     call sec_header(-1, 'MCD Tensor Calculator')
 
     call parse_argopts(infile, outfile, e_gamma, fstate, max_state, &
-        use_gamma, do_giao, do_guvcde, in_mem, debug)
+        use_gamma, do_giao, do_guvcde, in_mem, model_sos, debug)
     dfile = DataFile(infile)
     if (dfile%has_error()) then
         call write_err('std', 'Error found while initializing data file', &
@@ -358,28 +358,32 @@ program mcd_tensor
                 ov_eiej(istate,0) = ov_eieg(istate)
                 ov_eiej(0,istate) = -ov_eieg(istate)
                 pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), r_gg_ab, Smo_irj, debug%add_ijaa)
+                    t_mo(:,:,:,istate), r_gg_ab, Smo_irj, model_sos, &
+                    debug%add_ijaa)
                 pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), p_gg_ab, Smo_ipj, debug%add_ijaa)
-                r_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, &
-                    t_mo(:,:,:,istate), pfac_r)
-                p_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, &
-                    t_mo(:,:,:,istate), pfac_p)
+                    t_mo(:,:,:,istate), p_gg_ab, Smo_ipj, model_sos, &
+                    debug%add_ijaa)
+                r_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, n_els, &
+                    t_mo(:,:,:,istate), pfac_r, model=model_sos)
+                p_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, n_els, &
+                    t_mo(:,:,:,istate), pfac_p, model=model_sos)
                 forbid = .not.openshell .and. &
                     ispin_exc(istate) /= ispin_gs
-                r_lk(:,istate,0) =  sos_eiOg(3, n_ab, n_mos, &
-                    t_mo(:,:,:,istate), Smo_irj, forbid)
-                p_lk(:,istate,0) = sos_eiOg(3, n_ab, n_mos, &
-                    t_mo(:,:,:,istate), Smo_ipj, forbid)
+                r_lk(:,istate,0) =  sos_eiOg(3, n_ab, n_mos, n_els, &
+                    t_mo(:,:,:,istate), Smo_irj, forbid, model=model_sos)
+                p_lk(:,istate,0) = sos_eiOg(3, n_ab, n_mos, n_els, &
+                    t_mo(:,:,:,istate), Smo_ipj, forbid, model=model_sos)
                 ei = g2e_energy(istate)
                 do jstate = 1, n_states
                     if (jstate /= istate) then
                         forbid = .not.openshell .and. &
                             ispin_exc(jstate) /= ispin_exc(istate)
                         r_lk(:,istate,jstate) = sos_ejOei(3, n_ab, n_mos, &
-                            t_mo(:,:,:,jstate), pfac_r, forbid)
+                            n_els, t_mo(:,:,:,jstate), pfac_r, forbid, &
+                            model=model_sos)
                         p_lk(:,istate,jstate) = sos_ejOei(3, n_ab, n_mos, &
-                            t_mo(:,:,:,jstate), pfac_p, forbid)
+                            n_els, t_mo(:,:,:,jstate), pfac_p, forbid, &
+                            model=model_sos)
                         de = ei - g2e_energy(jstate)
                         if (use_gamma) then
                             ov_eiej(istate,jstate) = de/(de**2 + e_gamma**2)
@@ -397,28 +401,29 @@ program mcd_tensor
     ! For this reason, they are pre-computed once to speed up later
     if (debug%timer) call write_time('Prefactors')
     pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-                              r_gg_ab, Smo_irj, debug%add_ijaa)
+                              r_gg_ab, Smo_irj, model_sos, debug%add_ijaa)
     pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-                              p_gg_ab, Smo_ipj, debug%add_ijaa)
+                              p_gg_ab, Smo_ipj, model_sos, debug%add_ijaa)
     pfac_rxp = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-                                rxp_gg_ab, Smo_irxpj, debug%add_ijaa)
+                                rxp_gg_ab, Smo_irxpj, model_sos, &
+                                debug%add_ijaa)
     if (do_giao) then
-        r_lk(:,id_state,id_state) = sos_ejOei(3, n_ab, n_mos, &
-            t_mo(:,:,:,id_state), pfac_r)
-        p_lk(:,id_state,id_state) = sos_ejOei(3, n_ab, n_mos, &
-            t_mo(:,:,:,id_state), pfac_p)
-        r_lk(:,id_state,0) = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), &
-            Smo_irj)
-        p_lk(:,id_state,0) =  sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), &
-            Smo_ipj)
+        r_lk(:,id_state,id_state) = sos_ejOei(3, n_ab, n_mos, n_els, &
+            t_mo(:,:,:,id_state), pfac_r, model=model_sos)
+        p_lk(:,id_state,id_state) = sos_ejOei(3, n_ab, n_mos, n_els, &
+            t_mo(:,:,:,id_state), pfac_p, model=model_sos)
+        r_lk(:,id_state,0) = sos_eiOg(3, n_ab, n_mos, n_els, &
+            t_mo(:,:,:,id_state), Smo_irj, model=model_sos)
+        p_lk(:,id_state,0) =  sos_eiOg(3, n_ab, n_mos, n_els, &
+            t_mo(:,:,:,id_state), Smo_ipj, model=model_sos)
         do istate = 1, n_states
             if (istate /= id_state) then
                 forbid = .not.openshell .and. &
                          ispin_exc(istate) /= ispin_exc(id_state)
-                r_lk(:,id_state,istate) = sos_ejOei(3, n_ab, n_mos, &
-                    t_mo(:,:,:,istate), pfac_r, forbid)
-                p_lk(:,id_state,istate) = sos_ejOei(3, n_ab, n_mos, &
-                    t_mo(:,:,:,istate), pfac_p, forbid)
+                r_lk(:,id_state,istate) = sos_ejOei(3, n_ab, n_mos, n_els, &
+                    t_mo(:,:,:,istate), pfac_r, forbid, model=model_sos)
+                p_lk(:,id_state,istate) = sos_ejOei(3, n_ab, n_mos, n_els, &
+                    t_mo(:,:,:,istate), pfac_p, forbid, model=model_sos)
                 ov_eiej(istate,id_state) = ov_eief(istate)
                 ov_eiej(id_state,istate) = - ov_eief(istate)
             end if
@@ -433,22 +438,28 @@ program mcd_tensor
         r_fg = r_lk(:,id_state,0)
         p_fg = -p_lk(:,id_state,0) / g2e_energy(id_state)
     else
-        r_fg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irj, forbid)
-        p_fg = -sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_ipj, &
-                         forbid) / g2e_energy(id_state)
+        r_fg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), Smo_irj, &
+            forbid, model=model_sos)
+        p_fg = -sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
+            Smo_ipj, forbid, model=model_sos) / g2e_energy(id_state)
     endif
-    rxp_fg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irxpj, forbid)
+    rxp_fg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), Smo_irxpj, &
+        forbid, model=model_sos)
 
     G_if = 0.0_real64
     if (debug%print) write(iu_out, '(a)') 'NOW ON G_IF'
     do istate = 1, n_states
         if (istate /= id_state) then
             forbid = .not.openshell .and. ispin_exc(istate) /= ispin_gs
-            r_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_irj, forbid)
-            rxp_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,istate), Smo_irxpj, forbid)
+            r_kg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,istate), &
+                Smo_irj, forbid, model=model_sos)
+            rxp_kg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,istate), &
+                Smo_irxpj, forbid, model=model_sos)
             forbid = .not.openshell .and. ispin_exc(istate) /= ispin_exc(id_state)
-            r_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_r, forbid)
-            rxp_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,istate), pfac_rxp, forbid)
+            r_fk = sos_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,istate), &
+                pfac_r, forbid, model=model_sos)
+            rxp_fk = sos_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,istate), &
+                pfac_rxp, forbid, model=model_sos)
             if (debug%print) then
                 write(iu_out, '(i4,"r_kg   ",3f12.6)') istate, r_kg
                 write(iu_out, '(4x,"rxp_kg ",3f12.6)') rxp_kg
@@ -473,8 +484,10 @@ program mcd_tensor
     end do
     ! Add special cases for k=g or k=f
     forbid = .not.openshell .and. ispin_exc(id_state) /= ispin_gs
-    rxp_kg = sos_eiOg(3, n_ab, n_mos, t_mo(:,:,:,id_state), Smo_irxpj, forbid)
-    r_fk = sos_ejOei(3, n_ab, n_mos, t_mo(:,:,:,id_state), pfac_r, forbid)
+    rxp_kg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), Smo_irxpj, &
+        forbid, model=model_sos)
+    r_fk = sos_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), pfac_r, &
+        forbid, model=model_sos)
     ! Add case k=f for first term of G
     do jx = 1, 3
         do ix = 1, 3
@@ -542,7 +555,8 @@ contains
     end function fmt_param
 
     subroutine parse_argopts(infile, outfile, e_gamma, f_state, max_state, &
-                             use_gamma, do_giao, do_guvcde, in_mem, debug)
+                             use_gamma, do_giao, do_guvcde, in_mem, &
+                             model_sos, debug)
         !! Parses commandline options and updates information.
         !!
         !! Builds options parser and parse user-options, setting
@@ -568,6 +582,12 @@ contains
         !! This is intended for debugging purpose.
         logical, intent(out) :: in_mem
         !! Store integrals in memory (default, alternative NYI)
+        integer, intent(out) :: model_sos
+        !! Model for the SOS excitation:
+        !! 0: auto
+        !! 1: use pure TD-DFT amplitudes
+        !! 2: use pure Slater determinants
+        !! 3: hybrid, all TD-DFT amplitudes + Slater permutations
         type(DebugType), intent(out) :: debug
         !! Debug flags
 
@@ -618,6 +638,15 @@ contains
             'scalar', shortname='-f', longname='--final', &
             help='Final excited electronic state (starting from 1)', &
             min_value=1)
+        call opts%add_arg_char( &
+            'string', longname='--exc-model', &
+            help='Model to represent excited wave functions.  &
+            &Possible choices are: &
+            &amplitudes (use TD-DFT amplitudes coefficients), &
+            &slater (use Slater determinants with amplitudes, only &
+            &considering excitations occupied->virtual), &
+            &hybrid (default, use TD-DFT amplitudes and add Slater-like &
+            &permutations)')
         call opts%add_arg_bool( &
             'store_true', longname='--giao', &
             help='Include GIAO corrections (default)', &
@@ -638,7 +667,8 @@ contains
             &be overwritten.')
         call opts%add_arg_char( &
             'list', label='debug', longname='--debug', &
-            help='Debug flags. Supported: "print", "ijaa", "ijaa", "timer".  Use "no" before keyword to deactivate.')
+            help='Debug flags. Supported: "print", "ijaa", "ijaa", "timer".  &
+            &Use "no" before keyword to deactivate.')
 
         call opts%parse_args()
         if (opts%has_error()) then
@@ -692,7 +722,7 @@ contains
             write(*, '(" Error: conflicting option for the definition of GIAO")')
             stop
         end if
-        
+
         if (opts%is_user_set('no-giao')) then
             do_giao = .false.
         else if (opts%is_user_set('giao')) then
@@ -735,6 +765,35 @@ contains
         else
             call write_param('Highest excited state', 'include all')
         end if
+
+        if (opts%is_user_set('exc-model')) then
+            call opts%get_value('exc-model', string)
+            select case (trim(locase(string)))
+            case ('ampl', 'amplitude', 'amplitudes')
+                model_sos = 1
+            case ('slater')
+                model_sos = 2
+            case ('hybrid')
+                model_sos = 3
+            case default
+                write(*, '(" Error: Unrecognized model for SOS excitation.")')
+                stop 1
+            end select
+        else
+            model_sos = 3
+        end if
+
+        select case (model_sos)
+        case (1)
+            call write_param('Model for SOS excitations', 'TD amplitudes')
+        case (2)
+            call write_param('Model for SOS excitations', 'Slater determinant')
+        case (3)
+            call write_param('Model for SOS excitations', 'Hybrid model')
+        case default
+            write(*, '(" Error: List of supported SOS models needs updating")')
+            stop 2
+        end select
 
         ! debugging mode - print information
         if (debug%user_set) then

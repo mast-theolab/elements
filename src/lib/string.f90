@@ -99,4 +99,57 @@ end function findstr
 
 ! ======================================================================
 
+function str_equal(string1, string2, ignore_case, ignore_blanks) result(res)
+    !! Check if string1 and string2 are equal
+    !!
+    !! Checks if two strings are equal.
+    !! The test can be case sensitive or insensitive (default).
+    !! Trailing and leading blanks can be ignored (default).
+
+    character(len=*), intent(in) :: string1
+    !! First string
+    character(len=*), intent(in) :: string2
+    !! Second string
+    logical, intent(in), optional :: ignore_case
+    !! Ignore case in comparison
+    logical, intent(in), optional :: ignore_blanks
+    !! Ignore trailing and leading blanks characters
+    logical :: res
+    !! Result of the check
+
+    logical :: nocase, noblanks
+    character(len=:), allocatable :: str1, str2
+
+    if (present(ignore_case)) then
+        nocase = ignore_case
+    else
+        nocase = .true.
+    end if
+
+    if (present(ignore_blanks)) then
+        noblanks = ignore_blanks
+    else
+        noblanks = .true.
+    end if
+
+    if (nocase .and. noblanks) then
+        str1 = locase(trim(string1))
+        str2 = locase(trim(string2))
+    else if (nocase) then
+        str1 = locase(string1)
+        str2 = locase(string2)
+    else if (noblanks) then
+        str1 = trim(string1)
+        str2 = trim(string2)
+    else
+        str1 = string1
+        str2 = string2
+    end if
+
+    res = len(str1) == len(str2) .and. str1 == str2
+            
+end function str_equal
+
+! ======================================================================
+
 end module string

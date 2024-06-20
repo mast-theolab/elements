@@ -4,7 +4,7 @@ submodule (input) input_extract
     use arrays, only: symm_tri_array
     use parsefchk, only: fchkdata, fchkparser
     use basisset, only: build_bset_DB
-    use atomic, only: atdata
+    use atominfo, only: atdata
     use moldata
     use transdata
     use exception, only: BaseException, Error, InitError, RaiseArgError, &

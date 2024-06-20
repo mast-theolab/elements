@@ -385,7 +385,7 @@ subroutine sec_header(level, title)
             lblc = 78
             lshft = (lblc-ltitle)/2
         endif
-        write(fmt, 1010) lblc, lshft, lblc - ltitle - lshft, lblc
+        write(fmt, 1010) lblc, lshft, lblc - ltitle - lshft
         write(iu_out, fmt) trim(title)
     case(1)
         write(fmt, 1020) ltitle

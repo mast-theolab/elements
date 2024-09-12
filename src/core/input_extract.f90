@@ -6,7 +6,7 @@ submodule (input) input_extract
     use basisset, only: build_bset_DB
     use atominfo, only: atdata
     use moldata
-    use transdata
+    use excdata
     use exception, only: BaseException, Error, InitError, RaiseArgError, &
         RaiseError, RaiseFileError, RaiseQuantityError
 
@@ -379,7 +379,7 @@ subroutine build_excdata_fchk(dfile)
     !!
     !! Parses a Gaussian formatted checkpoint file and extracts all
     !! relevant information on electronic excited-state data and
-    !! transition data.  Data are stored in the transdata module.
+    !! transition data.  Data are stored in the excdata module.
     class(DataFile), intent(inout) :: dfile
     !! Name of the formatted checkpoint file
 

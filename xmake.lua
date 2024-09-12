@@ -103,7 +103,7 @@ target("datalib")
     add_packages("openmp")
     add_deps("corelib")
     add_files("src/data/moldata.f90")
-    add_files("src/data/transdata.f90")
+    add_files("src/data/excdata.f90")
     add_files("src/core/input.f90")
     add_files("src/core/input_*.f90")
 

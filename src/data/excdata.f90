@@ -1,4 +1,4 @@
-module transdata
+module excdata
     use iso_fortran_env, only: int32, int64, real64
 
     integer :: &
@@ -15,4 +15,4 @@ module transdata
     real(real64), dimension(:), allocatable :: &
         g2e_energy        ! excitation energies
 
-end module transdata
+end module excdata

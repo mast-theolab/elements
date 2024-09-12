@@ -13,7 +13,7 @@ program mcd_tensor
     use exc_sos, only: sos_eiOg, sos_ejOei, sos_prefac_ejOei, &
         sos_MCD_tensor_LORG_corr
     use moldata
-    use transdata
+    use excdata
 
     implicit none
 

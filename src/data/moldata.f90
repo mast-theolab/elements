@@ -30,9 +30,13 @@ module moldata
     real(real64), dimension(:,:), allocatable :: &
         at_crd           ! atomic coordinates
     logical :: &
-        openshell = .True., &  ! if molecule is open shell
-        pureD = .True., &      ! pure D basis functions
-        pureF = .True.         ! pure F... basis functions
+        openshell = .false., &    ! if molecule is open shell
+        pureD = .true., &         ! pure D basis functions
+        pureF = .true., &         ! pure F... basis functions
+        dat_base_loaded = .false., & ! Basic data have been loaded
+        dat_spec_loaded = .false., & ! Molecular spec. data have been loaded
+        dat_bset_loaded = .false., & ! Basis set data have been loaded
+        dat_morb_loaded = .false.    ! Basis set data have been loaded
     character(len=2), dimension(:), allocatable :: &
         at_lab           ! atomic labels
     type(PrimitiveFunction), dimension(:,:), allocatable :: &

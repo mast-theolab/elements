@@ -7,7 +7,8 @@ module exception
     
     private
     public :: InitError, RaiseError, RaiseAllocateError, RaiseArgError, &
-        RaiseFileError, RaiseKeyError, RaiseTermination, RaiseValueError
+        RaiseFileError, RaiseKeyError, RaiseQuantityError, RaiseTermination, &
+        RaiseValueError
 
     type, public, abstract :: BaseException
         private
@@ -75,6 +76,13 @@ module exception
     contains
         procedure, private :: set_msg => set_argerr_message
     end type ArgumentError
+
+    type, public, extends(BaseException) :: QuantityError
+        character(len=256), public :: qty = ' '
+        character(len=512), public :: issue = ' '
+    contains
+        procedure, private :: set_msg => set_qtyerr_message
+    end type QuantityError
 
 contains
 
@@ -148,21 +156,21 @@ end subroutine RaiseArgError
 
 ! ======================================================================
 
-subroutine RaiseTermination(err, msg_)
+subroutine RaiseTermination(err, msg)
     !! Set a termination signal.
     !!
     !! Takes an instance of BaseException and sets it to Termination
     !!   with an optional message set in input.
     class(BaseException), allocatable, intent(inout) :: err
     !! Original error, updated on return
-    character(len=*), intent(in), optional :: msg_
+    character(len=*), intent(in), optional :: msg
     !! Message to include in the error
 
     type(Termination), allocatable :: newerr
 
     allocate(newerr)
-    if (present(msg_)) then
-        call newerr%raise(msg_)
+    if (present(msg)) then
+        call newerr%raise(msg)
     else
         call newerr%raise(' ')
     end if
@@ -210,7 +218,7 @@ end subroutine RaiseValueError
 
 ! ======================================================================
 
-subroutine RaiseAllocateError(err, what, errmsg)
+subroutine RaiseAllocateError(err, what, msg)
     !! Sets a memory allocation error.
     !!
     !! Takes an instance of BaseException and sets it to the
@@ -219,20 +227,20 @@ subroutine RaiseAllocateError(err, what, errmsg)
     !! Original error, updated on return
     character(len=*), intent(in), optional :: what
     !! What was allocated.
-    character(len=*), intent(in), optional :: errmsg
+    character(len=*), intent(in), optional :: msg
     !! Error message provided by the system.
 
     type(AllocateError), allocatable :: newerr
     character(len=1024) :: new_msg
 
     allocate(newerr)
-    if (present(what) .and. present(errmsg)) then
+    if (present(what) .and. present(msg)) then
         write(new_msg, '("Allocation of ",a," failed.",a,"Reason: ",a)') &
-            trim(what), new_line(' '), trim(errmsg)
+            trim(what), new_line(' '), trim(msg)
     else if (present(what)) then
         write(new_msg, '("Allocation of ",a," failed.")') trim(what)
-    else if (present(errmsg)) then
-        write(new_msg, '("Memory allocation failed. Reason: ",a)') trim(errmsg)
+    else if (present(msg)) then
+        write(new_msg, '("Memory allocation failed. Reason: ",a)') trim(msg)
     else
         new_msg = ' '
     end if
@@ -318,6 +326,34 @@ subroutine RaiseKeyError(err, key, action, reason)
     err = newerr
 
 end subroutine RaiseKeyError
+
+! ======================================================================
+
+subroutine RaiseQuantityError(err, qty, msg)
+    !! Sets an quantity-related error
+    !!
+    !! Takes an instance of BaseException and sets it to the
+    !!   quantity-related error, with the message built from the input
+    !!   quantity and optional motive.
+    class(BaseException), allocatable, intent(inout) :: err
+    !! Original error, updated on return
+    character(len=*), intent(in), optional :: qty
+    !! Argument that raised the error
+    character(len=*), intent(in), optional :: msg
+    !! msg for the error related to `qty`
+
+    type(QuantityError), allocatable :: newerr
+
+    allocate(newerr)
+    if (present(qty)) newerr%qty = trim(qty)
+    if (present(msg)) newerr%issue = trim(msg)
+    call newerr%raise()
+
+    if (allocated(err)) deallocate(err)
+    err = newerr
+
+    return
+end subroutine RaiseQuantityError
 
 ! ======================================================================
 
@@ -558,6 +594,42 @@ subroutine set_term_message(this, msg)
 
     return
 end subroutine set_term_message
+
+! ======================================================================
+
+subroutine set_qtyerr_message(this, msg)
+    !! Set error message for an QuantityError exception.
+    !!
+    !! Sets the error message and updates the status of an exception.
+    !! The error message can be set in two ways:
+    !! - by providing directly the msg (no different from BaseException)
+    !! - through the attributes `arg` and `reason`
+    class(QuantityError) :: this
+    character(len=*), intent(in), optional :: msg
+
+    character(len=1024) :: new_msg
+
+    1000 format('Error found while processing quantity "',a,'"')
+    1001 format('Error with quantity "',a,'": ',a)
+    if (present(msg)) then
+        call set_status(this, msg)
+    else
+        if (this%qty /= ' ') then
+            if (this%issue /= ' ') then
+                write(new_msg, 1001) trim(this%qty), trim(this%issue)
+            else
+                write(new_msg, 1000) trim(this%qty)
+            end if
+        else if (this%issue /= ' ') then
+            new_msg = trim(this%issue)
+        else
+            new_msg = 'Error while processing some quantities'
+        end if
+        call set_status(this, new_msg)
+    end if
+
+    return
+end subroutine set_qtyerr_message
 
 ! ======================================================================
 

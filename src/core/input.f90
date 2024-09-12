@@ -207,13 +207,20 @@ end function get_error_msg
 
 ! ----------------------------------------------------------------------
 
-module subroutine build_moldata(dfile, fname, ftype, err)
+module subroutine build_moldata(dfile, fname, ftype, load_spec_data, &
+                                load_bset_data, load_morb_data, err)
     class(DataFile), intent(in), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
     !! File name containing data of interest.
     character(len=*), intent(in), optional :: ftype
     !! File type, superseeds the automatic search.
+    logical, intent(in), optional :: load_spec_data
+    !! Load basic molecular specifications data from file.
+    logical, intent(in), optional :: load_bset_data
+    !! Load basis set data from file.
+    logical, intent(in), optional :: load_morb_data
+    !! Load data related to molecular orbitals from file.
     class(BaseException), allocatable, intent(out), optional :: err
     !! Error instance
 

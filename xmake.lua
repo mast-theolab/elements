@@ -1,6 +1,5 @@
 add_rules("mode.debug", "mode.release")
 
-add_repositories("local-repo xmake")
 add_requires("openmp")
 
 

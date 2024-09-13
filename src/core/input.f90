@@ -8,7 +8,7 @@ module input
     implicit none
 
     private
-    public :: build_moldata, build_excdata
+    public :: build_moldata, build_excdata, build_vibdata
 
     type, public :: ProgramInfo
         private
@@ -29,7 +29,7 @@ module input
         type(ProgramInfo) :: prog
         class(BaseException), allocatable :: error
     contains
-        procedure :: build_moldata, build_excdata
+        procedure :: build_moldata, build_excdata, build_vibdata
         procedure :: get_name => get_datafile_name
         procedure :: get_type => get_datafile_type
         procedure :: get_error_type => get_error_instance
@@ -239,6 +239,24 @@ module subroutine build_excdata(dfile, fname, ftype, err)
     !! Error instance
 
 end subroutine build_excdata
+
+! ----------------------------------------------------------------------
+
+module subroutine build_vibdata(dfile, fname, ftype, get_Lmat, get_Lmweig, err)
+    class(DataFile), intent(in), target, optional :: dfile
+    !! DataFile instance.
+    character(len=*), intent(in), optional :: fname
+    !! File name containing data of interest.
+    character(len=*), intent(in), optional :: ftype
+    !! File type, superseeds the automatic search.
+    logical, intent(in), optional :: get_Lmat
+    !! Build/load dimensionless matrix of Hessian eigenvectors.
+    logical, intent(in), optional :: get_Lmweig
+    !! Build/load mass-weighted matrix of Hessian eigenvectors.
+    class(BaseException), allocatable, intent(out), optional :: err
+    !! Error instance
+
+end subroutine build_vibdata
 
 ! ----------------------------------------------------------------------
 

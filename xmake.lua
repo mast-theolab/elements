@@ -104,6 +104,7 @@ target("datalib")
     add_deps("corelib")
     add_files("src/data/moldata.f90")
     add_files("src/data/excdata.f90")
+    add_files("src/data/vibdata.f90")
     add_files("src/core/input.f90")
     add_files("src/core/input_*.f90")
 
@@ -209,6 +210,15 @@ target("test_read_file")
     add_deps("datalib")
     add_files("src/tests/read_file.f90")
     add_tests("default")
+
+target("test_read_vib")
+    set_default(false)
+    set_rundir("$(projectdir)/tests")
+    add_deps("datalib")
+    add_deps("corelib")
+    add_files("src/tests/read_vibdat.f90")
+    add_tests("default",
+              {runargs = {"H2CO_S0_frq.fchk"}})
 
 target("gen_py_atomDB")
     set_default(false)

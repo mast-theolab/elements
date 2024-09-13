@@ -7,6 +7,7 @@ submodule (input) input_extract
     use atominfo, only: atdata
     use moldata
     use excdata
+    use vibdata
     use exception, only: BaseException, Error, InitError, RaiseArgError, &
         RaiseError, RaiseFileError, RaiseQuantityError
 
@@ -126,6 +127,76 @@ module procedure build_excdata
     end if
 
 end procedure build_excdata
+
+! ----------------------------------------------------------------------
+
+module procedure build_vibdata
+    !! Main subroutine to load and store vibrational data.
+    !!
+    !! This subroutine is intended to be bound to DataFile instances
+    !! but can be used directly, providing either a DataFile instance
+    !! or the filename.  In the latter case, an instance of DataFile
+    !! is created internally to be transmitted to the internal routines.
+    !!
+    !! Note that the subroutine focuses on extracting core information,
+    !! not necessarily data related to vibrational transitions.
+    !! The eigenvectors matrix can have multiple forms and two can be
+    !! typically used:
+    !!
+    !! - diagonalization of the mass-weighted force constants, convenient
+    !!   to convert derivatives from Cartesian to mass-weighted normal
+    !!   coordinates.
+    !! - diagonalization of the force constants.  The resulting
+    !!   eigenvectors are dimensionless, generally more convenient for
+    !!   standard operations.
+    !!
+    !! The routine can provide either or both, doing internally all
+    !! necessary conversions.
+    type(DataFile), target :: finf
+    class(DataFile), pointer :: file
+
+    if (present(err)) err = InitError()
+
+    if (.not.present(dfile)) then
+        finf = DataFile(fname, ftype)
+        if (finf%error%raised()) then
+            if (present(err)) then
+                err = finf%error
+                return
+            else
+                print '("Failed to build file information")'
+                print '("Motive: ",a)', finf%error%msg()
+                stop 1
+            end if
+        end if
+        file => finf
+    else
+        file => dfile
+    end if
+
+    if (file%type == 'GFChk') then
+        call build_vibdata_fchk(file)
+        if (file%error%raised() .and. .not.present(dfile)) then
+            if (present(err)) then
+                err = file%error
+                return
+            else
+                print '("Error while parsing excited-state data")'
+                print '("Reason: ",a)', file%error%msg()
+            end if
+        end if
+    else
+        if (present(err)) then
+            err = InitError()
+            call RaiseArgError(err, 'Unsupported file type')
+            return
+        else
+            print '("Unsupported file type: ",a)', file%type
+            stop 1
+        end if
+    end if
+
+end procedure build_vibdata
 
 ! ======================================================================
 ! SUB-MODULE COMPONENTS
@@ -370,6 +441,8 @@ subroutine build_moldata_fchk(dfile, load_spec_data, load_bset_data, &
         dat_morb_loaded = .true.
     end if
 
+    deallocate(dbase)
+
 end subroutine build_moldata_fchk
 
 ! ======================================================================
@@ -482,7 +555,105 @@ subroutine build_excdata_fchk(dfile)
         end do
     end do
 
+    deallocate(dbase)
+
 end subroutine build_excdata_fchk
+
+! ======================================================================
+
+subroutine build_vibdata_fchk(dfile, get_Lmat, get_Lmweig)
+    !! Builds vibrational data from Gaussian formatted chk file.
+    !!
+    !! Parses a Gaussian formatted checkpoint file and extracts all
+    !! relevant information related to vibrations.
+    !! Data are stored in the vibdata module.
+    !!
+    !! See [[build_vibdata(proc)]] for details.
+    class(DataFile), intent(inout) :: dfile
+    !! Name of the formatted checkpoint file
+    logical, intent(in), optional :: get_Lmat
+    !! Build/load dimensionless matrix of Hessian eigenvectors.
+    logical, intent(in), optional :: get_Lmweig
+    !! Build/load mass-weighted matrix of Hessian eigenvectors.
+
+    character(len=42), dimension(*), parameter :: fchk_keys = [ &
+        'Number of Normal Modes               ', &  !  1.
+        'Vib-AtMass                           ', &  !  2.
+        'Vib-E2                               ', &  !  3.
+        'Vib-Modes                            '  &  !  4.
+    ]
+
+    integer :: i, ia, n_at3
+    real(real64) :: rval
+    real(real64), dimension(:,:), allocatable :: evec
+    logical :: build_Lmat, build_Lmweig, ok
+    type(fchkparser) :: dfchk
+    type(fchkdata), dimension(:), allocatable :: dbase
+
+    dfile%error = InitError()
+
+    if (present(get_Lmat)) then
+        build_Lmat = get_Lmat
+    else
+        build_Lmat = .true.
+    end if
+
+    if (present(get_Lmweig)) then
+        build_Lmweig = get_Lmweig
+    else
+        build_Lmweig = .true.
+    end if
+
+    dfchk = fchkparser(dfile%name)
+    dbase = dfchk%read(fchk_keys)
+
+    ok = dfchk%close()
+    if (.not. ok) then
+        call RaiseFileError(dfile%error, dfile%name, 'closing')
+        return
+    end if
+
+    ! First check that this exists, since a fchk may be missing it.
+    if (dbase(1)%dtype == '0') then
+        call RaiseQuantityError(dfile%error, &
+            msg='Missing vibrational data in file.')
+        return
+    end if
+
+    ! Get number of normal modes, necessary for the rest of the parsing
+    n_vib = dbase(1)%idata(1)
+    ! Get number of Cartesian coordinates
+    n_at3 = 3*size(dbase(2)%rdata)
+
+    ! Extract frequencies and reduced mass
+    ! They are stored in Vib-E2, starting with freq, then red. mass...
+    freq = dbase(3)%rdata(1:n_vib)
+    red_mass = dbase(3)%rdata(n_vib+1:2*n_vib)
+
+    ! Now extract eigenvectors and do necessary operations/conversions
+    evec = reshape(dbase(4)%rdata, [n_at3,n_vib])
+    if (build_Lmweig) then
+        allocate(L_mwg(n_at3,n_vib))
+        do i = 1, n_vib
+            L_mwg(:,i) = evec(:,i)/sqrt(red_mass(i))
+        end do
+    end if
+
+    if (build_Lmat) then
+        allocate(L_mat(n_at3,n_vib))
+        do i = 1, n_vib
+            do ia = 1, n_at3
+                L_mat(ia,i) = evec(ia,i)*sqrt(dbase(2)%rdata((ia+2)/3)) &
+                    /sqrt(red_mass(i))
+            end do
+            L_mat(:,i) = L_mat(:,i) / sqrt(sum(L_mat(:,i)**2))
+        end do
+    end if
+
+    deallocate(evec)
+    deallocate(dbase)
+
+end subroutine build_vibdata_fchk
 
 ! ======================================================================
 

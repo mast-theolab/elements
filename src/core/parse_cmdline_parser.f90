@@ -243,9 +243,8 @@ module procedure parse_args_list
             if (suberr%raised()) then
                 select type(suberr)
                     class is (Error)
-                        write(errmsg, &
-                            '("Error while parsing values for ''",a,"''")') &
-                                trim(opt%label)
+                        write(errmsg, '("Error while parsing values for ''"&
+                            &,a,"'': ",a)') trim(opt%label), trim(suberr%msg())
                         call RaiseError(this%error, errmsg)
                         return
                     class is (ValueError)
@@ -254,7 +253,8 @@ module procedure parse_args_list
                     class default
                         write(errmsg, &
                             '("Unknown error while parsing values for &
-                            &''",a,"''")') trim(opt%label)
+                            &''",a,"'': ",a)') trim(opt%label), &
+                            trim(suberr%msg())
                         call RaiseError(this%error, errmsg)
                         return
                 end select
@@ -358,8 +358,8 @@ module procedure parse_args_list
                 select type(suberr)
                     class is (Error)
                         write(errmsg, &
-                            '("Error while parsing values for ''",a,"''")') &
-                                this%args(iargDB)%arg%label
+                            '("Error while parsing values for ''",a,"'': ",a)') &
+                                this%args(iargDB)%arg%label, trim(suberr%msg())
                         call RaiseError(this%error, errmsg)
                         return
                     class is (ValueError)
@@ -368,7 +368,8 @@ module procedure parse_args_list
                     class default
                         write(errmsg, &
                             '("Unknown error while parsing &
-                            &''",a,"''")') this%args(iargDB)%arg%label
+                            &''",a,"'': ",a)') this%args(iargDB)%arg%label, &
+                                trim(suberr%msg())
                         call RaiseError(this%error, errmsg)
                         return
                 end select

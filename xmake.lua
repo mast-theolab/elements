@@ -101,9 +101,7 @@ target("datalib")
     set_kind("static")
     add_packages("openmp")
     add_deps("corelib")
-    add_files("src/data/moldata.f90")
-    add_files("src/data/excdata.f90")
-    add_files("src/data/vibdata.f90")
+    add_files("src/data/workdata.f90")
     add_files("src/core/input.f90")
     add_files("src/core/input_*.f90")
 
@@ -215,9 +213,13 @@ target("test_read_vib")
     set_rundir("$(projectdir)/tests")
     add_deps("datalib")
     add_deps("corelib")
+    add_deps("parselib")
     add_files("src/tests/read_vibdat.f90")
     add_tests("default",
-              {runargs = {"H2CO_S0_frq.fchk"}})
+              {runargs = {"-f", "H2CO_S0_frq.fchk", "-o", "test_vib_def.txt"}})
+    add_tests("twofiles",
+              {runargs = {"-f", "H2CO_S0_frq.fchk", "-o", "H2CO_S2_frq.fchk",
+               "-o", "test_vib_two.txt"}})
 
 target("gen_py_atomDB")
     set_default(false)

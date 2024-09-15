@@ -4,11 +4,12 @@ module input
     !! Contains data and procedures to process input data/options.
     use iso_fortran_env, only: real64
     use exception, only: BaseException
+    use workdata
 
     implicit none
 
     private
-    public :: build_moldata, build_excdata, build_vibdata
+    public :: build_bset_data, build_exc_data, build_orb_data, build_vib_data
 
     type, public :: ProgramInfo
         private
@@ -29,7 +30,8 @@ module input
         type(ProgramInfo) :: prog
         class(BaseException), allocatable :: error
     contains
-        procedure :: build_moldata, build_excdata, build_vibdata
+        procedure :: build_mol_data, build_bset_data, build_orb_data, &
+            build_exc_data, build_vib_data
         procedure :: get_name => get_datafile_name
         procedure :: get_type => get_datafile_type
         procedure :: get_error_type => get_error_instance
@@ -207,28 +209,7 @@ end function get_error_msg
 
 ! ----------------------------------------------------------------------
 
-module subroutine build_moldata(dfile, fname, ftype, load_spec_data, &
-                                load_bset_data, load_morb_data, err)
-    class(DataFile), intent(in), target, optional :: dfile
-    !! DataFile instance.
-    character(len=*), intent(in), optional :: fname
-    !! File name containing data of interest.
-    character(len=*), intent(in), optional :: ftype
-    !! File type, superseeds the automatic search.
-    logical, intent(in), optional :: load_spec_data
-    !! Load basic molecular specifications data from file.
-    logical, intent(in), optional :: load_bset_data
-    !! Load basis set data from file.
-    logical, intent(in), optional :: load_morb_data
-    !! Load data related to molecular orbitals from file.
-    class(BaseException), allocatable, intent(out), optional :: err
-    !! Error instance
-
-end subroutine build_moldata
-
-! ----------------------------------------------------------------------
-
-module subroutine build_excdata(dfile, fname, ftype, err)
+module function build_mol_data(dfile, fname, ftype, err) result(mol)
     class(DataFile), intent(in), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
@@ -237,12 +218,64 @@ module subroutine build_excdata(dfile, fname, ftype, err)
     !! File type, superseeds the automatic search.
     class(BaseException), allocatable, intent(out), optional :: err
     !! Error instance
+    type(MoleculeDB) :: mol
+    !! Molecular specifications database.
 
-end subroutine build_excdata
+end function build_mol_data
 
 ! ----------------------------------------------------------------------
 
-module subroutine build_vibdata(dfile, fname, ftype, get_Lmat, get_Lmweig, err)
+module function build_bset_data(dfile, fname, ftype, err) result(bset)
+    class(DataFile), intent(in), target, optional :: dfile
+    !! DataFile instance.
+    character(len=*), intent(in), optional :: fname
+    !! File name containing data of interest.
+    character(len=*), intent(in), optional :: ftype
+    !! File type, superseeds the automatic search.
+    class(BaseException), allocatable, intent(out), optional :: err
+    !! Error instance
+    type(BasisSetDB) :: bset
+    !! Basis set information database.
+
+end function build_bset_data
+
+! ----------------------------------------------------------------------
+
+module function build_orb_data(dfile, fname, ftype, err) result(orb)
+    class(DataFile), intent(in), target, optional :: dfile
+    !! DataFile instance.
+    character(len=*), intent(in), optional :: fname
+    !! File name containing data of interest.
+    character(len=*), intent(in), optional :: ftype
+    !! File type, superseeds the automatic search.
+    class(BaseException), allocatable, intent(out), optional :: err
+    !! Error instance
+    type(OrbitalsDB) :: orb
+    !! Orbitals information database.
+
+
+end function build_orb_data
+
+! ----------------------------------------------------------------------
+
+module function build_exc_data(dfile, fname, ftype, err) result(exc)
+    class(DataFile), intent(in), target, optional :: dfile
+    !! DataFile instance.
+    character(len=*), intent(in), optional :: fname
+    !! File name containing data of interest.
+    character(len=*), intent(in), optional :: ftype
+    !! File type, superseeds the automatic search.
+    class(BaseException), allocatable, intent(out), optional :: err
+    !! Error instance
+    type(ExcitationDB) :: exc
+    !! Electronic excitation information.
+
+end function build_exc_data
+
+! ----------------------------------------------------------------------
+
+module function build_vib_data(dfile, fname, ftype, get_Lmat, get_Lmweig, &
+                               err)  result(vib)
     class(DataFile), intent(in), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
@@ -255,8 +288,10 @@ module subroutine build_vibdata(dfile, fname, ftype, get_Lmat, get_Lmweig, err)
     !! Build/load mass-weighted matrix of Hessian eigenvectors.
     class(BaseException), allocatable, intent(out), optional :: err
     !! Error instance
+    type(VibrationsDB) :: vib
+    !! Vibrational information.
 
-end subroutine build_vibdata
+end function build_vib_data
 
 ! ----------------------------------------------------------------------
 

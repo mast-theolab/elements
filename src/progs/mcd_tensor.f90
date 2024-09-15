@@ -12,8 +12,7 @@ program mcd_tensor
     use electronic, only: convert_AO2MO, eltrans_amp, overlap_ao_1e, ovij_1e
     use exc_sos, only: sos_eiOg, sos_ejOei, sos_prefac_ejOei, &
         sos_MCD_tensor_LORG_corr
-    use moldata
-    use excdata
+    use workdata, only: MoleculeDB, BasisSetDB, OrbitalsDB, ExcitationDB
 
     implicit none
 
@@ -66,10 +65,15 @@ program mcd_tensor
     logical :: do_giao, do_guvcde, exists, forbid, in_mem, use_gamma
     character(len=512) :: fmt_elstate
     character(len=:), allocatable :: infile, outfile
+    character(len=*), parameter :: PROGTITLE = 'MCD Tensor Calculator'
     type(DataFile) :: dfile
     class(ovij_1e), allocatable :: ao_int
     class(BaseException), allocatable :: err
     type(DebugType) :: debug
+    type(MoleculeDB) :: moldb
+    type(BasisSetDB) :: bsetdb
+    type(OrbitalsDB) :: orbdb
+    type(ExcitationDB) :: excdb
 
     interface write_param
         procedure write_param_bool, write_param_int, write_param_real, &
@@ -79,9 +83,6 @@ program mcd_tensor
     1200 format(/, &
         ' > Number of excited states : ',i0,/, &
         ' > Reference excited state  : ',i0)
-
-    ! Write title
-    call sec_header(-1, 'MCD Tensor Calculator')
 
     call parse_argopts(infile, outfile, e_gamma, fstate, max_state, &
         use_gamma, do_giao, do_guvcde, in_mem, model_sos, debug)
@@ -94,10 +95,31 @@ program mcd_tensor
 
     call sec_header(1, 'Data on Molecular System')
     if (debug%timer) call write_time('Molecular data')
-    call dfile%build_moldata()
+    moldb = dfile%build_mol_data()
     if (dfile%has_error()) then
         call write_err('std', &
-            'Error found while parsing molecular data in file', &
+            'Error found while parsing molecular specifications in file', &
+            dfile%get_error())
+            stop 1
+    end if
+    bsetdb = dfile%build_bset_data()
+    if (dfile%has_error()) then
+        call write_err('std', &
+            'Error found while parsing basis set data in file', &
+            dfile%get_error())
+            stop 1
+    end if
+    orbdb = dfile%build_orb_data()
+    if (dfile%has_error()) then
+        call write_err('std', &
+            'Error found while parsing molecular orbitals data in file', &
+            dfile%get_error())
+            stop 1
+    end if
+    excdb = dfile%build_exc_data()
+    if (dfile%has_error()) then
+        call write_err('std', &
+            'Error found while parsing electronic excitations data in file', &
             dfile%get_error())
             stop 1
     end if
@@ -107,13 +129,13 @@ program mcd_tensor
     !         )
     !     stop
     ! end if
-    call write_moldata
+    call write_moldata(moldb, bsetdb, orbdb)
     ! Post-processing to build additional data
-    ispin_gs = multip - 1
+    ispin_gs = moldb%multip - 1
 
     if (do_guvcde) then
         if (debug%timer) call write_time('GUVCDE write control')
-        call write_control(iu_out, err)
+        call write_control(iu_out, moldb, bsetdb, orbdb, err)
         if (err%raised()) then
             select type(err)
                 class is (Error)
@@ -133,8 +155,8 @@ program mcd_tensor
 
     ! normalization coeffs
     if (debug%timer) call write_time('Check AO normalization')
-    call fix_norm_AOs(iu_out, n_at, n_ao, at_crd, nprim_per_at, bset_info, &
-                      err, debug%print)
+    call fix_norm_AOs(iu_out, moldb%n_at, orbdb%n_ao, moldb%at_crd, &
+                      bsetdb%nprim_per_at, bsetdb%info, err, debug%print)
     if (err%raised()) then
         select type(err)
             class is (Error)
@@ -156,8 +178,9 @@ program mcd_tensor
     ! overlap6
     qty_flag = 2**10 - 1
     ! qty_flag = ibset(qty_flag, 0)
-    call overlap_ao_1e(iu_out, n_at, n_ao, qty_flag, do_guvcde, in_mem, &
-                       at_crd, nprim_per_at, bset_info, ao_int, err)
+    call overlap_ao_1e(iu_out, moldb%n_at, orbdb%n_ao, qty_flag, do_guvcde, &
+                       in_mem, moldb%at_crd, bsetdb%nprim_per_at, &
+                       bsetdb%info, ao_int, err)
     if (err%raised()) then
         select type(err)
             class is (Error)
@@ -181,46 +204,52 @@ program mcd_tensor
     ! convert AO -> MO quantities of interest
     if (do_guvcde) then
         if (debug%timer) call write_time('GUVCDE build MOs')
-        call build_MOs(n_ab, n_ao, n_mos, coef_mos, .true.)
+        call build_MOs(orbdb%n_ab, orbdb%n_ao, orbdb%n_mos, orbdb%coef_mos, &
+                       .true.)
     endif
     ! call convert_AO2MO(n_ao, n_mo, coef_mos(1), ao_int%i_j, Smo_ij)
-    allocate(Smo_irj(3,n_mo,n_mo,n_ab), Smo_ipj(3,n_mo,n_mo,n_ab), &
-             Smo_irxpj(3,n_mo,n_mo,n_ab))
-    allocate(tmp_ao_arr1(n_ao,n_ao), tmp_ao_arrN(3,n_ao,n_ao))
+    allocate(Smo_irj(3,orbdb%n_mo,orbdb%n_mo,orbdb%n_ab), &
+             Smo_ipj(3,orbdb%n_mo,orbdb%n_mo,orbdb%n_ab), &
+             Smo_irxpj(3,orbdb%n_mo,orbdb%n_mo,orbdb%n_ab), &
+             tmp_ao_arr1(orbdb%n_ao,orbdb%n_ao), &
+             tmp_ao_arrN(3,orbdb%n_ao,orbdb%n_ao))
     if (debug%timer) call write_time('AO to MO conversion')
-    do iab = 1, n_ab
+    do iab = 1, orbdb%n_ab
         if (debug%timer) call write_time('<i|r|j>')
-        call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_r_j, &
+        call convert_AO2MO(orbdb%n_ao, orbdb%n_mos(iab), &
+                           orbdb%coef_mos(:,:,iab), ao_int%i_r_j, &
                            Smo_irj(:,:,:,iab), tmp_ao_arrN)
         if (debug%timer) call write_time('<i|p|j>')
-        call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), ao_int%i_p_j, &
+        call convert_AO2MO(orbdb%n_ao, orbdb%n_mos(iab), &
+                           orbdb%coef_mos(:,:,iab), ao_int%i_p_j, &
                            Smo_ipj(:,:,:,iab), tmp_ao_arrN)
         if (debug%timer) call write_time('<i|rxp|j>')
-        call convert_AO2MO(n_ao, n_mos(iab), coef_mos(:,:,iab), &
-                           ao_int%i_rxp_j, Smo_irxpj(:,:,:,iab), tmp_ao_arrN)
+        call convert_AO2MO(orbdb%n_ao, orbdb%n_mos(iab), &
+                           orbdb%coef_mos(:,:,iab), ao_int%i_rxp_j, &
+                           Smo_irxpj(:,:,:,iab), tmp_ao_arrN)
     end do
     ! call convert_AO2MO(n_ao, n_mo, coef_mos(1), ao_int%i_j)
 
     call sec_header(1, 'Transition Data')
     if (debug%timer) call write_time('Transition data')
-    call dfile%build_excdata()
+    excdb = dfile%build_exc_data()
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing excited-states data in file', &
             dfile%get_error())
             stop 1
     end if
-    write(iu_out, 1200) n_states, id_state
+    write(iu_out, 1200) excdb%n_states, excdb%id_state
 
     call sec_header(2, 'User overrides')
     exists = .false.
-    if (fstate > 0 .and. fstate /= id_state) then
+    if (fstate > 0 .and. fstate /= excdb%id_state) then
         exists = .true.
         write(iu_out, '(" > New final state, num. ",i0,".")') &
             fstate
-        id_state = fstate
+        excdb%id_state = fstate
     end if
-    if (max_state > n_states) then
+    if (max_state > excdb%n_states) then
         exists = .true.
         write(iu_out, '(1x,"NOTE: ",a,/,1x,a)') &
             'Requested upper bound exceeds available states.', &
@@ -229,7 +258,7 @@ program mcd_tensor
         exists = .true.
         write(iu_out, '(" > Setting highest electronic state to ",i0,".")') &
             max_state
-        n_states = max_state
+        excdb%n_states = max_state
     end if
     if (.not.exists) &
         write(iu_out, '(1x,a)') &
@@ -239,22 +268,17 @@ program mcd_tensor
 
     call sec_header(2, 'Definition of Transition Amplitudes')
     if (debug%timer) call write_time('Build trans. amplitudes')
-    allocate(t_mo(n_mo, n_mo, n_ab, n_states))
+    allocate(t_mo(orbdb%n_mo,orbdb%n_mo,orbdb%n_ab,excdb%n_states))
     ! "Now doing state num. ",i3," out of 123
     write(fmt_elstate, '("('' Now doing state num. '',i",i0,",'' out of '',&
-        &i0,''.'')")') len_int(n_states)
-    do istate = 1, n_states
-        write(iu_out, fmt_elstate) istate, n_states
-        t_mo(:,:,:,istate) = eltrans_amp(n_ab, n_ao, n_mos, ao_int%i_j, &
-                                         g2e_dens(:,:,:,istate), tmp_ao_arr1, &
-                                         .true., coef_mos)
-        ! call prt_mat(g2e_dens(:,:,1,istate), n_ao, n_ao, thresh_=1.0e-8_real64)
-        ! write(iu_out, '(1x,a)') 'Transition amplitudes'
-        ! write(iu_out, '(1x,a)') 'Spin ALPHA'
-        ! call prt_mat(t_mo(:,:,1,istate), n_mo, n_mo, thresh_=1.0e-6_real64)
-        ! write(iu_out, '(1x,a)') 'Spin BETA'
-        ! call prt_mat(t_mo(:,:,n_ab,istate), n_mo, n_mo, thresh_=1.0e-6_real64)
-        if (.not.openshell) &
+        &i0,''.'')")') len_int(excdb%n_states)
+    do istate = 1, excdb%n_states
+        write(iu_out, fmt_elstate) istate, excdb%n_states
+        t_mo(:,:,:,istate) = &
+            eltrans_amp(orbdb%n_ab, orbdb%n_ao, orbdb%n_mos, ao_int%i_j, &
+                        excdb%g2e_dens(:,:,:,istate), tmp_ao_arr1, .true., &
+                        orbdb%coef_mos)
+        if (.not.orbdb%openshell) &
             t_mo(:,:,:,istate) = t_mo(:,:,:,istate)*sqrt(2.0_real64)
     end do
 
@@ -265,16 +289,16 @@ program mcd_tensor
     p_gg_ab = 0.0_real64
     r_gg_ab = 0.0_real64
     rxp_gg_ab = 0.0_real64
-    if (openshell) then
-        do iab = 1, n_ab
-            do i = 1, n_els(iab)
+    if (orbdb%openshell) then
+        do iab = 1, orbdb%n_ab
+            do i = 1, orbdb%n_els(iab)
                 p_gg_ab(:,iab) = p_gg_ab(:,iab) + Smo_ipj(:,i,i,iab)
                 r_gg_ab(:,iab) = r_gg_ab(:,iab) + Smo_irj(:,i,i,iab)
                 rxp_gg_ab(:,iab) = rxp_gg_ab(:,iab) + Smo_irxpj(:,i,i,iab)
             end do
         end do
     else
-        do i = 1, n_els(1)
+        do i = 1, orbdb%n_els(1)
             p_gg_ab(:,1)   = p_gg_ab(:,1) + Smo_ipj(:,i,i,1)
             r_gg_ab(:,1)   = r_gg_ab(:,1) + Smo_irj(:,i,i,1)
             rxp_gg_ab(:,1) = rxp_gg_ab(:,1) + Smo_irxpj(:,i,i,1)
@@ -286,15 +310,15 @@ program mcd_tensor
     p_gg   = p_gg_ab(:,1)
     r_gg   = r_gg_ab(:,1)
     rxp_gg = rxp_gg_ab(:,1)
-    if (n_ab == 2) then
+    if (orbdb%n_ab == 2) then
         p_gg   = p_gg   + p_gg_ab(:,2)
         r_gg   = r_gg   + r_gg_ab(:,2)
         rxp_gg = rxp_gg + rxp_gg_ab(:,2)
     end if
 
-    edip_nuc(1) = sum(at_crd(1,:)*at_chg)
-    edip_nuc(2) = sum(at_crd(2,:)*at_chg)
-    edip_nuc(3) = sum(at_crd(3,:)*at_chg)
+    edip_nuc(1) = sum(moldb%at_crd(1,:)*moldb%at_chg)
+    edip_nuc(2) = sum(moldb%at_crd(2,:)*moldb%at_chg)
+    edip_nuc(3) = sum(moldb%at_crd(3,:)*moldb%at_chg)
 
     if (debug%print) then
         write(iu_out, '(a)') 'Electric dipole'
@@ -308,16 +332,16 @@ program mcd_tensor
     call sec_header(2, 'Transition Energies Factors')
 
     if (debug%timer) call write_time('Transition energies')
-    allocate(ov_eieg(n_states), ov_eief(n_states))
-    ef = g2e_energy(id_state)
-    do istate = 1, n_states
-        ei = g2e_energy(istate)
+    allocate(ov_eieg(excdb%n_states), ov_eief(excdb%n_states))
+    ef = excdb%g2e_energy(excdb%id_state)
+    do istate = 1, excdb%n_states
+        ei = excdb%g2e_energy(istate)
         if (use_gamma) then
             ov_eieg(istate) = ei/(ei**2 + e_gamma**2)
         else
             ov_eieg(istate) = 1.0_real64/ei
         end if
-        if (istate /= id_state) then
+        if (istate /= excdb%id_state) then
             de = ei - ef
             if (use_gamma) then
                 ov_eief(istate) = de/(de**2 + e_gamma**2)
@@ -344,47 +368,58 @@ program mcd_tensor
     !   < l | O | k > and < l | O | g > to be used later.
     if (do_giao) then
         if (debug%timer) call write_time('GIAO terms')
-        allocate(r_lk(3,n_states,0:n_states), p_lk(3,n_states,0:n_states), &
-                 ov_eiej(0:n_states,0:n_states))
+        allocate(r_lk(3,excdb%n_states,0:excdb%n_states), &
+                 p_lk(3,excdb%n_states,0:excdb%n_states), &
+                 ov_eiej(0:excdb%n_states,0:excdb%n_states))
         ov_eiej(0,0) = 0.0_real64
-        ov_eiej(id_state,0) = ov_eieg(id_state)
-        ov_eiej(0,id_state) = -ov_eieg(id_state)
-        do istate = 1, n_states
+        ov_eiej(excdb%id_state,0) = ov_eieg(excdb%id_state)
+        ov_eiej(0,excdb%id_state) = -ov_eieg(excdb%id_state)
+        do istate = 1, excdb%n_states
             ! This should never be used, since NaN, filled only for display
             ov_eiej(istate,istate) = 0.0_real64
             ! We exclude id_states so we can treat last and preserve the
             !   prefactors
-            if (istate /= id_state) then
+            if (istate /= excdb%id_state) then
                 ov_eiej(istate,0) = ov_eieg(istate)
                 ov_eiej(0,istate) = -ov_eieg(istate)
-                pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), r_gg_ab, Smo_irj, model_sos, &
-                    debug%add_ijaa)
-                pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), p_gg_ab, Smo_ipj, model_sos, &
-                    debug%add_ijaa)
-                r_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), pfac_r, model=model_sos)
-                p_lk(:,istate,istate) = sos_ejOei(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), pfac_p, model=model_sos)
-                forbid = .not.openshell .and. &
-                    ispin_exc(istate) /= ispin_gs
-                r_lk(:,istate,0) =  sos_eiOg(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), Smo_irj, forbid, model=model_sos)
-                p_lk(:,istate,0) = sos_eiOg(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), Smo_ipj, forbid, model=model_sos)
-                ei = g2e_energy(istate)
-                do jstate = 1, n_states
+                pfac_r = &
+                    sos_prefac_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                                     t_mo(:,:,:,istate), r_gg_ab, Smo_irj, &
+                                     model_sos, debug%add_ijaa)
+                pfac_p = &
+                    sos_prefac_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                                     t_mo(:,:,:,istate), p_gg_ab, Smo_ipj, &
+                                     model_sos, debug%add_ijaa)
+                r_lk(:,istate,istate) = &
+                    sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                              t_mo(:,:,:,istate), pfac_r, model=model_sos)
+                p_lk(:,istate,istate) = &
+                    sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                              t_mo(:,:,:,istate), pfac_p, model=model_sos)
+                forbid = .not.orbdb%openshell .and. &
+                          excdb%ispin_exc(istate) /= ispin_gs
+                r_lk(:,istate,0) = &
+                    sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                             t_mo(:,:,:,istate), Smo_irj, forbid, &
+                             model=model_sos)
+                p_lk(:,istate,0) = &
+                    sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                             t_mo(:,:,:,istate), Smo_ipj, forbid, &
+                             model=model_sos)
+                ei = excdb%g2e_energy(istate)
+                do jstate = 1, excdb%n_states
                     if (jstate /= istate) then
-                        forbid = .not.openshell .and. &
-                            ispin_exc(jstate) /= ispin_exc(istate)
-                        r_lk(:,istate,jstate) = sos_ejOei(3, n_ab, n_mos, &
-                            n_els, t_mo(:,:,:,jstate), pfac_r, forbid, &
-                            model=model_sos)
-                        p_lk(:,istate,jstate) = sos_ejOei(3, n_ab, n_mos, &
-                            n_els, t_mo(:,:,:,jstate), pfac_p, forbid, &
-                            model=model_sos)
-                        de = ei - g2e_energy(jstate)
+                        forbid = .not.orbdb%openshell .and. &
+                            excdb%ispin_exc(jstate) /= excdb%ispin_exc(istate)
+                        r_lk(:,istate,jstate) = &
+                            sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els,&
+                                      t_mo(:,:,:,jstate), pfac_r, forbid, &
+                                      model=model_sos)
+                        p_lk(:,istate,jstate) = &
+                            sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els,&
+                                      t_mo(:,:,:,jstate), pfac_p, forbid, &
+                                      model=model_sos)
+                        de = ei - excdb%g2e_energy(jstate)
                         if (use_gamma) then
                             ov_eiej(istate,jstate) = de/(de**2 + e_gamma**2)
                         else
@@ -400,32 +435,42 @@ program mcd_tensor
     !   (the latter for GIAO)
     ! For this reason, they are pre-computed once to speed up later
     if (debug%timer) call write_time('Prefactors')
-    pfac_r = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-                              r_gg_ab, Smo_irj, model_sos, debug%add_ijaa)
-    pfac_p = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-                              p_gg_ab, Smo_ipj, model_sos, debug%add_ijaa)
-    pfac_rxp = sos_prefac_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-                                rxp_gg_ab, Smo_irxpj, model_sos, &
-                                debug%add_ijaa)
+    pfac_r = sos_prefac_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                              t_mo(:,:,:,excdb%id_state), r_gg_ab, Smo_irj, &
+                              model_sos, debug%add_ijaa)
+    pfac_p = sos_prefac_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                              t_mo(:,:,:,excdb%id_state), p_gg_ab, Smo_ipj, &
+                              model_sos, debug%add_ijaa)
+    pfac_rxp = sos_prefac_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                                t_mo(:,:,:,excdb%id_state), rxp_gg_ab, &
+                                Smo_irxpj, model_sos, debug%add_ijaa)
     if (do_giao) then
-        r_lk(:,id_state,id_state) = sos_ejOei(3, n_ab, n_mos, n_els, &
-            t_mo(:,:,:,id_state), pfac_r, model=model_sos)
-        p_lk(:,id_state,id_state) = sos_ejOei(3, n_ab, n_mos, n_els, &
-            t_mo(:,:,:,id_state), pfac_p, model=model_sos)
-        r_lk(:,id_state,0) = sos_eiOg(3, n_ab, n_mos, n_els, &
-            t_mo(:,:,:,id_state), Smo_irj, model=model_sos)
-        p_lk(:,id_state,0) =  sos_eiOg(3, n_ab, n_mos, n_els, &
-            t_mo(:,:,:,id_state), Smo_ipj, model=model_sos)
-        do istate = 1, n_states
-            if (istate /= id_state) then
-                forbid = .not.openshell .and. &
-                         ispin_exc(istate) /= ispin_exc(id_state)
-                r_lk(:,id_state,istate) = sos_ejOei(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), pfac_r, forbid, model=model_sos)
-                p_lk(:,id_state,istate) = sos_ejOei(3, n_ab, n_mos, n_els, &
-                    t_mo(:,:,:,istate), pfac_p, forbid, model=model_sos)
-                ov_eiej(istate,id_state) = ov_eief(istate)
-                ov_eiej(id_state,istate) = - ov_eief(istate)
+        r_lk(:,excdb%id_state,excdb%id_state) = &
+            sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                      t_mo(:,:,:,excdb%id_state), pfac_r, model=model_sos)
+        p_lk(:,excdb%id_state,excdb%id_state) = &
+            sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                      t_mo(:,:,:,excdb%id_state), pfac_p, model=model_sos)
+        r_lk(:,excdb%id_state,0) = &
+            sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                     t_mo(:,:,:,excdb%id_state), Smo_irj, model=model_sos)
+        p_lk(:,excdb%id_state,0) = &
+            sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                     t_mo(:,:,:,excdb%id_state), Smo_ipj, model=model_sos)
+        do istate = 1, excdb%n_states
+            if (istate /= excdb%id_state) then
+                forbid = .not.orbdb%openshell .and. &
+                    excdb%ispin_exc(istate) /= excdb%ispin_exc(excdb%id_state)
+                r_lk(:,excdb%id_state,istate) = &
+                    sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                              t_mo(:,:,:,istate), pfac_r, forbid, &
+                              model=model_sos)
+                p_lk(:,excdb%id_state,istate) = &
+                    sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                              t_mo(:,:,:,istate), pfac_p, forbid, &
+                              model=model_sos)
+                ov_eiej(istate,excdb%id_state) = ov_eief(istate)
+                ov_eiej(excdb%id_state,istate) = - ov_eief(istate)
             end if
         end do
     end if
@@ -433,33 +478,43 @@ program mcd_tensor
     ! Compute the transition moment < f | O | g >
     ! we need to correct the sign of p and divided by the energy
     if (debug%timer) call write_time('Transition moments')
-    forbid = .not.openshell .and. ispin_exc(id_state) /= ispin_gs
+    forbid = .not.orbdb%openshell .and. &
+        excdb%ispin_exc(excdb%id_state) /= ispin_gs
     if (do_giao) then
-        r_fg = r_lk(:,id_state,0)
-        p_fg = -p_lk(:,id_state,0) / g2e_energy(id_state)
+        r_fg = r_lk(:,excdb%id_state,0)
+        p_fg = -p_lk(:,excdb%id_state,0) / excdb%g2e_energy(excdb%id_state)
     else
-        r_fg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), Smo_irj, &
-            forbid, model=model_sos)
-        p_fg = -sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), &
-            Smo_ipj, forbid, model=model_sos) / g2e_energy(id_state)
+        r_fg = sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                        t_mo(:,:,:,excdb%id_state), Smo_irj, forbid, &
+                        model=model_sos)
+        p_fg = -sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                         t_mo(:,:,:,excdb%id_state), Smo_ipj, forbid, &
+                         model=model_sos) / excdb%g2e_energy(excdb%id_state)
     endif
-    rxp_fg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), Smo_irxpj, &
-        forbid, model=model_sos)
+    rxp_fg = sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                      t_mo(:,:,:,excdb%id_state), Smo_irxpj, forbid, &
+                      model=model_sos)
 
     G_if = 0.0_real64
     if (debug%print) write(iu_out, '(a)') 'NOW ON G_IF'
-    do istate = 1, n_states
-        if (istate /= id_state) then
-            forbid = .not.openshell .and. ispin_exc(istate) /= ispin_gs
-            r_kg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,istate), &
-                Smo_irj, forbid, model=model_sos)
-            rxp_kg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,istate), &
-                Smo_irxpj, forbid, model=model_sos)
-            forbid = .not.openshell .and. ispin_exc(istate) /= ispin_exc(id_state)
-            r_fk = sos_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,istate), &
-                pfac_r, forbid, model=model_sos)
-            rxp_fk = sos_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,istate), &
-                pfac_rxp, forbid, model=model_sos)
+    do istate = 1, excdb%n_states
+        if (istate /= excdb%id_state) then
+            forbid = .not.orbdb%openshell .and. &
+                excdb%ispin_exc(istate) /= ispin_gs
+            r_kg = sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                            t_mo(:,:,:,istate), Smo_irj, forbid, &
+                            model=model_sos)
+            rxp_kg = sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                              t_mo(:,:,:,istate), Smo_irxpj, forbid, &
+                              model=model_sos)
+            forbid = .not.orbdb%openshell .and. &
+                excdb%ispin_exc(istate) /= excdb%ispin_exc(excdb%id_state)
+            r_fk = sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                             t_mo(:,:,:,istate), pfac_r, forbid, &
+                             model=model_sos)
+            rxp_fk = sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                               t_mo(:,:,:,istate), pfac_rxp, forbid, &
+                               model=model_sos)
             if (debug%print) then
                 write(iu_out, '(i4,"r_kg   ",3f12.6)') istate, r_kg
                 write(iu_out, '(4x,"rxp_kg ",3f12.6)') rxp_kg
@@ -477,41 +532,44 @@ program mcd_tensor
             end do
             if (do_giao) then
                 call sos_MCD_tensor_LORG_corr( &
-                    n_states, n_els, id_state, istate, r_gg, r_lk, p_lk, &
-                    ov_eieg, ov_eiej, G_if)
+                    excdb%n_states, orbdb%n_els, excdb%id_state, istate, &
+                    r_gg, r_lk, p_lk, ov_eieg, ov_eiej, G_if)
             end if
         end if
     end do
     ! Add special cases for k=g or k=f
-    forbid = .not.openshell .and. ispin_exc(id_state) /= ispin_gs
-    rxp_kg = sos_eiOg(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), Smo_irxpj, &
-        forbid, model=model_sos)
-    r_fk = sos_ejOei(3, n_ab, n_mos, n_els, t_mo(:,:,:,id_state), pfac_r, &
-        forbid, model=model_sos)
+    forbid = .not.orbdb%openshell .and. &
+        excdb%ispin_exc(excdb%id_state) /= ispin_gs
+    rxp_kg = sos_eiOg(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                      t_mo(:,:,:,excdb%id_state), Smo_irxpj, forbid, &
+                      model=model_sos)
+    r_fk = sos_ejOei(3, orbdb%n_ab, orbdb%n_mos, orbdb%n_els, &
+                     t_mo(:,:,:,excdb%id_state), pfac_r, forbid, &
+                     model=model_sos)
     ! Add case k=f for first term of G
     do jx = 1, 3
         do ix = 1, 3
             G_if(ix,jx) = G_if(ix,jx) &
-                + r_fk(ix)*rxp_kg(jx)*ov_eieg(id_state)
+                + r_fk(ix)*rxp_kg(jx)*ov_eieg(excdb%id_state)
         end do
     end do
     if (debug%timer) call write_time('LORG correction')
     if (do_giao) then
         call sos_MCD_tensor_LORG_corr( &
-            n_states, n_els, id_state, id_state, r_gg, r_lk, p_lk, ov_eieg, &
-            ov_eiej, G_if)
+            excdb%n_states, orbdb%n_els, excdb%id_state, excdb%id_state, &
+            r_gg, r_lk, p_lk, ov_eieg, ov_eiej, G_if)
     end if
     ! Add case k=g for second term of G
     do jx = 1, 3
         do ix = 1, 3
             G_if(ix,jx) = G_if(ix,jx) &
-                - r_gg(ix)*rxp_kg(jx)*ov_eieg(id_state)
+                - r_gg(ix)*rxp_kg(jx)*ov_eieg(excdb%id_state)
         end do
     end do
     if (do_giao) then
         call sos_MCD_tensor_LORG_corr( &
-            n_states, n_els, id_state, 0, r_gg, r_lk, p_lk, ov_eieg, ov_eiej, &
-            G_if)
+            excdb%n_states, orbdb%n_els, excdb%id_state, 0, r_gg, r_lk, p_lk, &
+            ov_eieg, ov_eiej, G_if)
     end if
 
     ! Correct using a factor of 1/2
@@ -613,6 +671,7 @@ contains
         ! Build parser and check arguments
         opts = CmdArgDB(progname='mcd_tensor')
         if (opts%has_error()) then
+            call sec_header(-1, PROGTITLE)
             write(*, '(a)') 'Failed to initialize the command-line parser'
             select type (err => opts%exception())
                 class is (AllocateError)
@@ -672,6 +731,7 @@ contains
 
         call opts%parse_args()
         if (opts%has_error()) then
+            call sec_header(-1, PROGTITLE)
             select type (err => opts%exception())
                 class is (ValueError)
                     write(*, '(a)') trim(opts%get_error())
@@ -704,15 +764,15 @@ contains
                 end select
             end do
         end if
-        if (debug%timer) call write_time('Option parser')
-
+        
         ! Output file
         if (opts%is_user_set('output')) then
             call opts%get_value('output', string)
             outfile = trim(string)
             open(newunit=iu_out, file=outfile, action='write')
-            call sec_header(-1, 'MCD Tensor Calculator')
         end if
+        call sec_header(-1, PROGTITLE)
+        if (debug%timer) call write_time('Option parser')
         call sec_header(1, 'Simulation Parameters')
         call sec_header(2, 'Standard parameters')
 
@@ -805,12 +865,19 @@ contains
 
     end subroutine parse_argopts
 
-    subroutine write_moldata
-        !! Writes molecular data.
+    subroutine write_moldata(moldb, bsetdb, orbdb)
+        !! Write molecular data.
         !!
-        !! Write some of the molecular data stored in the moldata module
+        !! Writes some of the molecular data stored in the moldata module
         !! for mcd_tensor.
         implicit none
+
+        class(MoleculeDB), intent(in) :: moldb
+        !! Molecule specifications database.
+        class(BasisSetDB), intent(in) :: bsetdb
+        !! Basis set specifications database.
+        class(OrbitalsDB), intent(in) :: orbdb
+        !! Molecular orbitals database.
 
         character(len=:), allocatable :: tag_bfunD, tag_bfunF, tag_open
 
@@ -824,28 +891,28 @@ contains
             ' > Type of F functions       : ',a,/, &
             ' > Number of atomic orbitals : ',i0)
 
-        if (openshell) then
+        if (orbdb%openshell) then
             tag_open = 'open'
         else
             tag_open = 'closed'
         end if
 
-        if (pureD) then
+        if (bsetdb%pureD) then
             tag_bfunD = 'pure'
         else
             tag_bfunD = 'Cartesian'
         end if
-        if (pureF) then
+        if (bsetdb%pureF) then
             tag_bfunF = 'pure'
         else
             tag_bfunF = 'Cartesian'
         end if
 
-        write(iu_out, 1100) n_at, charge, multip, tag_open, n_basis, &
-            tag_bfunD, tag_bfunF, n_ao
+        write(iu_out, 1100) moldb%n_at, moldb%charge, moldb%multip, tag_open, &
+            bsetdb%n_basis, tag_bfunD, tag_bfunF, orbdb%n_ao
 
         call sec_header(2, 'Atomic coordinates')
-        call prt_coord(n_at, at_lab, at_crd, at_mas)
+        call prt_coord(moldb%n_at, moldb%at_lab, moldb%at_crd, moldb%at_mas)
     end subroutine write_moldata
 
     subroutine write_param_bool(param, status, subparam)

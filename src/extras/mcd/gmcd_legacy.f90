@@ -3,11 +3,11 @@ module gmcd_legacy
     !!
     !! New or "modernized" procedures, used to preserve some of the
     !!   original behavior and facilitate the migration.
-    use iso_fortran_env, only: real64
+    use iso_fortran_env, only: int32, real64
     use exception, only: ArgumentError, BaseException, InitError, RaiseError
     use output, only: iu_out
     use electronic, only: convert_AO2MO
-    use moldata
+    use workdata, only: MoleculeDB, BasisSetDB, OrbitalsDB
     use physics, only: PhysFact
     use gmcd_output, only: shell_lmxyz
 
@@ -40,7 +40,7 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
         LPx = [3, 6, 3, 3, 3, 3, 3, 3]
         ! LPx = [3, 6, 3, 3, 3, 3, 3, 3, 3, 3]
     integer :: i, iab, ifile, iorb, irec0, iu_fi, iu_fo, iu_txt, ix, llab, &
-        lrec, N1, N2
+        lrec, n_mo, N1, N2
     real(real64), dimension(n_ao,n_ao) :: q_ao
     real(real64), dimension(:, :), allocatable :: q_mo
     real(real64), dimension(:, :), allocatable :: tmp_arr
@@ -133,13 +133,19 @@ end subroutine build_MOs
 
 ! ======================================================================
 
-subroutine write_control(iout, err)
+subroutine write_control(iout, moldb, bsetdb, orbdb, err)
     !! SOS: writes control output
     !!
     !! This subroutine reproduces the behavior of SOS [writecon]
     !! with ndiff = 0
     integer, intent(in) :: iout
     !! unit for output
+    class(MoleculeDB), intent(in) :: moldb
+    !! Molecule specifications database.
+    class(BasisSetDB), intent(in) :: bsetdb
+    !! Basis set specifications database.
+    class(OrbitalsDB), intent(in) :: orbdb
+    !! Molecular orbitals database.
     class(BaseException), allocatable, intent(out) :: err
     !! Error instance
 
@@ -155,9 +161,9 @@ subroutine write_control(iout, err)
 
     ! compute the number of doubly occupied orbitals
     ! number of singly occupied orbitals = (multip-1)
-    n_mo_1e = multip - 1
-    n_mo_2e = (n_el - n_mo_1e)/2
-    if (n_mo_2e*2 + n_mo_1e /= n_el) then
+    n_mo_1e = moldb%multip - 1
+    n_mo_2e = (moldb%n_el - n_mo_1e)/2
+    if (n_mo_2e*2 + n_mo_1e /= moldb%n_el) then
         call RaiseError(err, &
                         'Error in defining the number of occupied orbitals')
         return
@@ -165,15 +171,18 @@ subroutine write_control(iout, err)
     write(iout, *)  'ROAAI control output'
     write(iout, *)  'MOLECULAR PARAMETERS'
     write(iout, *)  '------------------------------------------'
-    write(iout, *) 'Number of basis functions           :    ', n_basis
-    write(iout, *) 'Number of electrons                 :    ', n_el
-    write(iout, *) 'Charge                              :    ', charge
-    write(iout, *) 'Multiplicity                        :    ', multip
+    write(iout, *) 'Number of basis functions           :    ', bsetdb%n_basis
+    write(iout, *) 'Number of electrons                 :    ', moldb%n_el
+    write(iout, *) 'Charge                              :    ', moldb%charge
+    write(iout, *) 'Multiplicity                        :    ', moldb%multip
     write(iout, *) 'Number of doubly occupied orbitals  :    ', n_mo_2e
-    write(iout, *) 'Number of singly occupied a-orbitals:    ', n_els(1)-n_mo_2e
-    write(iout, *) 'Number of singly occupied b-orbitals:    ', n_els(n_ab)-n_mo_2e
-    write(iout, *) 'Number of atoms                     :    ', n_at
-    write(iout, *) 'Sum of atomic charges               :    ', sum(int(at_chg))
+    write(iout, *) 'Number of singly occupied a-orbitals:    ', &
+        orbdb%n_els(1)-n_mo_2e
+    write(iout, *) 'Number of singly occupied b-orbitals:    ', &
+        orbdb%n_els(orbdb%n_ab)-n_mo_2e
+    write(iout, *) 'Number of atoms                     :    ', moldb%n_at
+    write(iout, *) 'Sum of atomic charges               :    ', &
+        sum(int(moldb%at_chg))
     write(iout, *)
     write(iout, *)
 
@@ -183,13 +192,13 @@ subroutine write_control(iout, err)
     1002 format(1x,i5,a2,i5,3f15.6,:,i4,' - ',i4)
     1003 format(1x,i5,a2,i5,2f15.6,:,15x,i4,' - ',i4)
     ! The list are for a control on the shells
-    allocate(atlist(n_ao), fcoords(n_ao))
+    allocate(atlist(orbdb%n_ao), fcoords(orbdb%n_ao))
 
     iao = 1
-    do ia = 1, n_at
-        write(iout, 1000) ia, nprim_per_at(ia)
-        do iprim = 1, nprim_per_at(ia)
-            associate (bs => bset_info(ia,iprim))
+    do ia = 1, moldb%n_at
+        write(iout, 1000) ia, bsetdb%nprim_per_at(ia)
+        do iprim = 1, bsetdb%nprim_per_at(ia)
+            associate (bs => bsetdb%info(ia,iprim))
             if (bs%shell_last) then
                 if(allocated(fcomp)) deallocate(fcomp)
                 fcomp = shell_lmxyz(bs%shelltype, bs%pure, suberr)
@@ -229,7 +238,7 @@ subroutine write_control(iout, err)
     end do
 
     write(iout, *) ' AO    type       atom'
-    do iao = 1, n_mos(1)
+    do iao = 1, orbdb%n_mos(1)
         write(iout, '(i6,1x,a10,i6)') iao, fcoords(iao), atlist(iao)
     end do
     deallocate(fcoords, atlist)
@@ -240,33 +249,33 @@ subroutine write_control(iout, err)
     1012 format(i12,5(:,f13.6))
     write(iout, *) 'Eigenvalues'
     write(iout, *) 'Alpha'
-    do i = 1, n_mos(1), ncols
-        nc = min(i+ncols-1,n_mos(1))
-        write(iout, 1010) (en_mos(j,1), j=i,nc)
+    do i = 1, orbdb%n_mos(1), ncols
+        nc = min(i+ncols-1,orbdb%n_mos(1))
+        write(iout, 1010) (orbdb%en_mos(j,1), j=i,nc)
         if (.false.) then ! Add coefficients
             write(iout, 1011) (j, j=i,nc)
-            do j = 1, n_mos(1)
-                write(iout, 1012) j, (coef_mos(k,j,1), k=i,nc)
+            do j = 1, orbdb%n_mos(1)
+                write(iout, 1012) j, (orbdb%coef_mos(k,j,1), k=i,nc)
             end do
         end if
     end do
     write(iout, *) 'Beta'
-    do i = 1, n_mos(n_ab), ncols
-        nc = min(i+ncols-1,n_mos(n_ab))
-        write(iout, 1010) (en_mos(j,n_ab), j=i,nc)
+    do i = 1, orbdb%n_mos(orbdb%n_ab), ncols
+        nc = min(i+ncols-1,orbdb%n_mos(orbdb%n_ab))
+        write(iout, 1010) (orbdb%en_mos(j,orbdb%n_ab), j=i,nc)
         if (.false.) then ! Add coefficients
             write(iout, 1011) (j, j=i,nc)
-            do j = 1, n_mos(n_ab)
-                write(iout, 1012) j, (coef_mos(k,j,n_ab), k=i,nc)
+            do j = 1, orbdb%n_mos(orbdb%n_ab)
+                write(iout, 1012) j, (orbdb%coef_mos(k,j,orbdb%n_ab), k=i,nc)
             end do
         end if
     end do
     
     1020 format(1x,a2,i6,3f16.6,f10.5)
     write(iout, *) 'Geometry (Ang):'
-    do ia = 1, n_at
-        write(iout, 1020) at_lab(ia), ia, &
-            (phys%bohr2Ang(at_crd(ix,ia)),ix=1,3), at_chg(ia)
+    do ia = 1, moldb%n_at
+        write(iout, 1020) moldb%at_lab(ia), ia, &
+            (phys%bohr2Ang(moldb%at_crd(ix,ia)),ix=1,3), moldb%at_chg(ia)
     end do
     
     return

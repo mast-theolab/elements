@@ -969,7 +969,7 @@ end function transfo_cart2pure
 
 ! ======================================================================
 
-subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh_)
+subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh)
     !! Check basis set redundancy
     !!
     !! Checks any redundancy within basis set functions.
@@ -978,25 +978,25 @@ subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh_)
     !! Number of atomic orbitals
     real(real64), dimension(n_ao,n_ao), intent(in) :: ovint_i_j
     !! Overlap integrals between atomic orbitals, < i | j >
-    real(real64), intent(in), optional :: thresh_
+    real(real64), intent(in), optional :: thresh
     !! Threshold to consider redundancy (redundancy if norm below).
 
     integer :: iao, jao, kao, lao
-    real(real64) :: norm, ovlp, thresh
+    real(real64) :: norm, ovlp, thresh0
     real(real64), dimension(n_ao,n_ao) :: trial
     logical, dimension(n_ao) :: is_red
     character(len=60) :: fmt_red
 
-    if (present(thresh_)) then
-        thresh = thresh_
-        if (thresh < epsilon(thresh)) then
+    if (present(thresh)) then
+        thresh0 = thresh
+        if (thresh0 < epsilon(thresh0)) then
             write(iu_out, '(a)') &
                 'WARNING: Threshold for redundancy check too low'
-            write(iu_out, '(9x,a,e12.4)') 'Resetting to:', epsilon(thresh)
-            thresh = epsilon(thresh)
+            write(iu_out, '(9x,a,e12.4)') 'Resetting to:', epsilon(thresh0)
+            thresh0 = epsilon(thresh0)
         end if
     else
-        thresh = 1.0e-6_real64
+        thresh0 = 1.0e-6_real64
     end if
 
     write(fmt_red, '("(""Orbital num. "",i",i0,","" - Rest norm:"",f12.8,&
@@ -1028,7 +1028,7 @@ subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh_)
                 norm = norm + trial(iao,kao)*ovint_i_j(kao,lao)*trial(iao,lao)
             end do
         end do
-        if (norm > thresh) then
+        if (norm > thresh0) then
             write(iu_out, fmt_red) iao, norm
         else
             write(iu_out, fmt_red) iao, norm, 'redundant'

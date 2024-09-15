@@ -117,9 +117,9 @@ module procedure set_arg_names
         if (present(required)) then
             this%is_req = required
         else
-            this%is_req = .False.
+            this%is_req = .false.
         end if
-        this%is_pos = .False.
+        this%is_pos = .false.
     else
         if (.not.present(label)) then
             call RaiseError(res, 'Missing label for positional argument.')
@@ -132,8 +132,8 @@ module procedure set_arg_names
                 return
             end if
         end if
-        this%is_req = .True.
-        this%is_pos = .True.
+        this%is_req = .true.
+        this%is_pos = .true.
     end if
 end procedure set_arg_names
 

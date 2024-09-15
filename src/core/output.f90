@@ -59,7 +59,7 @@ end function len_int64
 
 ! ======================================================================
 
-subroutine prt_coord_r32(n_at, at_lab, at_crd, at_mass_, iunit_)
+subroutine prt_coord_r32(n_at, at_lab, at_crd, at_mass, iunit)
     !! Prints the atomic coordinates in a formatted way (32bit version).
     !!
     !! Prints the atomic coordinates as a table, optionally with the
@@ -70,9 +70,9 @@ subroutine prt_coord_r32(n_at, at_lab, at_crd, at_mass_, iunit_)
     !! Atomic labels
     real(real32), dimension(3, n_at), intent(in) :: at_crd
     !! Atomic coordinates (in au)
-    real(real32), dimension(n_at), intent(in), optional :: at_mass_
+    real(real32), dimension(n_at), intent(in), optional :: at_mass
     !! Atomic masses (in u)
-    integer, intent(in), optional :: iunit_
+    integer, intent(in), optional :: iunit
     !! Output unit
 
     integer :: ia, iu
@@ -85,17 +85,17 @@ subroutine prt_coord_r32(n_at, at_lab, at_crd, at_mass_, iunit_)
     1110 format(2x,a,2x,"|",3(1x,f12.6))
 
     ! Set output
-    if (present(iunit_)) then
-        iu = iunit_
+    if (present(iunit)) then
+        iu = iunit
     else
         iu = iu_out
     end if
 
-    if (present(at_mass_)) then
+    if (present(at_mass)) then
         write(iu, 1000)
         write(iu, 1001)
         do ia = 1, n_at
-            write(iu, 1010) at_lab(ia), at_mass_(ia), &
+            write(iu, 1010) at_lab(ia), at_mass(ia), &
                 phys%bohr2Ang(at_crd(:,ia))
         end do
         write(iu, 1001)
@@ -103,7 +103,7 @@ subroutine prt_coord_r32(n_at, at_lab, at_crd, at_mass_, iunit_)
         write(iu, 1100)
         write(iu, 1101)
         do ia = 1, n_at
-            write(iu, 1110) at_lab(ia), at_mass_(ia), &
+            write(iu, 1110) at_lab(ia), at_mass(ia), &
                 phys%bohr2Ang(at_crd(:,ia))
         end do
         write(iu, 1101)
@@ -113,7 +113,7 @@ end subroutine prt_coord_r32
 
 ! ======================================================================
 
-subroutine prt_coord_r64(n_at, at_lab, at_crd, at_mass_, iunit_)
+subroutine prt_coord_r64(n_at, at_lab, at_crd, at_mass, iunit)
     !! Prints the atomic coordinates in a formatted way (64bit version).
     !!
     !! Prints the atomic coordinates as a table, optionally with the
@@ -124,9 +124,9 @@ subroutine prt_coord_r64(n_at, at_lab, at_crd, at_mass_, iunit_)
     !! Atomic labels
     real(real64), dimension(3, n_at), intent(in) :: at_crd
     !! Atomic coordinates (in au)
-    real(real64), dimension(n_at), intent(in), optional :: at_mass_
+    real(real64), dimension(n_at), intent(in), optional :: at_mass
     !! Atomic masses (in u)
-    integer, intent(in), optional :: iunit_
+    integer, intent(in), optional :: iunit
     !! Output unit
 
     integer :: ia, iu
@@ -141,18 +141,18 @@ subroutine prt_coord_r64(n_at, at_lab, at_crd, at_mass_, iunit_)
     1110 format(2x,a,3x,3(1x,f12.6))
 
     ! Set output
-    if (present(iunit_)) then
-        iu = iunit_
+    if (present(iunit)) then
+        iu = iunit
     else
         iu = iu_out
     end if
 
-    if (present(at_mass_)) then
+    if (present(at_mass)) then
         write(iu, 1001)
         write(iu, 1000)
         write(iu, 1002)
         do ia = 1, n_at
-            write(iu, 1010) at_lab(ia), at_mass_(ia), &
+            write(iu, 1010) at_lab(ia), at_mass(ia), &
                 phys%bohr2Ang(at_crd(:,ia))
         end do
         write(iu, 1001)
@@ -161,7 +161,7 @@ subroutine prt_coord_r64(n_at, at_lab, at_crd, at_mass_, iunit_)
         write(iu, 1100)
         write(iu, 1102)
         do ia = 1, n_at
-            write(iu, 1110) at_lab(ia), at_mass_(ia), &
+            write(iu, 1110) at_lab(ia), at_mass(ia), &
                 phys%bohr2Ang(at_crd(:,ia))
         end do
         write(iu, 1101)
@@ -171,7 +171,7 @@ end subroutine prt_coord_r64
 
 ! ======================================================================
 
-subroutine prt_mat_r32(mat, n_row, n_col, iunit_, ncol_by_blk_, prec_, thresh_)
+subroutine prt_mat_r32(mat, n_row, n_col, iunit, ncol_by_blk, prec, thresh)
     !! Print a real32 matrix
     !!
     !! Prints a real matrix with precision real32.
@@ -181,61 +181,61 @@ subroutine prt_mat_r32(mat, n_row, n_col, iunit_, ncol_by_blk_, prec_, thresh_)
     !! Number of rows to display
     integer, intent(in) :: n_col
     !! Number of columns to display
-    integer, intent(in), optional :: iunit_
+    integer, intent(in), optional :: iunit
     !! Output unit
-    integer, intent(in), optional :: ncol_by_blk_
+    integer, intent(in), optional :: ncol_by_blk
     !! Number of columns per block
-    integer, intent(in), optional :: prec_
+    integer, intent(in), optional :: prec
     !! Number of digits for precision (<0 for fixed-point notation)
-    real(real32), intent(in), optional :: thresh_
-    !! If set, elements below thresh_ are not printed.
-    integer :: icol, icol0, irow, iu, len_num, n, ncol_by_blk
+    real(real32), intent(in), optional :: thresh
+    !! If set, elements below thresh are not printed.
+    integer :: icol, icol0, irow, iu, len_num, n, ncols
     integer, parameter :: len_id = 8
     real(real32), dimension(:), allocatable :: vec
     character(len=10) :: num_fmt, id_fmt
     character(len=80) :: dfmt, hfmt
 
     ! Set output
-    if (present(iunit_)) then
-        iu = iunit_
+    if (present(iunit)) then
+        iu = iunit
     else
         iu = iu_out
     end if
 
     ! Build formats
     write(id_fmt, '("i",i0)') len_id
-    if (.not.present(prec_)) then
+    if (.not.present(prec)) then
         num_fmt = 'es14.6'
         len_num = 14
     else
-        if (prec_ > 0) then
-            len_num = prec_ + 8
-            write(num_fmt, '("es",i0,".",i0)') len_num, prec_
+        if (prec > 0) then
+            len_num = prec + 8
+            write(num_fmt, '("es",i0,".",i0)') len_num, prec
         else
-            len_num = -prec_ + 10
-            write(num_fmt, '("f",i0,".",i0)') len_num, -prec_
+            len_num = -prec + 10
+            write(num_fmt, '("f",i0,".",i0)') len_num, -prec
         end if
     end if
 
-    if (.not.present(ncol_by_blk_)) then
-        ncol_by_blk = 5
+    if (.not.present(ncol_by_blk)) then
+        ncols = 5
     else
-        ncol_by_blk = abs(ncol_by_blk_)
+        ncols = abs(ncol_by_blk)
     end if
-    allocate(vec(ncol_by_blk))
+    allocate(vec(ncols))
 
     write(hfmt, '("(",i0,"x,",i0,"(",i0,"x,",a,"))")') 1+len_id/2, &
-        ncol_by_blk, len_num-len_id, id_fmt
-    write(dfmt, '("(",a,",1x,",i0,"(",a,"))")') id_fmt, ncol_by_blk, num_fmt
+        ncols, len_num-len_id, id_fmt
+    write(dfmt, '("(",a,",1x,",i0,"(",a,"))")') id_fmt, ncols, num_fmt
 
     ! Now print the matrix
-    do icol0 = 0, n_col-1, ncol_by_blk
-        n = min(n_col-icol0, ncol_by_blk)
+    do icol0 = 0, n_col-1, ncols
+        n = min(n_col-icol0, ncols)
         write(iu, hfmt) (icol+icol0, icol=1,n)
         do irow = 1, n_row
-            if (present(thresh_)) then
+            if (present(thresh)) then
                 do icol = 1, n
-                    if (abs(mat(irow,icol0+icol)) > thresh_) then
+                    if (abs(mat(irow,icol0+icol)) > thresh) then
                         vec(icol) = mat(irow,icol0+icol)
                     else
                         vec(icol) = 0.0_real32
@@ -255,7 +255,7 @@ end subroutine prt_mat_r32
 
 ! ======================================================================
 
-subroutine prt_mat_r64(mat, n_row, n_col, iunit_, ncol_by_blk_, prec_, thresh_)
+subroutine prt_mat_r64(mat, n_row, n_col, iunit, ncol_by_blk, prec, thresh)
     !! Print a real64 matrix
     !!
     !! Prints a real matrix with precision real64.
@@ -265,61 +265,61 @@ subroutine prt_mat_r64(mat, n_row, n_col, iunit_, ncol_by_blk_, prec_, thresh_)
     !! Number of rows to display
     integer, intent(in) :: n_col
     !! Number of columns to display
-    integer, intent(in), optional :: iunit_
+    integer, intent(in), optional :: iunit
     !! Output unit
-    integer, intent(in), optional :: ncol_by_blk_
+    integer, intent(in), optional :: ncol_by_blk
     !! Number of columns per block
-    integer, intent(in), optional :: prec_
+    integer, intent(in), optional :: prec
     !! Number of digits for precision (<0 for fixed-point notation)
-    real(real64), intent(in), optional :: thresh_
-    !! If set, elements below thresh_ are not printed.
-    integer :: icol, icol0, irow, iu, len_num, n, ncol_by_blk
+    real(real64), intent(in), optional :: thresh
+    !! If set, elements below thresh are not printed.
+    integer :: icol, icol0, irow, iu, len_num, n, ncols
     integer, parameter :: len_id = 8
     real(real64), dimension(:), allocatable :: vec
     character(len=10) :: num_fmt, id_fmt
     character(len=80) :: dfmt, hfmt
 
     ! Set output
-    if (present(iunit_)) then
-        iu = iunit_
+    if (present(iunit)) then
+        iu = iunit
     else
         iu = iu_out
     end if
 
     ! Build formats
     write(id_fmt, '("i",i0)') len_id
-    if (.not.present(prec_)) then
+    if (.not.present(prec)) then
         num_fmt = 'es14.6'
         len_num = 14
     else
-        if (prec_ > 0) then
-            len_num = prec_ + 8
-            write(num_fmt, '("es",i0,".",i0)') len_num, prec_
+        if (prec > 0) then
+            len_num = prec + 8
+            write(num_fmt, '("es",i0,".",i0)') len_num, prec
         else
-            len_num = -prec_ + 10
-            write(num_fmt, '("f",i0,".",i0)') len_num, -prec_
+            len_num = -prec + 10
+            write(num_fmt, '("f",i0,".",i0)') len_num, -prec
         end if
     end if
 
-    if (.not.present(ncol_by_blk_)) then
-        ncol_by_blk = 5
+    if (.not.present(ncol_by_blk)) then
+        ncols = 5
     else
-        ncol_by_blk = abs(ncol_by_blk_)
+        ncols = abs(ncol_by_blk)
     end if
-    allocate(vec(ncol_by_blk))
+    allocate(vec(ncols))
 
     write(hfmt, '("(",i0,"x,",i0,"(",i0,"x,",a,"))")') 1+len_id/2, &
-        ncol_by_blk, len_num-len_id, id_fmt
-    write(dfmt, '("(",a,",1x,",i0,"(",a,"))")') id_fmt, ncol_by_blk, num_fmt
+        ncols, len_num-len_id, id_fmt
+    write(dfmt, '("(",a,",1x,",i0,"(",a,"))")') id_fmt, ncols, num_fmt
 
     ! Now print the matrix
-    do icol0 = 0, n_col-1, ncol_by_blk
-        n = min(n_col-icol0, ncol_by_blk)
+    do icol0 = 0, n_col-1, ncols
+        n = min(n_col-icol0, ncols)
         write(iu, hfmt) (icol+icol0, icol=1,n)
         do irow = 1, n_row
-            if (present(thresh_)) then
+            if (present(thresh)) then
                 do icol = 1, n
-                    if (abs(mat(irow,icol0+icol)) > thresh_) then
+                    if (abs(mat(irow,icol0+icol)) > thresh) then
                         vec(icol) = mat(irow,icol0+icol)
                     else
                         vec(icol) = 0.0_real64
@@ -408,7 +408,7 @@ end subroutine sec_header
 
 ! ======================================================================
 
-subroutine write_err(nature, msg, error_)
+subroutine write_err(nature, msg, error)
     !! Writes error message on default unit.
     !!
     !! Writes an error message.  The formatting depends on the nature
@@ -419,7 +419,7 @@ subroutine write_err(nature, msg, error_)
     !! Nature of the error
     character(len=*), intent(in) :: msg
     !! General error message
-    character(len=*), intent(in), optional :: error_
+    character(len=*), intent(in), optional :: error
 
     select case (locase(trim(nature)))
         case ('generic', 'gen')
@@ -427,7 +427,7 @@ subroutine write_err(nature, msg, error_)
             write(iu_out, '(a)') 'Stopping'
         case ('basic', 'std')
             write(iu_out, '(a)') trim(msg)
-            write(iu_out, '("Reason:",/,4x,a)') trim(error_)
+            write(iu_out, '("Reason:",/,4x,a)') trim(error)
         case default
             write(iu_out, '("Uncategorized error:",4x,a)') trim(msg)
     end select

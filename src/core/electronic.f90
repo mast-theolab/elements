@@ -699,7 +699,7 @@ end subroutine convert_AO2MO_N
 ! ======================================================================
 
 function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
-                     to_MO_, c_ia_)
+                     to_MOs, coefs_ia)
     !! Build and return transition amplitudes in the AO or MO basis.
     !!
     !! Builds the transition amplitudes in the atomic orbital basis
@@ -718,9 +718,9 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
     !! Transition electronic density matrix
     real(real64), dimension(n_ao, n_ao):: tmp_arr
     !! Temporary array
-    logical, intent(in), optional :: to_MO_
+    logical, intent(in), optional :: to_MOs
     !! Convert transition amplitudes to the MO basis.
-    real(real64), dimension(:,:,:), intent(in), optional :: c_ia_
+    real(real64), dimension(:,:,:), intent(in), optional :: coefs_ia
     !! Coefficients of MOs in AOs basis
     real(real64), dimension(:,:,:), allocatable, target :: eltrans_amp
     !! Electronic transition amplitudes
@@ -730,11 +730,10 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
     real(real64), dimension(:,:,:), pointer :: amp_ao => null()
     logical :: to_MO
 
-
-    if (present(to_MO_)) then
-        to_MO = to_MO_
+    if (present(to_MOs)) then
+        to_MO = to_MOs
     else
-        to_MO = .False.
+        to_MO = .false.
     end if
 
     if (to_MO) then
@@ -772,13 +771,13 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
         !$omp end parallel do
 
         if (to_MO) then
-            if (.not.present(c_ia_)) then
+            if (.not.present(coefs_ia)) then
                 write(iu_out, '(a)') &
                     'DEVERR: Missing c_ia for the conversion from AO to MO'
                 stop
             end if
-            call convert_AO2MO(n_ao, n_mos(iab), c_ia_(:,:,iab), tmp(:,:,iab), &
-                               eltrans_amp(:,:,iab), tmp_arr)
+            call convert_AO2MO(n_ao, n_mos(iab), coefs_ia(:,:,iab), &
+                               tmp(:,:,iab), eltrans_amp(:,:,iab), tmp_arr)
         end if
     end do
     if (to_MO) deallocate(tmp)

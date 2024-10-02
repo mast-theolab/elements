@@ -330,7 +330,8 @@ function build_mol_data_fchk(dfile) result(mol)
         'Current cartesian coordinates             ', &  ! 5
         'Atomic numbers                            ', &  ! 6
         'Nuclear charges                           ', &  ! 7
-        'Real atomic weights                       '  &  ! 8
+        'Real atomic weights                       ', &  ! 8
+        'Total Energy                              '     ! 9
     ]
 
     integer :: ia
@@ -366,6 +367,10 @@ function build_mol_data_fchk(dfile) result(mol)
     mol%at_mas = dbase(8)%rdata
     mol%at_crd = reshape(dbase(5)%rdata, [3, mol%n_at])
     deallocate(dbase(5)%rdata, dbase(6)%idata, dbase(7)%rdata, dbase(8)%rdata)
+
+    ! Other basic quantities
+    ! -- energy
+    mol%energy = dbase(9)%rdata(1)
 
     mol%loaded = .true.
 
@@ -597,7 +602,6 @@ function build_exc_data_fchk(dfile) result(exc)
         i,  i_ab, ioff, n_ab, nbas_lt, n_basis, &
         lblock_ETran, &  ! Length of a data block for a given state
         NLR              ! indicate if left and right trans. matrix data stored
-    real(real64) :: rval
     logical :: ok
     type(fchkparser) :: dfchk
     type(fchkdata), dimension(:), allocatable :: dbase
@@ -641,10 +645,11 @@ function build_exc_data_fchk(dfile) result(exc)
     ! Extract transition data values
     allocate(exc%g2e_energy(exc%n_states), exc%g2e_eldip(3,exc%n_states), &
              exc%g2e_magdip(3,exc%n_states))
-    rval = dbase(12)%rdata(1)
+    exc%gs_energy = dbase(12)%rdata(1)
     do i = 1, exc%n_states
         ioff = (i-1)*lblock_ETran
-        exc%g2e_energy(i) = dbase(7)%rdata(1+ioff) - rval
+        exc%exc_energy(i) = dbase(7)%rdata(1+ioff)
+        exc%g2e_energy(i) = exc%exc_energy(i) - exc%gs_energy
         exc%g2e_eldip(:,i) = dbase(7)%rdata(2+ioff:4+ioff)
         exc%g2e_magdip(:,i) = dbase(7)%rdata(5+ioff:7+ioff)
     end do

@@ -8,6 +8,7 @@
 - New module `vibdata` to store vibrational data extracted from input files.
 - New procedure `build_vibdata` to extract vibrational data.
 - The library can now support data sets for multiple molecules or states.
+- Extraction of electronic energies of current states (`moleculeDB` block) and pure excited-state energies (`ExcitationDB` block) from Gaussian fchk file.
 
 ### Changed
 

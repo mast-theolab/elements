@@ -10,6 +10,8 @@ module workdata
             n_el = 0       ! number of electrons
         integer, dimension(:), allocatable :: &
             at_num         ! atomic numbers
+        real(real64) :: &
+            energy = 0.0_real64  ! total energy (electronic state-dependent)
         real(real64), dimension(:), allocatable :: &
             at_chg, &      ! nuclear charges
             at_mas         ! atomic masses
@@ -70,6 +72,8 @@ module workdata
             id_state = -1     ! index of reference state (0: ground)
         integer, dimension(:), allocatable :: &
             ispin_exc         ! spin of electronic excited states
+        real(real64) :: &
+            gs_energy = 0.0_real64  ! ground-state energy
         real(real64), dimension(:,:,:,:), allocatable :: &
             exc_dens, &       ! excited-state densities
             g2e_dens          ! ground-to-excited transition densities
@@ -77,6 +81,7 @@ module workdata
             g2e_eldip, &      ! ground-to-excited electric dipoles
             g2e_magdip        ! ground-to-excited magnetic dipoles
         real(real64), dimension(:), allocatable :: &
+            exc_energy        ! excited-state energies
             g2e_energy        ! excitation energies
         logical :: &
             dens_loaded = .false., &  ! Density information has been loaded

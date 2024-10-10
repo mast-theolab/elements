@@ -81,7 +81,7 @@ module workdata
             g2e_eldip, &      ! ground-to-excited electric dipoles
             g2e_magdip        ! ground-to-excited magnetic dipoles
         real(real64), dimension(:), allocatable :: &
-            exc_energy        ! excited-state energies
+            exc_energy, &     ! excited-state energies
             g2e_energy        ! excitation energies
         logical :: &
             dens_loaded = .false., &  ! Density information has been loaded

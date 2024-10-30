@@ -372,6 +372,17 @@ end procedure get_error_instance
 
 ! ======================================================================
 
+module procedure set_error_instance
+    !! Sets error instance.
+    !!
+    !! Sets the error instance stored in the DataFile instance.
+
+    dfile%error = err
+
+end procedure set_error_instance
+
+! ======================================================================
+
 module procedure get_error_msg
     !! Gets error message.
     !!

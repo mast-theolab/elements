@@ -39,6 +39,7 @@ module input
         procedure, pass(file_data) :: get_version => get_prog_version
         procedure :: has_error => check_error_status
         procedure :: get_error => get_error_msg
+        procedure :: set_error => set_error_instance
         procedure, pass(file_data) :: check_version => check_prog_version
     end type DataFile
 
@@ -186,6 +187,16 @@ module function get_error_instance(dfile) result(err)
     !! Error instance.
 
 end function get_error_instance
+
+! ----------------------------------------------------------------------
+
+module subroutine set_error_instance(dfile, err)
+    class(DataFile), intent(inout) :: dfile
+    !! DataFile instance.
+    class(BaseException), intent(in) :: err
+    !! Error instance.
+
+end subroutine set_error_instance
 
 ! ----------------------------------------------------------------------
 

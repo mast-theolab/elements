@@ -643,8 +643,8 @@ function build_exc_data_fchk(dfile) result(exc)
     exc%ispin_exc = dbase(5)%idata
 
     ! Extract transition data values
-    allocate(exc%g2e_energy(exc%n_states), exc%g2e_eldip(3,exc%n_states), &
-             exc%g2e_magdip(3,exc%n_states))
+    allocate(exc%g2e_energy(exc%n_states), exc%exc_energy(exc%n_states), &
+        exc%g2e_eldip(3,exc%n_states), exc%g2e_magdip(3,exc%n_states))
     exc%gs_energy = dbase(12)%rdata(1)
     do i = 1, exc%n_states
         ioff = (i-1)*lblock_ETran

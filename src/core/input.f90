@@ -32,6 +32,7 @@ module input
     contains
         procedure :: build_mol_data, build_bset_data, build_orb_data, &
             build_exc_data, build_vib_data
+        procedure, private :: get_data_from_id, get_data_from_tag
         procedure :: get_name => get_datafile_name
         procedure :: get_type => get_datafile_type
         procedure :: get_error_type => get_error_instance
@@ -41,6 +42,7 @@ module input
         procedure :: get_error => get_error_msg
         procedure :: set_error => set_error_instance
         procedure, pass(file_data) :: check_version => check_prog_version
+        generic :: get_data => get_data_from_id, get_data_from_tag
     end type DataFile
 
     interface DataFile
@@ -303,6 +305,44 @@ module function build_vib_data(dfile, fname, ftype, get_Lmat, get_Lmweig, &
     !! Vibrational information.
 
 end function build_vib_data
+
+! ----------------------------------------------------------------------
+
+module function get_data_from_id(dfile, identifier, start_state, end_state, &
+                                 derorder) result(prop)
+    class(DataFile), intent(inout) :: dfile
+    !! DataFile instance.
+    integer, intent(in) :: identifier
+    !! Identifier of the property of interest.
+    integer, intent(in) :: start_state
+    !! Starting or reference electronic state.
+    integer, intent(in), optional :: end_state
+    !! End electronic state, only for electronic transition.
+    integer, intent(in), optional :: derorder
+    !! Derivative order, if relevant or assumed to be 0.
+    type(PropertyDB) :: prop
+    !! Property information.
+
+end function get_data_from_id
+
+! ----------------------------------------------------------------------
+
+module function get_data_from_tag(dfile, identifier, start_state, end_state, &
+                                  derorder) result(prop)
+    class(DataFile), intent(inout) :: dfile
+    !! DataFile instance.
+    character(len=*), intent(in) :: identifier
+    !! Identifier of the property of interest.
+    integer, intent(in) :: start_state
+    !! Starting or reference electronic state.
+    integer, intent(in), optional :: end_state
+    !! End electronic state, only for electronic transition.
+    integer, intent(in), optional :: derorder
+    !! Derivative order, if relevant or assumed to be 0.
+    type(PropertyDB) :: prop
+    !! Property information.
+
+end function get_data_from_tag
 
 ! ----------------------------------------------------------------------
 

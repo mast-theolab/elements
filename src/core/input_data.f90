@@ -66,6 +66,44 @@ end function build_vib_data_fchk
 
 ! ----------------------------------------------------------------------
 
+module function get_data_from_id_fchk(dfile, identifier, start_state, &
+                                      end_state, derorder) result(prop)
+    class(DataFile), intent(inout) :: dfile
+    !! DataFile instance.
+    integer, intent(in) :: identifier
+    !! Identifier of the property of interest.
+    integer, intent(in) :: start_state
+    !! Starting or reference electronic state.
+    integer, intent(in), optional :: end_state
+    !! End electronic state, only for electronic transition.
+    integer, intent(in), optional :: derorder
+    !! Derivative order, if relevant or assumed to be 0.
+    type(PropertyDB) :: prop
+    !! Property information.
+
+end function get_data_from_id_fchk
+
+! ----------------------------------------------------------------------
+
+module function get_data_from_tag_fchk(dfile, identifier, start_state, &
+                                       end_state, derorder) result(prop)
+    class(DataFile), intent(inout) :: dfile
+    !! DataFile instance.
+    character(len=*), intent(in) :: identifier
+    !! Identifier of the property of interest.
+    integer, intent(in) :: start_state
+    !! Starting or reference electronic state.
+    integer, intent(in), optional :: end_state
+    !! End electronic state, only for electronic transition.
+    integer, intent(in), optional :: derorder
+    !! Derivative order, if relevant or assumed to be 0.
+    type(PropertyDB) :: prop
+    !! Property information.
+
+end function get_data_from_tag_fchk
+
+! ----------------------------------------------------------------------
+
 end interface
 
 
@@ -364,9 +402,59 @@ module procedure build_vib_data
 end procedure build_vib_data
 
 ! ======================================================================
-! SUB-MODULE COMPONENTS
+
+module procedure get_data_from_id
+    !! Entry function to extract data from specific quantity.
+    !!
+    !! This function acts as a wrapper by calling parser-specific functions
+    !! to extract data related to a specific property.
+
+    if (dfile%type == 'GFChk') then
+        prop = get_data_from_id_fchk(dfile, identifier, start_state, &
+                                     end_state, derorder)
+        if (dfile%error%raised()) then
+            select type(err => dfile%error)
+                type is(FileError)
+                    prop%istat = -2
+                type is(QuantityError)
+                    if (prop%istat == 0) prop%istat = 2
+                class is(Error)
+                    prop%istat = 10
+            end select
+        end if
+    else
+        prop%istat = -1
+    end if
+
+end procedure get_data_from_id
+
 ! ======================================================================
 
+module procedure get_data_from_tag
+    !! Entry function to extract data from specific quantity.
+    !!
+    !! This function acts as a wrapper by calling parser-specific functions
+    !! to extract data related to a specific property.
 
+    if (dfile%type == 'GFChk') then
+        prop = get_data_from_tag_fchk(dfile, identifier, start_state, &
+                                      end_state, derorder)
+        if (dfile%error%raised()) then
+            select type(err => dfile%error)
+                type is(FileError)
+                    prop%istat = -2
+                type is(QuantityError)
+                    if (prop%istat == 0) prop%istat = 2
+                class is(Error)
+                    prop%istat = 10
+            end select
+        end if
+    else
+        prop%istat = -1
+    end if
+
+end procedure get_data_from_tag
+
+! ======================================================================
 
 end

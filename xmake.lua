@@ -102,6 +102,7 @@ target("datalib")
     add_deps("corelib")
     add_files("src/parsers/parse_fchk.f90")
     add_files("src/data/workdata.f90")
+    add_files("src/data/propinfo.f90")
     add_files("src/core/input.f90")
     add_files("src/core/input_*.f90")
     add_files("src/parsers/input_data_*.f90")
@@ -240,3 +241,17 @@ target("test_blas_ops")
     add_files("src/drivers/blas.f90")
     add_files("src/tests/blas_ops.f90")
     add_tests("default")
+
+target("test_get_data")
+    set_default(false)
+    set_rundir("$(projectdir)/tests")
+    add_deps("datalib")
+    add_deps("corelib")
+    add_deps("parselib")
+    add_files("src/tests/test_getdata.f90")
+    add_tests("h2co",
+              {runargs = {"-f", "H2CO_S2_frq.fchk",
+                          "-o", "test_getdata_H2CO.txt"}})
+    add_tests("biphenyl",
+              {runargs = {"-f", "biphenyl_S1_frq.fchk",
+                          "-o", "test_getdata_biphenyl.txt"}})

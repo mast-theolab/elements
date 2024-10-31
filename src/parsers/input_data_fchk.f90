@@ -5,6 +5,7 @@ submodule (input:input_data) input_data_fchk
     use parsefchk, only: fchkdata, fchkparser
     use basisset, only: build_bset_DB
     use atominfo, only: atdata
+    use propinfo, only: load_property_info
     use exception, only: BaseException, Error, InitError, &
         RaiseError, RaiseFileError, RaiseQuantityError
 
@@ -469,5 +470,465 @@ module procedure build_vib_data_fchk
 end procedure build_vib_data_fchk
 
 ! ======================================================================
+
+module procedure get_data_from_id_fchk
+    !! Extract data for a specific quantity from Gaussian fchk file.
+    !!
+    !! Extracts data for a specific quantity from the Gaussian fchk file.
+    !! The procedure also takes care of doing necessary adjustments if
+    !! needed.
+    integer :: der_ord, i, ioff, LP
+    real(real64), dimension(:), allocatable :: tmpvec
+    logical :: ok
+    character(len=42), dimension(:), allocatable :: fchk_keys
+    type(fchkparser) :: dfchk
+    type(fchkdata), dimension(:), allocatable :: dbase
+
+    ! Check if reference/starting state makes sense and set it in DB
+    if (start_state < 0) then
+        prop%istat = 99
+        return
+    else
+        prop%states(1) = start_state
+    end if
+
+    ! Check if end state provided and consistent with start state
+    if (present(end_state)) then
+        if (end_state == -1) then
+            prop%states(2) = -1
+        else if (end_state < start_state) then
+            prop%istat = 99
+            return
+        else
+            prop%states(2) = end_state
+        end if
+    else
+        prop%states(2) = prop%states(1)
+    end if
+
+    ! Check derivative order.
+    ! Since does not necessarily makes sense for all properties, we
+    ! store it in temporary variables and will use later.
+    if (present(derorder)) then
+        if (derorder < 0) then
+            prop%istat = 99
+            return
+        else
+            der_ord = derorder
+        end if
+    else
+        der_ord = 0
+    end if
+
+    ! load basic information about property
+    call load_property_info(identifier, prop)
+
+    ! Load parsing capabilities
+    dfchk = fchkparser(dfile%name)
+
+    ! Now extract information
+    select case(identifier)
+    case(101)
+        prop%order = der_ord
+        if (prop%states(1) /= prop%states(2)) then
+            ! Electronic transition moment
+            if (prop%states(1) == 0) then
+                fchk_keys = [ &
+                    'ETran scalars                        ', &  !  1.
+                    'ETran state values                   '  &  !  2.
+                ]
+                dbase = dfchk%read(fchk_keys)
+                if (dbase(1)%dtype == '0') then
+                    prop%istat = 2
+                    return
+                end if
+                LP = 3  ! we could use prop%pdim but not much sense.
+                if (prop%order == 0) then
+                    block
+                    integer :: n_states, lblock
+                    n_states = dbase(1)%idata(1)
+                    lblock = dbase(1)%idata(2)
+                    if (n_states < prop%states(2)) then
+                        prop%istat = 2
+                        return
+                    end if
+                    if (prop%states(2) == -1) then
+                        allocate(prop%data(LP*n_states))
+                        do i = 1, n_states
+                            ioff = (i-1)*lblock
+                            prop%data((i-1)*LP+1:i*LP) = &
+                                dbase(2)%rdata(2+ioff:4+ioff)
+                        end do
+                        prop%loaded = .true.
+                        prop%shape = [LP, n_states]
+                    else
+                        allocate(prop%data(LP))
+                        ioff = (prop%states(2)-1)*lblock
+                        prop%data = dbase(2)%rdata(2+ioff:4+ioff)
+                        prop%loaded = .true.
+                        prop%shape = [LP]
+                    end if
+                    end block
+                else if (prop%order == 1) then
+                    block
+                    integer :: exc_state, lblock, n_at3, n_LR, n_states
+                    n_states = dbase(1)%idata(1)
+                    exc_state = dbase(1)%idata(5)
+                    lblock = dbase(1)%idata(2)
+                    n_LR = dbase(1)%idata(3)
+                    n_at3 = dbase(1)%idata(6) - 3  ! 3*natoms + 3 (elec. field)
+                    if (exc_state /= prop%states(2) .and. &
+                            prop%states(2) /= -1) then
+                        prop%istat = 2
+                        return
+                    end if
+                    allocate(prop%data(LP*n_at3))
+                    ioff = lblock*n_states*n_LR + 3*lblock + 2
+                    do i = 0, n_at3 - 1
+                        prop%data(i*LP+1:i*LP+3) = &
+                            dbase(2)%rdata(ioff+i*lblock:ioff+i*lblock+2)
+                    end do
+                    prop%loaded = .true.
+                    prop%shape = [LP, n_at3]
+                    end block
+                else
+                    prop%istat = 1
+                end if
+            else
+                prop%istat = 1
+            end if
+        else
+            ! Reference state
+            stop 'El. dipole NYI'
+        end if
+    case(111)
+        prop%order = der_ord
+        if (prop%states(1) /= prop%states(2)) then
+            ! Electronic transition moment
+            if (prop%states(1) == 0) then
+                fchk_keys = [ &
+                    'ETran scalars                        ', &  !  1.
+                    'ETran state values                   '  &  !  2.
+                ]
+                dbase = dfchk%read(fchk_keys)
+                if (dbase(1)%dtype == '0') then
+                    prop%istat = 2
+                    return
+                end if
+                LP = 3  ! we could use prop%pdim but not much sense.
+                if (prop%order == 0) then
+                    block
+                    integer :: n_states, lblock
+                    n_states = dbase(1)%idata(1)
+                    lblock = dbase(1)%idata(2)
+                    if (n_states < prop%states(2)) then
+                        prop%istat = 2
+                        return
+                    end if
+                    if (prop%states(2) == -1) then
+                        allocate(prop%data(LP*n_states))
+                        do i = 1, n_states
+                            ioff = (i-1)*lblock
+                            prop%data((i-1)*LP+1:i*LP) = &
+                                dbase(2)%rdata(5+ioff:7+ioff)
+                        end do
+                        prop%loaded = .true.
+                        prop%shape = [LP, n_states]
+                    else
+                        allocate(prop%data(LP))
+                        ioff = (prop%states(2)-1)*lblock
+                        prop%data = dbase(2)%rdata(5+ioff:7+ioff)
+                        prop%loaded = .true.
+                        prop%shape = [LP]
+                    end if
+                    end block
+                else if (prop%order == 1) then
+                    block
+                    integer :: exc_state, lblock, n_at3, n_LR, n_states
+                    n_states = dbase(1)%idata(1)
+                    exc_state = dbase(1)%idata(5)
+                    lblock = dbase(1)%idata(2)
+                    n_LR = dbase(1)%idata(3)
+                    n_at3 = dbase(1)%idata(6) - 3  ! 3*natoms + 3 (elec. field)
+                    if (exc_state /= prop%states(2) .and. &
+                            prop%states(2) /= -1) then
+                        prop%istat = 2
+                        return
+                    end if
+                    allocate(prop%data(LP*n_at3))
+                    ioff = lblock*n_states*n_LR + 3*lblock + 5
+                    do i = 0, n_at3 - 1
+                        prop%data(i*LP+1:i*LP+3) = &
+                            dbase(2)%rdata(ioff+i*lblock:ioff+i*lblock+2)
+                    end do
+                    prop%loaded = .true.
+                    prop%shape = [LP, n_at3]
+                    end block
+                else
+                    prop%istat = 1
+                end if
+            else
+                prop%istat = 1
+            end if
+        else
+            ! Reference state
+            stop 'El. dipole (vel.) NYI'
+        end if
+    case(102)
+        prop%order = der_ord
+        if (prop%states(1) /= prop%states(2)) then
+            ! Electronic transition moment
+            if (prop%states(1) == 0) then
+                fchk_keys = [ &
+                    'ETran scalars                        ', &  !  1.
+                    'ETran state values                   '  &  !  2.
+                ]
+                dbase = dfchk%read(fchk_keys)
+                if (dbase(1)%dtype == '0') then
+                    prop%istat = 2
+                    return
+                end if
+                LP = 3  ! we could use prop%pdim but not much sense.
+                if (prop%order == 0) then
+                    block
+                    integer :: n_states, lblock
+                    n_states = dbase(1)%idata(1)
+                    lblock = dbase(1)%idata(2)
+                    if (n_states < prop%states(2)) then
+                        prop%istat = 2
+                        return
+                    end if
+                    if (prop%states(2) == -1) then
+                        allocate(prop%data(LP*n_states))
+                        do i = 1, n_states
+                            ioff = (i-1)*lblock
+                            prop%data((i-1)*LP+1:i*LP) = &
+                                dbase(2)%rdata(8+ioff:10+ioff)
+                        end do
+                        prop%loaded = .true.
+                        prop%shape = [LP, n_states]
+                    else
+                        allocate(prop%data(LP))
+                        ioff = (prop%states(2)-1)*lblock
+                        prop%data = dbase(2)%rdata(8+ioff:10+ioff)
+                        prop%loaded = .true.
+                        prop%shape = [LP]
+                    end if
+                    end block
+                else if (prop%order == 1) then
+                    block
+                    integer :: exc_state, lblock, n_at3, n_LR, n_states
+                    n_states = dbase(1)%idata(1)
+                    exc_state = dbase(1)%idata(5)
+                    lblock = dbase(1)%idata(2)
+                    n_LR = dbase(1)%idata(3)
+                    n_at3 = dbase(1)%idata(6) - 3  ! 3*natoms + 3 (elec. field)
+                    if (exc_state /= prop%states(2) .and. &
+                            prop%states(2) /= -1) then
+                        prop%istat = 2
+                        return
+                    end if
+                    allocate(prop%data(LP*n_at3))
+                    ioff = lblock*n_states*n_LR + 3*lblock + 8
+                    do i = 0, n_at3 - 1
+                        prop%data(i*LP+1:i*LP+3) = &
+                            dbase(2)%rdata(ioff+i*lblock:ioff+i*lblock+2)
+                    end do
+                    prop%loaded = .true.
+                    prop%shape = [LP, n_at3]
+                    end block
+                else
+                    prop%istat = 1
+                end if
+            else
+                prop%istat = 1
+            end if
+        else
+            ! Reference state
+            stop 'Mag. dipole NYI'
+        end if
+    case(107)
+        prop%order = der_ord
+        if (prop%states(1) /= prop%states(2)) then
+            ! Electronic transition moment
+            if (prop%states(1) == 0) then
+                fchk_keys = [ &
+                    'ETran scalars                        ', &  !  1.
+                    'ETran state values                   '  &  !  2.
+                ]
+                dbase = dfchk%read(fchk_keys)
+                if (dbase(1)%dtype == '0') then
+                    prop%istat = 2
+                    return
+                end if
+                LP = 9  ! length stored in memeory.
+                if (prop%order == 0) then
+                    block
+                    integer :: n_states, lblock
+                    allocate(tmpvec(LP))
+                    n_states = dbase(1)%idata(1)
+                    lblock = dbase(1)%idata(2)
+                    if (n_states < prop%states(2)) then
+                        prop%istat = 2
+                        return
+                    end if
+                    if (prop%states(2) == -1) then
+                        allocate(prop%data(LP*n_states))
+                        do i = 1, n_states
+                            ioff = (i-1)*lblock
+                            tmpvec = dbase(2)%rdata(11+ioff:16+ioff)
+                            prop%data((i-1)*LP+1:i*LP) = &
+                                reshape(elquad_LT_to_2D(tmpvec), [LP])
+                        end do
+                        prop%loaded = .true.
+                        prop%shape = [prop%pdim, n_states]
+                    else
+                        allocate(prop%data(LP))
+                        ioff = (prop%states(2)-1)*lblock
+                        tmpvec = dbase(2)%rdata(11+ioff:16+ioff)
+                        prop%data = reshape(elquad_LT_to_2D(tmpvec), [LP])
+                        prop%loaded = .true.
+                        prop%shape = prop%pdim
+                    end if
+                    end block
+                else if (prop%order == 1) then
+                    block
+                    integer :: exc_state, lblock, n_at3, n_LR, n_states
+                    n_states = dbase(1)%idata(1)
+                    exc_state = dbase(1)%idata(5)
+                    lblock = dbase(1)%idata(2)
+                    n_LR = dbase(1)%idata(3)
+                    n_at3 = dbase(1)%idata(6) - 3  ! 3*natoms + 3 (elec. field)
+                    if (exc_state /= prop%states(2) .and. &
+                            prop%states(2) /= -1) then
+                        prop%istat = 2
+                        return
+                    end if
+                    allocate(prop%data(LP*n_at3))
+                    ioff = lblock*n_states*n_LR + 3*lblock + 11
+                    do i = 0, n_at3 - 1
+                        tmpvec = dbase(2)%rdata(ioff+i*lblock:ioff+i*lblock+5)
+                        prop%data(i*LP+1:i*LP+9) = &
+                            reshape(elquad_LT_to_2D(tmpvec), [LP])
+                    end do
+                    prop%loaded = .true.
+                    prop%shape = [prop%pdim, n_at3]
+                    end block
+                else
+                    prop%istat = 1
+                end if
+            else
+                prop%istat = 1
+            end if
+        else
+            ! Reference state
+            stop 'El. quadrupole NYI'
+        end if
+    case default
+        stop 'Unsupported property'
+    end select
+    ok = dfchk%close()
+    if (.not. ok) then
+        call RaiseFileError(dfile%error, dfile%name, 'closing')
+        return
+    end if
+
+end procedure get_data_from_id_fchk
+
+! ======================================================================
+
+module procedure get_data_from_tag_fchk
+    !! Extract data for a specific quantity from Gaussian fchk file.
+    !!
+    !! Extracts data for a specific quantity from the Gaussian fchk file.
+    !! The procedure also takes care of doing necessary adjustments if
+    !! needed.
+    integer :: der_ord, i, ioff, LP
+    real(real64), dimension(:), allocatable :: tmpvec
+    logical :: ok
+    character(len=42), dimension(:), allocatable :: fchk_keys
+    type(fchkparser) :: dfchk
+    type(fchkdata), dimension(:), allocatable :: dbase
+
+    ! Check if reference/starting state makes sense and set it in DB
+    if (start_state < 0) then
+        prop%istat = 99
+        return
+    else
+        prop%states(1) = start_state
+    end if
+
+    ! Check if end state provided and consistent with start state
+    if (present(end_state)) then
+        if (end_state == -1) then
+            prop%states(2) = -1
+        else if (end_state < start_state) then
+            prop%istat = 99
+            return
+        else
+            prop%states(2) = end_state
+        end if
+    else
+        prop%states(2) = prop%states(1)
+    end if
+
+    ! Check derivative order.
+    ! Since does not necessarily makes sense for all properties, we
+    ! store it in temporary variables and will use later.
+    if (present(derorder)) then
+        if (derorder < 0) then
+            prop%istat = 99
+            return
+        else
+            der_ord = derorder
+        end if
+    else
+        der_ord = 0
+    end if
+
+    ! load basic information about property
+    call load_property_info(identifier, prop)
+
+    ! Load parsing capabilities
+    dfchk = fchkparser(dfile%name)
+
+    ! Now extract information
+    select case(identifier)
+    case default
+        stop 'Unsupported property'
+    end select
+    ok = dfchk%close()
+    if (.not. ok) then
+        call RaiseFileError(dfile%error, dfile%name, 'closing')
+        return
+    end if
+
+end procedure get_data_from_tag_fchk
+
+! ======================================================================
+
+function elquad_LT_to_2D(equad_LT) result(equad_2D)
+    !! Sort elements of electric quadrupole and returns full 2D tensor.
+    !!
+    !! Gaussian stores the electric quadrupole in a particular way,
+    !! starting from the diagonal elements (trace), in the following
+    !! sequence:
+    !! XX, YY, ZZ, XY, XZ, ZZ
+    !! The function builds a complete, symmetric 2D tensor, reordering
+    !! the elements.
+    real(real64), dimension(:), intent(in) :: equad_LT
+    !! Electric quadrupole, in lower triangular form as stored by Gaussian.
+    real(real64), dimension(3,3) :: equad_2D
+    !! Electric quadrupole, as symmetric tensor
+    equad_2D(1,1) = equad_LT(1)
+    equad_2D(2,2) = equad_LT(2)
+    equad_2D(3,3) = equad_LT(3)
+    equad_2D(2,1) = equad_LT(4)
+    equad_2D(1,2) = equad_LT(4)
+    equad_2D(3,1) = equad_LT(5)
+    equad_2D(1,3) = equad_LT(5)
+    equad_2D(3,2) = equad_LT(6)
+    equad_2D(2,3) = equad_LT(6)
+end function elquad_LT_to_2D
 
 end

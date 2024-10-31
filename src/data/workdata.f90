@@ -88,4 +88,39 @@ module workdata
             prop_loaded = .false.     ! Properties have been loaded
     end type ExcitationDB
 
+    type PropertyDB
+        integer :: id
+        !! internal identification of property
+        integer :: order
+        !! derivative order
+        character(len=:), allocatable :: label
+        !! short label for the property
+        character(len=:), allocatable :: name
+        !! full name of the quantity
+        character(len=:), allocatable :: unit
+        !! unit of the quantity
+        integer, dimension(:), allocatable :: pdim
+        !! dimension/shape of the property
+        integer, dimension(:), allocatable :: shape
+        !! shape of the quantity
+        real(real64), dimension(:), allocatable :: data
+        !! data
+        integer, dimension(2) :: states = [0, 0]
+        !! Electronic states involved (same for state-specific)
+        !! Last value can be -1 to include all final states.
+        logical :: loaded = .false.
+        !! Data have been loaded
+        logical :: known = .false.
+        !! Property is known/supported
+        integer :: istat = 0
+        !! Store a simple status code
+        !! -2. problem to read file
+        !! -1. corrupted/unrecognized data file.
+        !!  0. no error, all operations proceeded properly.
+        !!  1. property not supported by program.
+        !!  2. property not found.
+        !! 10. unspecified error.
+        !! 99. inconsistency in query, e.g., end state < start state
+    end type PropertyDB
+
 end module workdata

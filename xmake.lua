@@ -86,7 +86,6 @@ target("corelib")
     add_files("src/core/output.f90")
     add_files("src/core/basisset.f90")
     add_files("src/core/electronic.f90")
-    add_files("src/core/parsefchk.f90")
 
 
 target("parselib")
@@ -101,9 +100,11 @@ target("datalib")
     set_kind("static")
     add_packages("openmp")
     add_deps("corelib")
+    add_files("src/parsers/parse_fchk.f90")
     add_files("src/data/workdata.f90")
     add_files("src/core/input.f90")
     add_files("src/core/input_*.f90")
+    add_files("src/parsers/input_data_*.f90")
 
 
 target("mcd_tensor")

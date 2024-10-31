@@ -12,6 +12,8 @@
 
 ### Changed
 
+- Software-specific parsing features are moved to new directory `parsers/`; this includes the parsing tools and the interfaces for `input`.
+- `input_extract` is renamed `input_data` for better clarity.
 - Module `transdata` is renamed `excdata` for consistency.
 - `build_moldata` has optional arguments to control which data have to be loaded, grouped by categories: molecular specification, basis set specifications, molecular orbitals.
 - Data effectively loaded in the `moldata` module can be probed with logical variables of the form `dat_XXXX_loaded`, with XXXX=spec, morb, bset.

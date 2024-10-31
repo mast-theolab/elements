@@ -342,14 +342,14 @@ module procedure build_exc_data_fchk
 
     ! Extract transition data values
     allocate(exc%g2e_energy(exc%n_states), exc%exc_energy(exc%n_states), &
-        exc%g2e_eldip(3,exc%n_states), exc%g2e_magdip(3,exc%n_states))
+             exc%g2e_eldip(3,exc%n_states), exc%g2e_magdip(3,exc%n_states))
     exc%gs_energy = dbase(12)%rdata(1)
     do i = 1, exc%n_states
         ioff = (i-1)*lblock_ETran
         exc%exc_energy(i) = dbase(7)%rdata(1+ioff)
         exc%g2e_energy(i) = exc%exc_energy(i) - exc%gs_energy
         exc%g2e_eldip(:,i) = dbase(7)%rdata(2+ioff:4+ioff)
-        exc%g2e_magdip(:,i) = dbase(7)%rdata(5+ioff:7+ioff)
+        exc%g2e_magdip(:,i) = dbase(7)%rdata(8+ioff:10+ioff)
     end do
 
     ! Now extract the ground to excited transition moments

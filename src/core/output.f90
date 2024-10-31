@@ -358,7 +358,7 @@ subroutine sec_header(level, title)
 
     1000 format('(1x,"/",',i0,'("-"),"\",/,1x,"|",',i0,'x,"|",/,1x,"|",',i0, &
         'x,a,',i0,'x,"|",/,1x,"|",',i0,'x,"|",/,1x,"\",',i0,'("-"),"/")')
-    1010 format('(//,1x,',i0,'("*"),/,1x,',i0,'x,a,/,1x,',i0,'("*"))')
+    1010 format('(//,1x,',i0,'("*"),//,1x,',i0,'x,a,//,1x,',i0,'("*"))')
     1020 Format('(//,1x,a,/,1x,',i0,'("="))')
     1030 Format('(/,1x,a,/,1x,',i0,'("-"))')
     1040 Format('(/,1x,a,/,1x,',i0,'("^"))')
@@ -385,7 +385,7 @@ subroutine sec_header(level, title)
             lblc = 78
             lshft = (lblc-ltitle)/2
         endif
-        write(fmt, 1010) lblc, lshft, lblc - ltitle - lshft
+        write(fmt, 1010) lblc, lshft, lblc
         write(iu_out, fmt) trim(title)
     case(1)
         write(fmt, 1020) ltitle

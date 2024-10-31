@@ -390,49 +390,49 @@ module procedure parse_args_list
     end do
 
 contains
-    function get_arg(iarg, ierr) result(res)
+    function get_arg(index_arg, index_err) result(res)
         !! Get argument from argument list.
-        integer, intent(in) :: iarg
+        integer, intent(in) :: index_arg
         !! Argument index.
-        integer, intent(out) :: ierr
+        integer, intent(out) :: index_err
         !! Error instance.
         character(len=MAX_ARGLEN) :: res
 
-        ierr = 0
+        index_err = 0
         if (present(arglist)) then
-            if (iarg <= size(arglist)) then
-                res = arglist(iarg)
+            if (index_arg <= size(arglist)) then
+                res = arglist(index_arg)
             else
-                ierr = -1
+                index_err = -1
             end if
         else
-            call get_command_argument(iarg, res, status=ierr)
-            if (ierr > 0) ierr = -1
+            call get_command_argument(index_arg, res, status=index_err)
+            if (index_err > 0) index_err = -1
         end if
     end function get_arg
 
-    function chk_shortarg(shortarg) result(iargDB)
-        !! Check if shortarg corresponds to a defined option.
-        character(len=2), intent(in) :: shortarg
+    function chk_shortarg(name) result(index_argDB)
+        !! Check if short arg. `name` corresponds to a defined option.
+        character(len=2), intent(in) :: name
         !! Short argument name.
-        integer :: iargDB
+        integer :: index_argDB
         !! Index of argument corresponding to `shortarg`, 0 otherwise.
 
-        logical :: found
+        logical :: is_found
 
-        found = .False.
-        do iargDB = 1, this%nargs
-            if (this%args(iargDB)%arg%short_name == shortarg) then
-                found = .True.
-                if (iargDB == this%iarg_help) call this%print_help()
+        is_found = .False.
+        do index_argDB = 1, this%nargs
+            if (this%args(index_argDB)%arg%short_name == name) then
+                is_found = .True.
+                if (index_argDB == this%iarg_help) call this%print_help()
                 exit
             end if
         end do
-        if (.not.found) then
+        if (.not.is_found) then
             write(errmsg, '("Unknown option as argument num. ",i0,": ",a)') &
                 iarg
             call RaiseError(this%error, errmsg)
-            iargDB = 0
+            index_argDB = 0
         end if
     end function chk_shortarg
 

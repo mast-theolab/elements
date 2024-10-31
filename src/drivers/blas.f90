@@ -110,14 +110,14 @@ function cdot(trans, n, cx, incx, cy, incy)
     complex :: cdot
 
     interface
-        function cdotc(n, cx, incx, cy, incy)
-            integer :: n, incx, incy
-            complex, dimension(*) :: cx, cy
+        function cdotc(n_, cx_, incx_, cy_, incy_)
+            integer :: n_, incx_, incy_
+            complex, dimension(*) :: cx_, cy_
             complex :: cdotc
         end function cdotc
-        function cdotu(n, cx, incx, cy, incy)
-            integer :: n, incx, incy
-            complex, dimension(*) :: cx, cy
+        function cdotu(n_, cx_, incx_, cy_, incy_)
+            integer :: n_, incx_, incy_
+            complex, dimension(*) :: cx_, cy_
             complex :: cdotu
         end function cdotu
     end interface
@@ -142,14 +142,14 @@ function zdot(trans, n, cx, incx, cy, incy)
     complex*16 :: zdot
 
     interface
-        function zdotc(n, cx, incx, cy, incy)
-            integer :: n, incx, incy
-            complex*16, dimension(*) :: cx, cy
+        function zdotc(n_, cx_, incx_, cy_, incy_)
+            integer :: n_, incx_, incy_
+            complex*16, dimension(*) :: cx_, cy_
             complex*16 :: zdotc
         end function zdotc
-        function zdotu(n, cx, incx, cy, incy)
-            integer :: n, incx, incy
-            complex*16, dimension(*) :: cx, cy
+        function zdotu(n_, cx_, incx_, cy_, incy_)
+            integer :: n_, incx_, incy_
+            complex*16, dimension(*) :: cx_, cy_
             complex*16 :: zdotu
         end function zdotu
     end interface

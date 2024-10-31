@@ -45,32 +45,32 @@ function set_real_bound_msg(val_min, val_max) result(msg)
     end if
 
 contains
-    function val_txt(value) result(txt)
+    function val_txt(value) result(text)
         !! Write a text suitable for the format.
 
         real(real64), intent(in) :: value
-        character(len=:), allocatable :: txt
+        character(len=:), allocatable :: text
 
         integer :: i
         character(len=64) :: fmt, test
 
         if (abs(value) < tiny(value)) then
-            txt = '0.0'
+            text = '0.0'
         else if (abs(value) >= 0.01_real64 .and. abs(value) <= 5000.0_real64) &
             then
             write(test, '(f0.16)') value
             i = verify(test, ' 0', back=.True.)
-            txt = test(:i)
+            text = test(:i)
         else
             if (value < 0.0_real64) then
                 i = 11
             else
                 i = 10
             end if
-            allocate(character(len=i) :: txt)
+            allocate(character(len=i) :: text)
             write(fmt, '("(es",i0,".4)")') i
             write(test, fmt) value
-            txt = trim(test)
+            text = trim(test)
         end if
     end function val_txt
 

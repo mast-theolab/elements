@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added dependency on xmake `openblas` package to support calls to BLAS/LAPACK routines.
 - New exception `QuantityError` and the associated procedure `RaiseQuantityError` for errors related to the processing of data/quantities.
 - New module `vibdata` to store vibrational data extracted from input files.
 - New procedure `build_vibdata` to extract vibrational data.

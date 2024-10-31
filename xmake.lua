@@ -1,7 +1,7 @@
 add_rules("mode.debug", "mode.release")
 
 add_requires("openmp")
-
+add_requires("openblas")
 
 rule("ford")
     set_extensions(".md", ".markdown")
@@ -236,7 +236,7 @@ target("test_blas_ops")
     set_default(false)
     set_rundir("$(projectdir)/tests")
     add_deps("corelib")
-    add_links("blas")
+    add_packages("openblas")
     add_files("src/drivers/blas.f90")
     add_files("src/tests/blas_ops.f90")
     add_tests("default")

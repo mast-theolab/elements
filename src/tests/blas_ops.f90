@@ -19,7 +19,7 @@ program test_blas_ops
     real(real64) :: aval64, rmin64, rmax64
     complex(real32) :: cval32
     complex(real64) :: cval64
-    
+
     real(real32) :: f0r32 = 0.0_real32, f1r32 = 1.0_real32
     real(real64) :: f0r64 = 0.0_real64, f1r64 = 1.0_real64
     complex(real32) :: f0c32 = (0.0_real32, 0.0_real32), &
@@ -68,7 +68,7 @@ program test_blas_ops
     call sec_header(2, 'Real 32 bits')
 
     what = 'C = A * B'
-    
+
     call xgemm('N', 'N', N, N, N, f1r32, AR32, N, BR32, N, f0r32, CR32, N)
     if (any(abs(CR32-matmul(AR32, BR32)) > zero_r32)) then
         print 1000, what, 'FAILED'
@@ -90,7 +90,7 @@ program test_blas_ops
     call sec_header(2, 'Real 64 bits')
 
     what = 'C = A * B'
-    
+
     call xgemm('N', 'N', N, N, N, f1r64, AR64, N, BR64, N, f0r64, CR64, N)
     if (any(abs(CR64-matmul(AR64, BR64)) > zero_r64)) then
         print 1000, what, 'FAILED'
@@ -112,7 +112,7 @@ program test_blas_ops
     call sec_header(2, 'complex 32 bits')
 
     what = 'C = A * B'
-    
+
     call xgemm('N', 'N', N, N, N, f1c32, AC32, N, BC32, N, f0c32, CC32, N)
     CCC32 = CC32-matmul(AC32, BC32)
     CCC32 = conjg(CCC32) * CCC32
@@ -142,7 +142,7 @@ program test_blas_ops
     call sec_header(2, 'complex 64 bits')
 
     what = 'C = A * B'
-    
+
     call xgemm('N', 'N', N, N, N, f1c64, AC64, N, BC64, N, f0c64, CC64, N)
     CCC64 = CC64-matmul(AC64, BC64)
     CCC64 = conjg(CCC64) * CCC64
@@ -175,7 +175,7 @@ program test_blas_ops
     call sec_header(2, 'Real 32 bits')
 
     what = 'Z = A * X'
-    
+
     call xgemv('N', N, N, f1r32, AR32, N, XR32, 1, f0r32, ZR32, 1)
     if (any(abs(ZR32-matmul(AR32, XR32)) > zero_r32)) then
         print 1000, what, 'FAILED'
@@ -197,7 +197,7 @@ program test_blas_ops
     call sec_header(2, 'Real 64 bits')
 
     what = 'Z = A * X'
-    
+
     call xgemv('N', N, N, f1r64, AR64, N, XR64, 1, f0r64, ZR64, 1)
     if (any(abs(ZR64-matmul(AR64, XR64)) > zero_r64)) then
         print 1000, what, 'FAILED'
@@ -219,7 +219,7 @@ program test_blas_ops
     call sec_header(2, 'complex 32 bits')
 
     what = 'Z = A * X'
-    
+
     call xgemv('N', N, N, f1c32, AC32, N, XC32, 1, f0c32, ZC32, 1)
     ZZC32 = ZC32-matmul(AC32, XC32)
     ZZC32 = conjg(ZZC32) * ZZC32
@@ -249,7 +249,7 @@ program test_blas_ops
     call sec_header(2, 'complex 64 bits')
 
     what = 'Z = A * X'
-    
+
     call xgemv('N', N, N, f1c64, AC64, N, XC64, 1, f0c64, ZC64, 1)
     ZZC64 = ZC64-matmul(AC64, XC64)
     ZZC64 = conjg(ZZC64) * ZZC64
@@ -282,7 +282,7 @@ program test_blas_ops
     call sec_header(2, 'Real 32 bits')
 
     what = 'C = A * B'
-    
+
     aval32 = xdot(N, XR32, 1, YR32, 1)
     if (abs(aval32 - dot_product(XR32, YR32)) > zero_r32) then
         print 1000, what, 'FAILED'
@@ -294,7 +294,7 @@ program test_blas_ops
     call sec_header(2, 'Real 64 bits')
 
     what = 'C = A * B'
-    
+
     aval64 = xdot(N, XR64, 1, YR64, 1)
     if (abs(aval64 - dot_product(XR64, YR64)) > zero_r64) then
         print 1000, what, 'FAILED'
@@ -306,7 +306,7 @@ program test_blas_ops
     call sec_header(2, 'complex 32 bits')
 
     what = 'Z = X^T * Y'
-    
+
     cval32 = xdot('T', N, XC32, 1, YC32, 1)
     cval32 = cval32 - dot_product(conjg(XC32), YC32)
     cval32 = conjg(cval32) * cval32
@@ -332,7 +332,7 @@ program test_blas_ops
     call sec_header(2, 'complex 64 bits')
 
     what = 'Z = X^T * Y'
-    
+
     cval64 = xdot('T', N, XC64, 1, YC64, 1)
     cval64 = cval64 - dot_product(conjg(XC64), YC64)
     cval64 = conjg(cval64) * cval64

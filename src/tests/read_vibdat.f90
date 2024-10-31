@@ -8,7 +8,6 @@ program test_read_vibdata
 
     integer :: ifile, iu_out, nfiles
     integer, parameter :: MAXFILES = 2
-    logical :: has_file2
     character(len=:), dimension(:), allocatable :: files
     character(len=256) :: outfile, string
     type(DataFile) :: dfile

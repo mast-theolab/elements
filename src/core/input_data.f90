@@ -1,10 +1,10 @@
 submodule (input) input_data
     !! Submodule containing the definition of procedures related to the
     !! data extraction.
-    use basisset, only: build_bset_DB
     use string, only: locase
     use workdata
-    use exception, only: Error, InitError, RaiseArgError
+    use exception, only: Error, InitError, RaiseArgError, &
+        FileError, QuantityError
 
     implicit none
 
@@ -151,6 +151,7 @@ module procedure build_mol_data
             else
                 print '("Error while parsing molecular data")'
                 print '("Reason: ",a)', file%error%msg()
+                stop 1
             end if
         end if
     else
@@ -166,7 +167,7 @@ module procedure build_mol_data
 
 end procedure build_mol_data
 
-! ----------------------------------------------------------------------
+! ======================================================================
 
 module procedure build_bset_data
     !! Main function to load basis set-related data.
@@ -206,6 +207,7 @@ module procedure build_bset_data
             else
                 print '("Error while parsing basis set data")'
                 print '("Reason: ",a)', file%error%msg()
+                stop 1
             end if
         end if
     else
@@ -221,7 +223,7 @@ module procedure build_bset_data
 
 end procedure build_bset_data
 
-! ----------------------------------------------------------------------
+! ======================================================================
 
 module procedure build_orb_data
     !! Main function to load orbitals-related data.
@@ -261,6 +263,7 @@ module procedure build_orb_data
             else
                 print '("Error while parsing orbital data")'
                 print '("Reason: ",a)', file%error%msg()
+                stop 1
             end if
         end if
     else
@@ -276,7 +279,7 @@ module procedure build_orb_data
 
 end procedure build_orb_data
 
-! ----------------------------------------------------------------------
+! ======================================================================
 
 module procedure build_exc_data
     !! Main function to load and store excited-states data.
@@ -316,6 +319,7 @@ module procedure build_exc_data
             else
                 print '("Error while parsing excited-state data")'
                 print '("Reason: ",a)', file%error%msg()
+                stop 1
             end if
         end if
     else
@@ -331,7 +335,7 @@ module procedure build_exc_data
 
 end procedure build_exc_data
 
-! ----------------------------------------------------------------------
+! ======================================================================
 
 module procedure build_vib_data
     !! Main function to load and store vibrational data.
@@ -386,6 +390,7 @@ module procedure build_vib_data
             else
                 print '("Error while parsing vibration-related data")'
                 print '("Reason: ",a)', file%error%msg()
+                stop 1
             end if
         end if
     else

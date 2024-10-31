@@ -307,6 +307,14 @@ module procedure build_exc_data_fchk
         return
     end if
 
+    ! Check if excited-states properties available
+    ! First check that this exists, since a fchk may be missing it.
+    if (dbase(4)%dtype == '0') then
+        call RaiseQuantityError(dfile%error, &
+            msg='Missing excited-states data in file.')
+        return
+    end if
+
     ! -- Basic information
     ! Number of basis functions
     n_basis = dbase(1)%idata(1)

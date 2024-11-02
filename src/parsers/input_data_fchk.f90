@@ -573,12 +573,14 @@ module procedure get_data_from_id_fchk
                         end do
                         prop%loaded = .true.
                         prop%shape = [LP, n_states]
+                        prop%dim_shape = [1, 1]
                     else
                         allocate(prop%data(LP))
                         ioff = (prop%states(2)-1)*lblock
                         prop%data = dbase(2)%rdata(2+ioff:4+ioff)
                         prop%loaded = .true.
                         prop%shape = [LP]
+                        prop%dim_shape = [1]
                     end if
                     end block
                 else if (prop%order == 1) then
@@ -602,6 +604,7 @@ module procedure get_data_from_id_fchk
                     end do
                     prop%loaded = .true.
                     prop%shape = [LP, n_at3]
+                    prop%dim_shape = [1, 1]
                     end block
                 else
                     prop%istat = 1
@@ -646,12 +649,14 @@ module procedure get_data_from_id_fchk
                         end do
                         prop%loaded = .true.
                         prop%shape = [LP, n_states]
+                        prop%dim_shape = [1, 1]
                     else
                         allocate(prop%data(LP))
                         ioff = (prop%states(2)-1)*lblock
                         prop%data = dbase(2)%rdata(5+ioff:7+ioff)
                         prop%loaded = .true.
                         prop%shape = [LP]
+                        prop%dim_shape = [1]
                     end if
                     end block
                 else if (prop%order == 1) then
@@ -675,6 +680,7 @@ module procedure get_data_from_id_fchk
                     end do
                     prop%loaded = .true.
                     prop%shape = [LP, n_at3]
+                    prop%dim_shape = [1, 1]
                     end block
                 else
                     prop%istat = 1
@@ -719,12 +725,14 @@ module procedure get_data_from_id_fchk
                         end do
                         prop%loaded = .true.
                         prop%shape = [LP, n_states]
+                        prop%dim_shape = [1, 1]
                     else
                         allocate(prop%data(LP))
                         ioff = (prop%states(2)-1)*lblock
                         prop%data = dbase(2)%rdata(8+ioff:10+ioff)
                         prop%loaded = .true.
                         prop%shape = [LP]
+                        prop%dim_shape = [1, 1]
                     end if
                     end block
                 else if (prop%order == 1) then
@@ -748,6 +756,7 @@ module procedure get_data_from_id_fchk
                     end do
                     prop%loaded = .true.
                     prop%shape = [LP, n_at3]
+                    prop%dim_shape = [1, 1]
                     end block
                 else
                     prop%istat = 1
@@ -794,6 +803,7 @@ module procedure get_data_from_id_fchk
                         end do
                         prop%loaded = .true.
                         prop%shape = [prop%pdim, n_states]
+                        prop%dim_shape = [1, 1, 1]
                     else
                         allocate(prop%data(LP))
                         ioff = (prop%states(2)-1)*lblock
@@ -801,6 +811,7 @@ module procedure get_data_from_id_fchk
                         prop%data = reshape(elquad_LT_to_2D(tmpvec), [LP])
                         prop%loaded = .true.
                         prop%shape = prop%pdim
+                        prop%dim_shape = [1, 1]
                     end if
                     end block
                 else if (prop%order == 1) then
@@ -825,6 +836,7 @@ module procedure get_data_from_id_fchk
                     end do
                     prop%loaded = .true.
                     prop%shape = [prop%pdim, n_at3]
+                    prop%dim_shape = [1, 1, 1]
                     end block
                 else
                     prop%istat = 1

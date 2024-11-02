@@ -90,21 +90,29 @@ module workdata
 
     type PropertyDB
         integer :: id
-        !! internal identification of property
+        !! Internal identification of property.
         integer :: order
-        !! derivative order
+        !! Derivative order (`0` if reference value of property).
         character(len=:), allocatable :: label
-        !! short label for the property
+        !! Short label for the property (for internal use/tests).
         character(len=:), allocatable :: name
-        !! full name of the quantity
+        !! Full name of the quantity, for printing.
         character(len=:), allocatable :: unit
-        !! unit of the quantity
+        !! Unit of the quantity.
         integer, dimension(:), allocatable :: pdim
-        !! dimension/shape of the property
+        !! Dimension/shape of the property itself.
         integer, dimension(:), allocatable :: shape
-        !! shape of the quantity
+        !! Actual shape of the extracted quantity (e.g., for reshaping).
+        integer, dimension(:), allocatable :: dim_shape
+        !! Internal shape of each dimension:
+        !! 0. Unknown/not relevant
+        !! 1. Linear storage
+        !! 2: lower-triangular part of symmetric 2D matrix.
+        !! 3: lower-triangular part of symmetric 3D matrix.
+        !! -2: lower-triangular part of antisymm. 2D matrix.
+        !! -3: lower-triangular part of antisymm. 3D matrix.
         real(real64), dimension(:), allocatable :: data
-        !! data
+        !! Extracted data.
         integer, dimension(2) :: states = [0, 0]
         !! Electronic states involved (same for state-specific)
         !! Last value can be -1 to include all final states.

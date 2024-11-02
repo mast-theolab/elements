@@ -15,7 +15,7 @@ contains
 
 ! ======================================================================
 
-subroutine load_propinfo_from_id(identifier, property)
+subroutine load_propinfo_from_id(property, identifier)
     !! Load property information corresponding to an integer identifier.
     !!
     !! Loads basic property information related to the identifier
@@ -25,10 +25,10 @@ subroutine load_propinfo_from_id(identifier, property)
     !!
     !! CAUTION: If the identifier is not found, empty information is
     !! provided.  This should be checked carefully by calling routine.
-    integer, intent(in) :: identifier
-    !! Identifier of the property of interest.
     class(PropertyDB), intent(inout) :: property
     !! Property database.
+    integer, intent(in) :: identifier
+    !! Identifier of the property of interest.
 
     select case(identifier)
     case(101)
@@ -72,22 +72,27 @@ end subroutine load_propinfo_from_id
 
 ! ======================================================================
 
-subroutine load_propinfo_from_tag(identifier, property)
-    !! Load property information corresponding to a string identifier.
+subroutine load_propinfo_from_tag(property, name, tag)
+    !! Load property information based on its name (and tag).
     !!
     !! Loads basic property information related to the identifier
-    !! provided as a string in input.
+    !! provided as a string or a group of string in input.
+    !! `name` can be directly the name of the property of itnerest
+    !! or a group.  In the latter case, a `tag` name should be
+    !! provided to fully characterize the property of interest.
     !!
     !! NOTE: Information contained on property are overwritten.
     !!
     !! CAUTION: If the identifier is not found, empty information is
     !! provided.  This should be checked carefully by calling routine.
-    character(len=*), intent(in) :: identifier
-    !! Identifier of the property of interest.
     class(PropertyDB), intent(inout) :: property
     !! Property database.
+    character(len=*), intent(in) :: name
+    !! Name/group name of the property of interest.
+    character(len=*), intent(in), optional :: tag
+    !! Tag of the property of interest within group.
 
-    select case(identifier)
+    select case(name)
     case default
         property%label = 'N/A'
         property%name = 'unknown'

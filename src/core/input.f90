@@ -223,7 +223,7 @@ end function get_error_msg
 ! ----------------------------------------------------------------------
 
 module function build_mol_data(dfile, fname, ftype, err) result(mol)
-    class(DataFile), intent(in), target, optional :: dfile
+    class(DataFile), intent(inout), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
     !! File name containing data of interest.
@@ -239,7 +239,7 @@ end function build_mol_data
 ! ----------------------------------------------------------------------
 
 module function build_bset_data(dfile, fname, ftype, err) result(bset)
-    class(DataFile), intent(in), target, optional :: dfile
+    class(DataFile), intent(inout), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
     !! File name containing data of interest.
@@ -255,7 +255,7 @@ end function build_bset_data
 ! ----------------------------------------------------------------------
 
 module function build_orb_data(dfile, fname, ftype, err) result(orb)
-    class(DataFile), intent(in), target, optional :: dfile
+    class(DataFile), intent(inout), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
     !! File name containing data of interest.
@@ -272,7 +272,7 @@ end function build_orb_data
 ! ----------------------------------------------------------------------
 
 module function build_exc_data(dfile, fname, ftype, err) result(exc)
-    class(DataFile), intent(in), target, optional :: dfile
+    class(DataFile), intent(inout), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
     !! File name containing data of interest.
@@ -289,7 +289,7 @@ end function build_exc_data
 
 module function build_vib_data(dfile, fname, ftype, get_Lmat, get_Lmweig, &
                                err)  result(vib)
-    class(DataFile), intent(in), target, optional :: dfile
+    class(DataFile), intent(inout), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
     !! File name containing data of interest.
@@ -314,7 +314,7 @@ module function get_data_from_id(dfile, identifier, start_state, end_state, &
     !! DataFile instance.
     integer, intent(in) :: identifier
     !! Identifier of the property of interest.
-    integer, intent(in) :: start_state
+    integer, intent(in), optional :: start_state
     !! Starting or reference electronic state.
     integer, intent(in), optional :: end_state
     !! End electronic state, only for electronic transition.
@@ -327,13 +327,15 @@ end function get_data_from_id
 
 ! ----------------------------------------------------------------------
 
-module function get_data_from_tag(dfile, identifier, start_state, end_state, &
+module function get_data_from_tag(dfile, name, tag, start_state, end_state, &
                                   derorder) result(prop)
     class(DataFile), intent(inout) :: dfile
     !! DataFile instance.
-    character(len=*), intent(in) :: identifier
-    !! Identifier of the property of interest.
-    integer, intent(in) :: start_state
+    character(len=*), intent(in) :: name
+    !! name/group name of the quantity of interest.
+    character(len=*), intent(in), optional :: tag
+    !! tag of the quantity within group.
+    integer, intent(in), optional :: start_state
     !! Starting or reference electronic state.
     integer, intent(in), optional :: end_state
     !! End electronic state, only for electronic transition.

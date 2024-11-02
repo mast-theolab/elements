@@ -72,7 +72,7 @@ module function get_data_from_id_fchk(dfile, identifier, start_state, &
     !! DataFile instance.
     integer, intent(in) :: identifier
     !! Identifier of the property of interest.
-    integer, intent(in) :: start_state
+    integer, intent(in), optional :: start_state
     !! Starting or reference electronic state.
     integer, intent(in), optional :: end_state
     !! End electronic state, only for electronic transition.
@@ -85,13 +85,15 @@ end function get_data_from_id_fchk
 
 ! ----------------------------------------------------------------------
 
-module function get_data_from_tag_fchk(dfile, identifier, start_state, &
+module function get_data_from_tag_fchk(dfile, name, tag, start_state, &
                                        end_state, derorder) result(prop)
     class(DataFile), intent(inout) :: dfile
     !! DataFile instance.
-    character(len=*), intent(in) :: identifier
-    !! Identifier of the property of interest.
-    integer, intent(in) :: start_state
+    character(len=*), intent(in) :: name
+    !! name/group name of the quantity of interest.
+    character(len=*), intent(in), optional :: tag
+    !! tag of the quantity within group.
+    integer, intent(in), optional :: start_state
     !! Starting or reference electronic state.
     integer, intent(in), optional :: end_state
     !! End electronic state, only for electronic transition.
@@ -442,7 +444,7 @@ module procedure get_data_from_tag
     !! to extract data related to a specific property.
 
     if (dfile%type == 'GFChk') then
-        prop = get_data_from_tag_fchk(dfile, identifier, start_state, &
+        prop = get_data_from_tag_fchk(dfile, name, tag, start_state, &
                                       end_state, derorder)
         if (dfile%error%raised()) then
             select type(err => dfile%error)

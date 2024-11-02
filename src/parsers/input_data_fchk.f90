@@ -493,11 +493,15 @@ module procedure get_data_from_id_fchk
     type(fchkdata), dimension(:), allocatable :: dbase
 
     ! Check if reference/starting state makes sense and set it in DB
-    if (start_state < 0) then
-        prop%istat = 99
-        return
+    if (present(start_state)) then
+        if (start_state < 0) then
+            prop%istat = 99
+            return
+        else
+            prop%states(1) = start_state
+        end if
     else
-        prop%states(1) = start_state
+        prop%states(2) = 0
     end if
 
     ! Check if end state provided and consistent with start state
@@ -529,7 +533,7 @@ module procedure get_data_from_id_fchk
     end if
 
     ! load basic information about property
-    call load_property_info(identifier, prop)
+    call load_property_info(prop, identifier)
 
     ! Load parsing capabilities
     dfchk = fchkparser(dfile%name)
@@ -859,11 +863,15 @@ module procedure get_data_from_tag_fchk
     type(fchkdata), dimension(:), allocatable :: dbase
 
     ! Check if reference/starting state makes sense and set it in DB
-    if (start_state < 0) then
-        prop%istat = 99
-        return
+    if (present(start_state)) then
+        if (start_state < 0) then
+            prop%istat = 99
+            return
+        else
+            prop%states(1) = start_state
+        end if
     else
-        prop%states(1) = start_state
+        prop%states(2) = 0
     end if
 
     ! Check if end state provided and consistent with start state
@@ -895,13 +903,13 @@ module procedure get_data_from_tag_fchk
     end if
 
     ! load basic information about property
-    call load_property_info(identifier, prop)
+    call load_property_info(prop, name, tag)
 
     ! Load parsing capabilities
     dfchk = fchkparser(dfile%name)
 
     ! Now extract information
-    select case(identifier)
+    select case(name)
     case default
         stop 'Unsupported property'
     end select

@@ -4,6 +4,7 @@
 
 ### Added
 
+- New character function `timestamp` to return a formatted string of the current date and time.
 - New "real work precision" (`realwp`) provided by module `numeric`.  The precision can be set through preprocessor directives (`-DUSE_R4`, `-DUSE_R8`).
 - Core and data modules that do not provide versions for different real precisions use `realwp` internally.
 - New method `get_data` for `DataFile` provides a simple way to extract data selectively from data files.

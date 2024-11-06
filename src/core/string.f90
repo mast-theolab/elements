@@ -99,6 +99,113 @@ end function findstr
 
 ! ======================================================================
 
+function timestamp(date, time, add_ms, shorten, US_date_order) &
+                   result(datetime)
+    !! Build string containing a printable timestamp.
+    !!
+    !! Builds a string containing the date and time at the moment the
+    !! procedure is called.
+    !!
+    !! If `shorten` is true, the months are shortened to 3 characters.
+    !!
+    !! By default, the ISO format is preferred: day month year
+    !! Alternatively, it is possible to request the US format:
+    !!   month, day year
+    logical, intent(in), optional :: date
+    !! Include date in timestamp.
+    logical, intent(in), optional :: time
+    !! Include time in timestamp.
+    logical, intent(in), optional :: add_ms
+    !! Add milliseconds to time part of timestamps.
+    logical, intent(in), optional :: shorten
+    !! Shorten months of the year.
+    logical, intent(in), optional :: US_date_order
+    !! Use US date order instead of ISO
+    character(len=:), allocatable :: datetime
+    !! Final date time string.
+
+    integer :: icur
+    integer, dimension(8) :: dtdat
+    logical :: add_date, add_time, full_time, US_order
+    character(len=*), parameter :: &
+        long_months(12) = [ &
+            'January  ',  'February ',  'March    ',  'April    ', &
+            'May      ',  'June     ',  'July     ',  'August   ', &
+            'September',  'October  ',  'November ',  'December '  &
+        ], &
+        short_months(12) = [ &
+            'Jan.', 'Feb.', 'Mar.', 'Apr.', 'May ', 'Jun.', &
+            'Jul.', 'Aug.', 'Sep.', 'Oct.', 'Nov.', 'Dec.'  &
+        ]
+    character(len=:), dimension(:), allocatable :: months
+    character(len=100) :: workstr
+
+    call date_and_time(values=dtdat)
+
+    if (present(date)) then
+        add_date = date
+    else
+        add_date = .true.
+    end if
+
+    if (present(time)) then
+        add_time = time
+    else
+        add_time = .true.
+    end if
+
+    if (present(add_ms).and.add_time) then
+        full_time = add_ms
+    else
+        full_time = .false.
+    end if
+
+    if (present(shorten)) then
+        if(shorten) then
+            months = short_months
+        else
+            months = long_months
+        end if
+    else
+        months = long_months
+    end if
+
+    if(present(US_date_order)) then
+        US_order = US_date_order
+    else
+        US_order = .false.
+    end if
+
+    icur = 1
+    if (add_date) then
+        if (US_order) then
+            write(workstr(icur:), '(a,1x,i0,1x,i0)') &
+                trim(months(dtdat(2))), dtdat(3), dtdat(1)
+        else
+            write(workstr(icur:), '(i0,1x,a,1x,i0)') &
+                dtdat(3), trim(months(dtdat(2))), dtdat(1)
+        end if
+        icur = len_trim(workstr) + 1
+        if (add_time) then
+            write(workstr(icur:icur+1), '(", ")')
+            icur = icur + 2
+        end if
+    end if
+
+    if (add_time) then
+        if (full_time) then
+            write(workstr(icur:), '(i2.2,":",i2.2,":",i2.2,".",i0)') dtdat(5:8)
+        else
+            write(workstr(icur:), '(i2.2,":",i2.2,":",i2.2)') dtdat(5:7)
+        end if
+    end if
+
+    datetime = trim(workstr)
+
+end function timestamp
+
+! ======================================================================
+
 function str_equal(string1, string2, ignore_case, ignore_blanks) result(res)
     !! Check if string1 and string2 are equal
     !!

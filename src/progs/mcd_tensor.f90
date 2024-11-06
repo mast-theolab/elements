@@ -1,6 +1,7 @@
 program mcd_tensor
     use iso_fortran_env, only: output_unit
     use numeric, only: realwp, f0, f1, f2
+    use string, only: timestamp, labXYZ_1D, locase
     use input, only: DataFile
     use parse_cmdline, only: CmdArgDB
     use output, only: iu_out, sec_header, len_int, prt_coord, prt_mat, &
@@ -62,9 +63,10 @@ program mcd_tensor
         Smo_irxpj    ! MO-basis integral < i | r x p | j >
     real(realwp), allocatable :: tmp_ao_arr1(:,:), tmp_ao_arrN(:,:,:)
     ! logical, parameter :: DEBUG = .true., TIMEIT = .false.
-    logical :: do_giao, do_guvcde, exists, forbid, in_mem, use_gamma
+    logical :: do_giao, do_guvcde, exists, forbid, in_mem, show_timestamp, &
+        use_gamma
     character(len=512) :: fmt_elstate
-    character(len=:), allocatable :: infile, outfile
+    character(len=:), allocatable :: infile, outfile, datetime
     character(len=*), parameter :: PROGTITLE = 'MCD Tensor Calculator'
     type(DataFile) :: dfile
     class(ovij_1e), allocatable :: ao_int
@@ -85,12 +87,18 @@ program mcd_tensor
         ' > Reference excited state  : ',i0)
 
     call parse_argopts(infile, outfile, e_gamma, fstate, max_state, &
-        use_gamma, do_giao, do_guvcde, in_mem, model_sos, debug)
+        use_gamma, do_giao, do_guvcde, in_mem, model_sos, show_timestamp, &
+        debug)
     dfile = DataFile(infile)
     if (dfile%has_error()) then
         call write_err('std', 'Error found while initializing data file', &
                        dfile%get_error())
         stop 1
+    end if
+
+    if (show_timestamp) then
+        datetime = timestamp()
+        write(iu_out, '(/," Calculations started on ", a)') datetime
     end if
 
     call sec_header(1, 'Data on Molecular System')
@@ -581,6 +589,11 @@ program mcd_tensor
         write(iu_out, '(1x,a,3es15.6)') labXYZ_1D(i), G_if(i,:)
     end do
 
+    if (show_timestamp) then
+        datetime = timestamp()
+        write(iu_out, '(/," Calculations ended on ", a)') datetime
+    end if
+
 contains
     function fmt_param(label, sub) result(res)
         !! Formats the parameter label for output
@@ -614,7 +627,7 @@ contains
 
     subroutine parse_argopts(infile, outfile, e_gamma, f_state, max_state, &
                              use_gamma, do_giao, do_guvcde, in_mem, &
-                             model_sos, debug)
+                             model_sos, show_timestamp, debug)
         !! Parses commandline options and updates information.
         !!
         !! Builds options parser and parse user-options, setting
@@ -625,7 +638,7 @@ contains
         !! Input filename.
         character(len=:), allocatable, intent(out) :: outfile
         !! Optional output filename.
-        real(real64), intent(out) :: e_gamma
+        real(realwp), intent(out) :: e_gamma
         !! Energy shift to avoid accidental degeneracies in summation.
         integer, intent(out) :: f_state
         !! Final state of interest.
@@ -646,6 +659,8 @@ contains
         !! 1: use pure TD-DFT amplitudes
         !! 2: use pure Slater determinants
         !! 3: hybrid, all TD-DFT amplitudes + Slater permutations
+        logical, intent(out) :: show_timestamp
+        !! Show timestamp in output.
         type(DebugType), intent(out) :: debug
         !! Debug flags
 
@@ -662,6 +677,7 @@ contains
         use_gamma = .true.  ! Use energy correction gamma
         f_state = -1  ! Final state is chosen automatically
         max_state = -1  ! Highest state in summation chosen automatically
+        show_timestamp = .true.  ! By default, show timestamp.
         ! Debug mode
         debug%user_set = .false.
         debug%print = .false.
@@ -724,6 +740,9 @@ contains
             'string', label='output', shortname='-o', longname='--output', &
             help='Name of the file to store the output. Existing content will &
             &be overwritten.')
+        call opts%add_arg_bool( &
+            'store_false', longname='--no-timestamp', &
+            help='Do not show date and time in output (to facilitate regression tests).')
         call opts%add_arg_char( &
             'list', label='debug', longname='--debug', &
             help='Debug flags. Supported: "print", "ijaa", "ijaa", "timer".  &
@@ -855,6 +874,8 @@ contains
             stop 2
         end select
 
+        if (opts%is_user_set('no-timestamp')) show_timestamp = .false.
+
         ! debugging mode - print information
         if (debug%user_set) then
             call sec_header(2, 'Debugging parameters')
@@ -967,7 +988,7 @@ contains
 
         character(len=*), intent(in) :: param
         !! Parameter name (with info like unit).
-        real(real64), intent(in) :: value
+        real(realwp), intent(in) :: value
         !! Value associated to parameter
         logical, intent(in), optional :: subparam
         !! Parameter is a sub-parameter type
@@ -1009,13 +1030,12 @@ contains
 
         character(len=*), intent(in) :: label
         !! Label to display in printing information
+        
+        character(len=:), allocatable :: dtime
 
-        integer, dimension(8) :: ia_dtime
-
-        1000 format('Entering: ',a,' - Date: ',i4,'/',i2.2,'/',i2.2,' at ', &
-            i2.2,':',i2.2,':',i2.2)
-        call date_and_time(values=ia_dtime)
-        write(iu_out, 1000) trim(label), ia_dtime(1:3), ia_dtime(5:7)
+        1000 format('Entering ',a,' on ',a)
+        dtime = timestamp()
+        write(iu_out, 1000) trim(label), dtime
     end subroutine write_time
 
 end program mcd_tensor

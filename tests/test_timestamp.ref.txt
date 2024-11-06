@@ -1,0 +1,65 @@
+
+
+ ******************************************************************************
+
+                           Test Program for TimeStamp
+
+ ******************************************************************************
+
+ Filename: test_timestamp.txt
+
+
+ Date (ISO)
+ ==========
+
+ Full date
+ ---------
+ 6 November 2024, 11:02:57
+
+ Full date with ms
+ -----------------
+ 6 November 2024, 11:02:57.319
+
+ Only date
+ ---------
+ 6 November 2024
+
+ Only time
+ ---------
+ 11:02:57
+
+ Only time with ms
+ -----------------
+ 11:02:57.319
+
+
+ Date (US)
+ =========
+
+ Full date
+ ---------
+ November 6 2024, 11:02:57
+
+ Full date with ms
+ -----------------
+ November 6 2024, 11:02:57.319
+
+ Only date
+ ---------
+ November 6 2024
+
+
+ Date (short format)
+ ===================
+
+ Full date
+ ---------
+ 6 Nov. 2024, 11:02:57
+
+ Full date with ms
+ -----------------
+ 6 Nov. 2024, 11:02:57.319
+
+ Only date
+ ---------
+ 6 Nov. 2024

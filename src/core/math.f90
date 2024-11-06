@@ -8,7 +8,8 @@ module math
 
     integer, dimension(:,:), allocatable :: itri_pa
     real(real64), dimension(:,:), allocatable :: rtri_pa
-    real(real64), parameter :: pi = 4.0_real64*atan(1.0_real64)
+    real(real64), parameter :: pi_r64 = 4.0_real64*atan(1.0_real64)
+    real(real32), parameter :: pi_r32 = 4.0_real32*atan(1.0_real32)
 
     interface cross
         module procedure scross, dcross
@@ -140,7 +141,7 @@ pure function int_xn_e2ax2(n, a) result(res)
         if (i > n-1) exit
     end do
     as = sqrt(a)
-    res = b*sqrt(2.0_real64*pi)/(as*2.0_real64)**(n+1)
+    res = b*sqrt(2.0_real64*pi_r64)/(as*2.0_real64)**(n+1)
     return
 end function int_xn_e2ax2
 
@@ -184,7 +185,7 @@ elemental function phii_xn_phij(only_R, ni, xi, ai, nj, xj, aj, nk) result(res)
     xij = xj - xi
 
     if (only_R) then
-        fac = ovaiaj**(ni+nj+nk+1)/sqrt(pi)
+        fac = ovaiaj**(ni+nj+nk+1)/sqrt(pi_r64)
     else
         fac = ovaiaj**(ni+nj+nk+1)
     end if

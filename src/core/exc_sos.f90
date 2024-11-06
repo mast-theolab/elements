@@ -11,8 +11,7 @@ module exc_sos
     !!   2. P. Bour, Chem. Phys. Lett. 1998, 288, 363-370
     !! @endnote
     !!
-    use iso_fortran_env, only: real64
-
+    use numeric, only: realwp, f0, f1, f2
     use exception, only: ArgumentError, BaseException, InitError, &
         RaiseArgError, RaiseError
 
@@ -40,9 +39,9 @@ function sos_eiOg(ldim, n_ab, n_mos, n_els, t_mo, O_ij, forbid, model) &
     !! Number of molecular orbitals.
     integer, dimension(:), intent(in) :: n_els
     !! Number of electrons in the molecular orbitals.
-    real(real64), dimension(:,:,:), intent(in) :: t_mo
+    real(realwp), dimension(:,:,:), intent(in) :: t_mo
     !! Electronic transition amplitudes
-    real(real64), dimension(:,:,:,:), intent(in) :: O_ij
+    real(realwp), dimension(:,:,:,:), intent(in) :: O_ij
     !! MO-integrals for the quantity/property of interest
     logical, intent(in), optional :: forbid
     !! Transition is forbidden (transition moment = 0).
@@ -51,14 +50,14 @@ function sos_eiOg(ldim, n_ab, n_mos, n_els, t_mo, O_ij, forbid, model) &
     !! 1: use pure TD-DFT amplitudes
     !! 2: use pure Slater determinants
     !! 3: hybrid, all TD-DFT amplitudes + Slater permutations
-    real(real64), dimension(:), allocatable :: res
+    real(realwp), dimension(:), allocatable :: res
     !! Integral < e_j | O | g >
 
     integer :: ia, iab, ib
 
     allocate(res(ldim))
 
-    res = 0.0_real64
+    res = f0
     if (present(forbid)) then
         if (forbid) return
     end if
@@ -81,7 +80,7 @@ function sos_eiOg(ldim, n_ab, n_mos, n_els, t_mo, O_ij, forbid, model) &
             end do
         end do
     end if
-    if (n_ab == 1) res = res*sqrt(2.0_real64)
+    if (n_ab == 1) res = res*sqrt(f2)
 
 end function sos_eiOg
 
@@ -104,9 +103,9 @@ function sos_ejOei(ldim, n_ab, n_mos, n_els, t_mo, prefac, forbid, model) &
     !! Number of molecular orbitals.
     integer, dimension(:), intent(in) :: n_els
     !! Number of electrons in the molecular orbitals.
-    real(real64), dimension(:,:,:), intent(in) :: t_mo
+    real(realwp), dimension(:,:,:), intent(in) :: t_mo
     !! Electronic transition amplitudes
-    real(real64), dimension(:,:,:,:), intent(in) :: prefac
+    real(realwp), dimension(:,:,:,:), intent(in) :: prefac
     !! Prefactor, computed by [sos_prefac_ejOei]
     logical, intent(in), optional :: forbid
     !! Transition is forbidden (transition moment = 0).
@@ -115,14 +114,14 @@ function sos_ejOei(ldim, n_ab, n_mos, n_els, t_mo, prefac, forbid, model) &
     !! 1: use pure TD-DFT amplitudes
     !! 2: use pure Slater determinants
     !! 3: hybrid, all TD-DFT amplitudes + Slater permutations
-    real(real64), dimension(:), allocatable :: res
+    real(realwp), dimension(:), allocatable :: res
     !! Integral < e_j | O | e_i >
 
     integer :: ia, iab, ib
 
     allocate(res(ldim))
 
-    res = 0.0_real64
+    res = f0
     if (present(forbid)) then
         if (forbid) return
     end if
@@ -163,11 +162,11 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij, &
     !! Number of molecular orbitals.
     integer, dimension(:), intent(in) :: n_els
     !! Number of electrons in the molecular orbitals.
-    real(real64), dimension(:,:,:), intent(in) :: t_mo
+    real(realwp), dimension(:,:,:), intent(in) :: t_mo
     !! Electronic transition amplitudes.
-    real(real64), dimension(:,:), intent(in) :: O_gg
+    real(realwp), dimension(:,:), intent(in) :: O_gg
     !! Ground-state moment of the quantity/property.
-    real(real64), dimension(:,:,:,:), intent(in) :: O_ij
+    real(realwp), dimension(:,:,:,:), intent(in) :: O_ij
     !! MO-integrals for the quantity/property of interest.
     integer, intent(in), optional :: model
     !! SOS model
@@ -176,16 +175,16 @@ function sos_prefac_ejOei(ldim, n_ab, n_mos, n_els, t_mo, O_gg, O_ij, &
     !! 3: hybrid, all TD-DFT amplitudes + Slater permutations
     logical, intent(in) :: add_ijaa
     !! Include <ia|ja> terms.
-    real(real64), dimension(:,:,:,:), allocatable :: prefac
+    real(realwp), dimension(:,:,:,:), allocatable :: prefac
     !! Returned prefactor.
 
     integer :: ia, iab, ib, ic, n_mo
-    real(real64), dimension(:), allocatable :: x, u_gg
+    real(realwp), dimension(:), allocatable :: x, u_gg
 
     n_mo = maxval(n_mos(:n_ab))
     allocate(prefac(ldim,n_mo,n_mo,n_ab), x(ldim))
 
-    prefac = 0.0_real64
+    prefac = f0
 
     if (n_ab == 1) then
         u_gg = O_gg(:,1)
@@ -421,27 +420,27 @@ subroutine sos_MCD_tensor_LORG_corr(n_states, n_els, fstate, kstate, r_gg, &
     !! Identifier of the final state
     integer, intent(in) :: kstate
     !! Identifier of the intermediate state
-    real(real64), dimension(:), intent(in) :: r_gg
+    real(realwp), dimension(:), intent(in) :: r_gg
     !! Ground-state moment < g | r | g >
-    real(real64), dimension(:,:,0:), intent(in) :: r_ij
+    real(realwp), dimension(:,:,0:), intent(in) :: r_ij
     !! Integral between electronic states (0: ground) < e_i | r | e_j >
-    real(real64), dimension(:,:,0:), intent(in) :: p_ij
+    real(realwp), dimension(:,:,0:), intent(in) :: p_ij
     !! Integral between electronic states (0: ground) < e_i | p | e_j >
-    real(real64), dimension(:), intent(in) :: ov_eieg
+    real(realwp), dimension(:), intent(in) :: ov_eieg
     !! 1/(e_i - e_g), inverse of electronic transition energy, in a.u.
-    real(real64), dimension(0:,0:), intent(in) :: ov_eiej
+    real(realwp), dimension(0:,0:), intent(in) :: ov_eiej
     !! 1/(e_i - e_j), inverse of electronic energy difference, in a.u.
-    real(real64), intent(inout) :: G_gf(3,3)
+    real(realwp), intent(inout) :: G_gf(3,3)
     !! MCD G tensor
 
     integer :: ix, jx, lstate
-    real(real64) :: ov_2Ne
-    real(real64), dimension(3) :: t2, t3, t5, t6
+    real(realwp) :: ov_2Ne
+    real(realwp), dimension(3) :: t2, t3, t5, t6
 
-    t2 = 0.0_real64
-    t3 = 0.0_real64
-    t5 = 0.0_real64
-    t6 = 0.0_real64
+    t2 = f0
+    t3 = f0
+    t5 = f0
+    t6 = f0
 
     ! Contrib. to T3, case l=g: <g|r|g> x <k|p|g> / (e_k - e_g)
     if (kstate /= 0) then
@@ -473,7 +472,7 @@ subroutine sos_MCD_tensor_LORG_corr(n_states, n_els, fstate, kstate, r_gg, &
         end if
     end do
 
-    ov_2Ne = 1.0_real64/(2.0_real64*(n_els(1)+n_els(2)))
+    ov_2Ne = f1 / (f2 * (n_els(1)+n_els(2)))
     if (kstate == 0) then
         do ix = 1, 3
             do jx = 1, 3

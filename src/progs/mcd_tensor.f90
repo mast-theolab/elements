@@ -1,6 +1,6 @@
 program mcd_tensor
-    use iso_fortran_env, only: real64, output_unit
-    use string, only: labXYZ_1D, locase
+    use iso_fortran_env, only: output_unit
+    use numeric, only: realwp, f0, f1, f2
     use input, only: DataFile
     use parse_cmdline, only: CmdArgDB
     use output, only: iu_out, sec_header, len_int, prt_coord, prt_mat, &
@@ -25,9 +25,9 @@ program mcd_tensor
 
     integer :: fstate, i, iab, istate, ispin_gs, ix, jstate, jx, max_state, &
         model_sos, qty_flag
-    real(real64) :: de, ef, ei
-    real(real64) :: e_gamma = 1.0e-4
-    real(real64), dimension(3) :: &
+    real(realwp) :: de, ef, ei
+    real(realwp) :: e_gamma = 1.0e-4
+    real(realwp), dimension(3) :: &
         r_gg, &      ! < g | r | g >
         p_gg, &      ! < g | p | g >
         rxp_gg, &    ! < g | r x p | g >
@@ -39,20 +39,20 @@ program mcd_tensor
         r_kg, &      ! < f | r | g >
         rxp_kg, &    ! < f | r x p | g >
         edip_nuc     ! Nuclear contribution to electric dipoles
-    real(real64), dimension(3,2) :: &
+    real(realwp), dimension(3,2) :: &
         r_gg_ab, &   ! < g | r | g >
         p_gg_ab, &   ! < g | p | g >
         rxp_gg_ab    ! < g | r x p | g >
-    real(real64), dimension(3,3) :: G_if
-    real(real64), dimension(:), allocatable :: &
+    real(realwp), dimension(3,3) :: G_if
+    real(realwp), dimension(:), allocatable :: &
         ov_eieg, &   ! Inverse of (E_i-E_g)
         ov_eief      ! Inverse of (E_i-E_f)
-    real(real64), dimension(:,:), allocatable :: &
+    real(realwp), dimension(:,:), allocatable :: &
         ov_eiej      ! Inverse of (E_i-E_j)
-    real(real64), dimension(:,:,:), allocatable :: &
+    real(realwp), dimension(:,:,:), allocatable :: &
         r_lk, &      ! Stores all combinations < l | r | k >
         p_lk         ! Stores all combinations < l | p | k >
-    real(real64), dimension(:,:,:,:), allocatable :: &
+    real(realwp), dimension(:,:,:,:), allocatable :: &
         t_mo, &      ! Transition amplitude in MO basis
         pfac_r, &    ! Stores the prefactor for < e_j | r | e_i >
         pfac_p, &    ! Stores the prefactor for < e_j | p | e_i >
@@ -60,7 +60,7 @@ program mcd_tensor
         Smo_ipj, &   ! MO-basis integral < i | p | j >
         Smo_irj, &   ! MO-basis integral < i | r | j >
         Smo_irxpj    ! MO-basis integral < i | r x p | j >
-    real(real64), allocatable :: tmp_ao_arr1(:,:), tmp_ao_arrN(:,:,:)
+    real(realwp), allocatable :: tmp_ao_arr1(:,:), tmp_ao_arrN(:,:,:)
     ! logical, parameter :: DEBUG = .true., TIMEIT = .false.
     logical :: do_giao, do_guvcde, exists, forbid, in_mem, use_gamma
     character(len=512) :: fmt_elstate
@@ -279,16 +279,16 @@ program mcd_tensor
                         excdb%g2e_dens(:,:,:,istate), tmp_ao_arr1, .true., &
                         orbdb%coef_mos)
         if (.not.orbdb%openshell) &
-            t_mo(:,:,:,istate) = t_mo(:,:,:,istate)*sqrt(2.0_real64)
+            t_mo(:,:,:,istate) = t_mo(:,:,:,istate)*sqrt(f2)
     end do
 
     call sec_header(1, 'Computation of Properties')
     call sec_header(2, 'Ground-state properties')
 
     if (debug%timer) call write_time('Ground-state moments')
-    p_gg_ab = 0.0_real64
-    r_gg_ab = 0.0_real64
-    rxp_gg_ab = 0.0_real64
+    p_gg_ab = f0
+    r_gg_ab = f0
+    rxp_gg_ab = f0
     if (orbdb%openshell) then
         do iab = 1, orbdb%n_ab
             do i = 1, orbdb%n_els(iab)
@@ -303,9 +303,9 @@ program mcd_tensor
             r_gg_ab(:,1)   = r_gg_ab(:,1) + Smo_irj(:,i,i,1)
             rxp_gg_ab(:,1) = rxp_gg_ab(:,1) + Smo_irxpj(:,i,i,1)
         end do
-        p_gg_ab(:,1)   = 2.0_real64*p_gg_ab(:,1)
-        r_gg_ab(:,1)   = 2.0_real64*r_gg_ab(:,1)
-        rxp_gg_ab(:,1) = 2.0_real64*rxp_gg_ab(:,1)
+        p_gg_ab(:,1)   = f2*p_gg_ab(:,1)
+        r_gg_ab(:,1)   = f2*r_gg_ab(:,1)
+        rxp_gg_ab(:,1) = f2*rxp_gg_ab(:,1)
     end if
     p_gg   = p_gg_ab(:,1)
     r_gg   = r_gg_ab(:,1)
@@ -339,14 +339,14 @@ program mcd_tensor
         if (use_gamma) then
             ov_eieg(istate) = ei/(ei**2 + e_gamma**2)
         else
-            ov_eieg(istate) = 1.0_real64/ei
+            ov_eieg(istate) = f1/ei
         end if
         if (istate /= excdb%id_state) then
             de = ei - ef
             if (use_gamma) then
                 ov_eief(istate) = de/(de**2 + e_gamma**2)
             else
-                ov_eief(istate) = 1.0_real64/de
+                ov_eief(istate) = f1/de
             end if
         end if
     end do
@@ -371,12 +371,12 @@ program mcd_tensor
         allocate(r_lk(3,excdb%n_states,0:excdb%n_states), &
                  p_lk(3,excdb%n_states,0:excdb%n_states), &
                  ov_eiej(0:excdb%n_states,0:excdb%n_states))
-        ov_eiej(0,0) = 0.0_real64
+        ov_eiej(0,0) = f0
         ov_eiej(excdb%id_state,0) = ov_eieg(excdb%id_state)
         ov_eiej(0,excdb%id_state) = -ov_eieg(excdb%id_state)
         do istate = 1, excdb%n_states
             ! This should never be used, since NaN, filled only for display
-            ov_eiej(istate,istate) = 0.0_real64
+            ov_eiej(istate,istate) = f0
             ! We exclude id_states so we can treat last and preserve the
             !   prefactors
             if (istate /= excdb%id_state) then
@@ -423,7 +423,7 @@ program mcd_tensor
                         if (use_gamma) then
                             ov_eiej(istate,jstate) = de/(de**2 + e_gamma**2)
                         else
-                            ov_eiej(istate,jstate) = 1.0_real64/de
+                            ov_eiej(istate,jstate) = f1/de
                         end if
                     end if
                 end do
@@ -495,7 +495,7 @@ program mcd_tensor
                       t_mo(:,:,:,excdb%id_state), Smo_irxpj, forbid, &
                       model=model_sos)
 
-    G_if = 0.0_real64
+    G_if = f0
     if (debug%print) write(iu_out, '(a)') 'NOW ON G_IF'
     do istate = 1, excdb%n_states
         if (istate /= excdb%id_state) then
@@ -573,7 +573,7 @@ program mcd_tensor
     end if
 
     ! Correct using a factor of 1/2
-    G_if = G_if / 2.0_real64
+    G_if = G_if / f2
 
     call sec_header(2, 'Final Value')
     write(iu_out, '(10X,"X              Y              Z")')
@@ -655,7 +655,7 @@ contains
         class(CmdArgDB), allocatable :: opts
 
         ! Basic initialization
-        e_gamma = 1.0e-4_real64
+        e_gamma = 1.0e-4_realwp
         do_guvcde = .false.  ! No testing.  Code does not try to match SOS/GUVCDE.
         do_giao = .true.  ! Include GIAO correction
         in_mem = .true.  ! Store everything in memory
@@ -975,7 +975,7 @@ contains
         1000 format(a,1x,f0.4)
         1010 format(a,es13.6)
 
-        if (abs(value) < 1.0e-2_real64 .or. abs(value) > 1.0e4_real64) then
+        if (abs(value) < 1.0e-2_realwp .or. abs(value) > 1.0e4_realwp) then
             write(iu_out, 1010) fmt_param(param, subparam), value
         else
             write(iu_out, 1000) fmt_param(param, subparam), value

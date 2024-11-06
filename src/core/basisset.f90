@@ -2,8 +2,8 @@ module basisset
     !! Basis sets-related modules
     !!
     !! Procedure related to basis sets and their definition
-    use iso_fortran_env, only: real64
-    use math, only: build_PascalTriangle, fac => factorial, pi, int_xn_e2ax2, &
+    use numeric, only: realwp, f0, f1, f2, f3, f4, f5, f10, fhalf, pi
+    use math, only: build_PascalTriangle, fac => factorial, int_xn_e2ax2, &
         itri_pa, phii_xn_phij
     use exception, only: BaseException, ArgumentError, InitError, RaiseError, &
         RaiseArgError
@@ -31,9 +31,9 @@ module basisset
         !! true if first primitive of shell
         logical :: shell_last
         !! true if last primitive of shell
-        real(real64) :: alpha
+        real(realwp) :: alpha
         !! alpha: primitive exponent
-        real(real64), dimension(:), allocatable :: coeff
+        real(realwp), dimension(:), allocatable :: coeff
         !! Unique normalized contraction coefficients
         !! indexes: 0, -1... : non-normalized original coeffs.
         integer, dimension(:,:), allocatable :: lxyz
@@ -69,11 +69,11 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
     !! number of primitives per shell
     integer, dimension(:), intent(in) :: shell_to_at
     !! shell to atom mapping
-    real(real64), dimension(:), intent(in) :: coef_contr
+    real(realwp), dimension(:), intent(in) :: coef_contr
     !! contraction coefficients
-    real(real64), dimension(:), allocatable, intent(in) :: coef_contrSP
+    real(realwp), dimension(:), allocatable, intent(in) :: coef_contrSP
     !! contraction coefficients for shells of type S=P
-    real(real64), dimension(:), intent(in) :: prim_exp
+    real(realwp), dimension(:), intent(in) :: prim_exp
     !! primitives exponents
     integer, dimension(:), allocatable, intent(out) :: nprim_per_at
     !! Number of primitive per atom
@@ -85,7 +85,7 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
     integer :: i, ia, ippa, iprim, iptot, L_ang, ndim, ntot_AOs
     integer :: ish
     integer, dimension(:), allocatable :: shell_per_at
-    real(real64) :: c1, c2
+    real(realwp) :: c1, c2
     logical :: purefunc
     character(len=2) :: shtype
     class(BaseException), allocatable :: suberr
@@ -197,7 +197,7 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
             if (allocated(coef_contrSP)) then
                 c2 = coef_contrSP(iptot)
             else
-                c2 = 0.0_real64
+                c2 = f0
             end if
             call coefs_norm_sh(shtype, c1, bset(ia,ippa)%alpha, c2, &
                                bset(ia,ippa)%coeff, bset(ia,ippa)%lxyz, suberr)
@@ -225,22 +225,22 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
     !!   for a given primitive shell
     character(len=*), intent(in) :: shtype
     !! Shell type
-    real(real64), intent(in) :: coef
+    real(realwp), intent(in) :: coef
     !! Contracted coefficient
-    real(real64), intent(in) :: alpha
+    real(realwp), intent(in) :: alpha
     !! Primitive exponent alpha
-    real(real64), intent(in) :: coef2
+    real(realwp), intent(in) :: coef2
     !! Secondary contracted coefficient, for instance for S=P shell
-    real(real64), dimension(:), allocatable, intent(out) :: new_coefs
+    real(realwp), dimension(:), allocatable, intent(out) :: new_coefs
     !! New, normalized coefficients
     integer, dimension(:,:), allocatable, intent(out) :: indexes
     !! Indexes corresponding to each coefficients
     class(BaseException), allocatable, intent(out) :: err
     !! Error instance
 
-    real(real64), parameter :: f2 = 2.0_real64, sq2pi = sqrt(f2*pi)
+    real(realwp), parameter :: sq2pi = sqrt(f2*pi)
     integer :: i, ix, iy, iz, L
-    real(real64) :: cnorm, f2sqal
+    real(realwp) :: cnorm, f2sqal
 
     err = InitError()
 
@@ -287,7 +287,7 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
             cnorm = sqrt(f2sqal**7/(sq2pi**3))
             new_coefs(0) = coef
             new_coefs(2) = coef*cnorm
-            new_coefs(1) = new_coefs(2)/sqrt(3.0_real64)
+            new_coefs(1) = new_coefs(2)/sqrt(f3)
             indexes(:,2) = [0, 1, 1]
             indexes(:,1) = [0, 0, 2]
         case ('F')
@@ -302,8 +302,8 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
             cnorm = sqrt(f2sqal**7/(sq2pi**3))
             new_coefs(0) = coef
             new_coefs(3) = coef*cnorm
-            new_coefs(2) = new_coefs(1)/sqrt(3.0_real64)
-            new_coefs(1) = new_coefs(2)/sqrt(15.0_real64)
+            new_coefs(2) = new_coefs(1)/sqrt(f3)
+            new_coefs(1) = new_coefs(2)/sqrt(15.0_realwp)
             indexes(:,3) = [1, 1, 1]
             indexes(:,2) = [0, 1, 2]
             indexes(:,1) = [0, 0, 3]
@@ -390,14 +390,14 @@ subroutine coef_transfo_P2C(L_ang, Ncart, Npure, coef2P, coef2C)
     !! Number of Cartesian components
     integer, intent(in) :: Npure
     !! Number of pure/spherical components
-    real(real64), dimension(Ncart,Npure), intent(out) :: coef2P
+    real(realwp), dimension(Ncart,Npure), intent(out) :: coef2P
     !! Transformation coefficients to pure
-    real(real64), dimension(Ncart,Npure), intent(out) :: coef2C
+    real(realwp), dimension(Ncart,Npure), intent(out) :: coef2C
     !! Transformation coefficients to Cartesian
 
     integer :: i1, i2, k, Lx, Lx1, Lx2, Lxyz, Ly, Ly1, Ly2, Lz, Lz1, &
         Lz2, M
-    real(real64) :: a1, a2, s
+    real(realwp) :: a1, a2, s
     ! Form coef2P
     Lxyz = 0
     do Lx = 0, L_ang
@@ -412,20 +412,20 @@ subroutine coef_transfo_P2C(L_ang, Ncart, Npure, coef2P, coef2C)
     end do
 
     ! Form coef2C
-    coef2C = 0.0_real64
+    coef2C = f0
     i1 = 0
     do Lx1 = 0, L_ang
         do Ly1 = 0, (L_ang-Lx1)
             i1 = i1 + 1
             Lz1 = L_ang - Lx1 - Ly1
-            a1 = sqrt(real(fac(Lx1)*fac(Ly1)*fac(Lz1), kind=real64) &
+            a1 = sqrt(real(fac(Lx1)*fac(Ly1)*fac(Lz1), kind=realwp) &
                       /(fac(2*Lx1)*fac(2*Ly1)*fac(2*Lz1)))
             i2 = 0
             do Lx2 = 0, L_ang
                 do Ly2 = 0, (L_ang-Lx2)
                     i2 = i2 + 1
                     Lz2 = L_ang - Lx2 - Ly2
-                    a2 = sqrt(real(fac(Lx2)*fac(Ly2)*fac(Lz2), kind=real64) &
+                    a2 = sqrt(real(fac(Lx2)*fac(Ly2)*fac(Lz2), kind=realwp) &
                               /(fac(2*Lx2)*fac(2*Ly2)*fac(2*Lz2)))
                     Lx = Lx1 + Lx2
                     Ly = Ly1 + Ly2
@@ -452,7 +452,7 @@ function coef_C2P(L, M, Lx, Ly) result(coef)
     !! Calculates the coefficient for the conversion from the normalized
     !!   Cartesian component Lx,Ly,Lz=L-Lx-Ly to the spherical harmonics
     !!   component L,M
-    real(real64) :: coef
+    real(realwp) :: coef
     integer, intent(in) :: L
     !! Angular moment
     integer, intent(in) :: M
@@ -463,39 +463,39 @@ function coef_C2P(L, M, Lx, Ly) result(coef)
     !! Ly component of the Cartesian function
 
     integer :: i, j, k, Lx2k, Lz, Ma
-    real(real64) :: a, b, c, d, e, g
+    real(realwp) :: a, b, c, d, e, g
 
     Lz = L - Lx - Ly
     Ma = Abs(M)
     if (Ma > L .or. Lz < 0) then
-        coef = 0.0_real64
+        coef = f0
         return
     end if
-    a = sqrt(real(fac(2*Lx)*fac(2*Ly)*fac(2*Lz)*fac(L), kind=real64) &
+    a = sqrt(real(fac(2*Lx)*fac(2*Ly)*fac(2*Lz)*fac(L), kind=realwp) &
              / (fac(2*L)*fac(Lx)*fac(Ly)*fac(Lz)))
-    b = sqrt(real(fac(L-Ma), kind=real64)/fac(L+Ma))/((2**L)*fac(L))
+    b = sqrt(real(fac(L-Ma), kind=realwp)/fac(L+Ma))/((2**L)*fac(L))
     j = (L-Ma-Lz)/2
-    g = 0.0_real64
+    g = f0
     if (2*j == L-Ma-Lz) then
         do i = 0, (L-Ma)/2
-            c = 0.0_real64
+            c = f0
             if (j >= 0 .and. j <= i) then
-                c = (real(fac(L), kind=real64)/(fac(i)*fac(L-i))) &
-                    *(real(fac(2*L-2*i)*((-1)**i), kind=real64)/fac(L-Ma-2*i)) &
-                    *(real(fac(i), kind=real64)/(fac(j)*fac(i-j)))
+                c = (real(fac(L), kind=realwp)/(fac(i)*fac(L-i))) &
+                    *(real(fac(2*L-2*i)*((-1)**i), kind=realwp)/fac(L-Ma-2*i)) &
+                    *(real(fac(i), kind=realwp)/(fac(j)*fac(i-j)))
                 do k = 0, j
-                    d = 0.0_real64
+                    d = f0
                     Lx2k = Lx-2*k
                     if (Lx2k >= 0 .and. Lx2k <= Ma) then
-                        d = (real(fac(j), kind=real64)/(fac(k)*fac(j-k))) &
-                            *(real(fac(Ma), kind=real64) &
+                        d = (real(fac(j), kind=realwp)/(fac(k)*fac(j-k))) &
+                            *(real(fac(Ma), kind=realwp) &
                                 /(fac(Lx2k)*fac(Ma-Lx2k)))
-                        e = 0.0_real64
+                        e = f0
                         if (M==0 .and. mod(Lx,2) == 0) e = (-1)**(-Lx2k/2)
                         if (M > 0 .and. mod(abs(Ma-Lx),2) == 0) &
-                            e = Sqrt(2.0_real64)*(-1)**((Ma-Lx2k)/2)
+                            e = Sqrt(f2)*(-1)**((Ma-Lx2k)/2)
                         if (M < 0 .and. mod(abs(Ma-Lx),2) == 1) &
-                            e = Sqrt(2.0_real64)*(-1)**((Ma-Lx2k)/2)
+                            e = Sqrt(f2)*(-1)**((Ma-Lx2k)/2)
                         g = g + c*d*e
                     end if
                 end do
@@ -521,7 +521,7 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
     !! Number of atoms
     integer, intent(in) :: n_ao
     !! Number of atomic orbitals
-    real(real64), dimension(:,:), intent(in) :: at_crd
+    real(realwp), dimension(:,:), intent(in) :: at_crd
     !! Atomic coordinates (in au)
     integer, dimension(:), intent(in) :: nprim_per_at
     !! Number of basis primitives per atom
@@ -534,22 +534,22 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
 
     integer, parameter :: &
         dimPa = 24  ! maximum used dimension for Pascal's triangle
-    real(real64), parameter :: &
-        tol_expm = 100.0_real64, &  ! Max. value of x for e^-x to be relevant
+    real(realwp), parameter :: &
+        tol_expm = 100.0_realwp, &  ! Max. value of x for e^-x to be relevant
         sqpi3 = sqrt(pi**3)
     integer :: ndi, ndj
     integer :: i, idi, idj, iprim, j, jj, jprim
     integer :: ia, ia0, ja, ja0
     integer, dimension(:,:), allocatable :: ldi, ldj
-    real(real64) :: a, ai, aj, cijer, cjer, ebase, r2ij, x
-    real(real64), dimension(3) :: ri, rj, ovi
-    real(real64), dimension(max_nxyz,max_nxyz) :: ovlp_ij
-    real(real64), dimension(max_nxyz,max_nxyz), target :: allones
-    real(real64), dimension(:), allocatable :: ao_norms, ci, cj
-    real(real64), dimension(:,:), allocatable :: ao_ovlp
-    real(real64), dimension(:,:), allocatable, target :: c2p_D, c2p_F, c2p_G, &
+    real(realwp) :: a, ai, aj, cijer, cjer, ebase, r2ij, x
+    real(realwp), dimension(3) :: ri, rj, ovi
+    real(realwp), dimension(max_nxyz,max_nxyz) :: ovlp_ij
+    real(realwp), dimension(max_nxyz,max_nxyz), target :: allones
+    real(realwp), dimension(:), allocatable :: ao_norms, ci, cj
+    real(realwp), dimension(:,:), allocatable :: ao_ovlp
+    real(realwp), dimension(:,:), allocatable, target :: c2p_D, c2p_F, c2p_G, &
         c2p_H, c2p_I
-    real(real64), dimension(:,:), pointer :: c2pi, c2pj
+    real(realwp), dimension(:,:), pointer :: c2pi, c2pj
     logical :: dbg_print = .false.
     class(BaseException), allocatable :: suberr
 
@@ -574,8 +574,8 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
     end if
 
     allocate(ao_norms(n_ao), ao_ovlp(max_nxyz,n_ao))
-    ao_norms = 0.0_real64
-    ao_ovlp = 0.0_real64
+    ao_norms = f0
+    ao_ovlp = f0
 
     ia0 = 0
     do ia = 1, n_at
@@ -668,7 +668,7 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
                     else
                         c2pj => allones
                     end if
-                    a = 1.0_real64/(ai+aj)
+                    a = f1 / (ai+aj)
                     x = ai*aj*r2ij*a
                     if (x < tol_expm) then
                         ebase = sqpi3*exp(-x)
@@ -720,7 +720,7 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
                     ao_norms(ia0+i) = ao_ovlp(i,ia0+i)
                 end do
                 ia0 = ia0 + bsetDB(ia,iprim)%ndim
-                ao_ovlp = 0.0_real64
+                ao_ovlp = f0
             end if
         end do
     end do
@@ -735,7 +735,7 @@ subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
     do ia = 1, n_at
         ri = at_crd(:,ia)
         do iprim = 1, nprim_per_at(ia)
-            a = 1.0_real64/sqrt(ao_norms(ia0))
+            a = f1 / sqrt(ao_norms(ia0))
             bsetDB(ia,iprim)%coeff = bsetDB(ia,iprim)%coeff*a
             if (bsetDB(ia,iprim)%shell_last) ia0 = ia0 + bsetDB(ia,iprim)%ndim
         end do
@@ -759,7 +759,7 @@ subroutine set_primC_comp(bfunc, ndimC, lxyz, coefs, err)
     !! True number of dimension
     integer, dimension(:,:), allocatable, intent(out) :: lxyz
     !! Number of occurrence of each x,y,z coordinate for each dimension
-    real(real64), dimension(:), allocatable, intent(out) :: coefs
+    real(realwp), dimension(:), allocatable, intent(out) :: coefs
     !! Contraction coefficient for each dimension
     class(BaseException), allocatable, intent(out) :: err
     !! Error instance
@@ -894,15 +894,14 @@ function transfo_cart2pure(L_ang) result(convmat)
     !!           allocated on exit.
     integer, intent(in) :: L_ang
     !! Angular momentum for the shell of interest
-    real(real64), dimension(:,:), allocatable :: convmat
+    real(realwp), dimension(:,:), allocatable :: convmat
     !! Conversion matrix of dimension (npure,ncart)
 
     integer :: ncart, npure
-    real(real64), parameter :: f0=0.0_real64, f1=1.0_real64, f2=2.0_real64, &
-        f3=3.0_real64, f4=4.0_real64, pt5=0.5_real64, sq2=sqrt(2.0_real64), &
-        sq3=sqrt(3.0_real64), sq5=sqrt(5.0_real64), sq10=sqrt(10.0_real64)
-    real(real64) :: s1, s2, s3, s4, s5, s6, s7
-    real(real64), dimension(max_nxyz,max_nxyz) :: tempmat
+    real(realwp), parameter :: sq2=sqrt(f2), sq3=sqrt(f3), sq5=sqrt(f5), &
+        sq10=sqrt(f10)
+    real(realwp) :: s1, s2, s3, s4, s5, s6, s7
+    real(realwp), dimension(max_nxyz,max_nxyz) :: tempmat
 
     select case (L_ang)
         case (0)
@@ -922,25 +921,25 @@ function transfo_cart2pure(L_ang) result(convmat)
             convmat(3,6) = f1
             convmat(5,4) = f1
             ! |normalized z^2-r^2> = s1*(two*|norm.zz>-|norm.xx>-|norm.yy>)
-            s1 = pt5
+            s1 = fhalf
             convmat(1,1) = -s1
             convmat(1,2) = -s1
-            convmat(1,3) = 2.0_real64*s1
+            convmat(1,3) = f2*s1
             ! |normalized x^2-y^2> = s5*(|norm.xx>-|norm.yy>)
-            s5 = pt5*sq3
+            s5 = fhalf*sq3
             convmat(4,1) = s5
             convmat(4,2) = -s5
         case (3)
             allocate(convmat(7,10))
             convmat = f0
             ! normalization coefficients
-            s1 = pt5/sq5
-            s2 = pt5*sq3/sq10
-            s3 = pt5*sq3/sq10
-            s4 = pt5*sq3
+            s1 = fhalf/sq5
+            s2 = fhalf*sq3/sq10
+            s3 = fhalf*sq3/sq10
+            s4 = fhalf*sq3
             s5 = f1
-            s6 = pt5/sq2
-            s7 = pt5/sq2
+            s6 = fhalf/sq2
+            s7 = fhalf/sq2
             ! normalized conversion matrix
             convmat(1, 3) =  s1 * f2 * sq5
             convmat(1, 5) = -s1 * f3
@@ -976,14 +975,14 @@ subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh)
     !!
     integer, intent(in) :: n_ao
     !! Number of atomic orbitals
-    real(real64), dimension(n_ao,n_ao), intent(in) :: ovint_i_j
+    real(realwp), dimension(n_ao,n_ao), intent(in) :: ovint_i_j
     !! Overlap integrals between atomic orbitals, < i | j >
-    real(real64), intent(in), optional :: thresh
+    real(realwp), intent(in), optional :: thresh
     !! Threshold to consider redundancy (redundancy if norm below).
 
     integer :: iao, jao, kao, lao
-    real(real64) :: norm, ovlp, thresh0
-    real(real64), dimension(n_ao,n_ao) :: trial
+    real(realwp) :: norm, ovlp, thresh0
+    real(realwp), dimension(n_ao,n_ao) :: trial
     logical, dimension(n_ao) :: is_red
     character(len=60) :: fmt_red
 
@@ -996,23 +995,23 @@ subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh)
             thresh0 = epsilon(thresh0)
         end if
     else
-        thresh0 = 1.0e-6_real64
+        thresh0 = 1.0e-6_realwp
     end if
 
     write(fmt_red, '("(""Orbital num. "",i",i0,","" - Rest norm:"",f12.8,&
         &:,"" ["",a,""]"")")') len_int(n_ao)
 
     ! Initialize trial matrix to check overlap
-    trial = 0.0_real64
+    trial = f0
     do iao = 1, n_ao
-        trial(iao,iao) = 1.0_real64
+        trial(iao,iao) = f1
     end do
-    is_red = .False.
+    is_red = .false.
 
     do iao = 1, n_ao
         do jao = 1, iao-1
             if (.not.is_red(jao)) then
-                ovlp = 0.0_real64
+                ovlp = f0
                 do kao = 1, iao
                     do lao = 1, iao
                         ovlp = ovlp + &

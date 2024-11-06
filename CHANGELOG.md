@@ -4,6 +4,8 @@
 
 ### Added
 
+- New "real work precision" (`realwp`) provided by module `numeric`.  The precision can be set through preprocessor directives (`-DUSE_R4`, `-DUSE_R8`).
+- Core and data modules that do not provide versions for different real precisions use `realwp` internally.
 - New method `get_data` for `DataFile` provides a simple way to extract data selectively from data files.
 - Added dependency on xmake `openblas` package to support calls to BLAS/LAPACK routines.
 - New exception `QuantityError` and the associated procedure `RaiseQuantityError` for errors related to the processing of data/quantities.

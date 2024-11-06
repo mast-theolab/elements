@@ -2,7 +2,6 @@ module input
     !! Input-processing module
     !!
     !! Contains data and procedures to process input data/options.
-    use iso_fortran_env, only: real64
     use exception, only: BaseException
     use workdata
 

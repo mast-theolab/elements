@@ -5,12 +5,12 @@ module electronic
     !!   electronic calculations:
     !! * orbitals-related constants and operations
     !! * integral calculations
-    use iso_fortran_env, only: real64
 
+    use numeric, only: realwp, f0, f1, f2, fhalf, pi
     use output, only: iu_out
     use exception, only: ArgumentError, BaseException, InitError, &
         RaiseArgError, RaiseError
-    use math, only: build_PascalTriangle, cross, itri_pa, pi, phii_xn_phij
+    use math, only: build_PascalTriangle, cross, itri_pa, phii_xn_phij
     use basisset, only: max_nxyz, PrimitiveFunction, set_primC_comp, &
         transfo_cart2pure
 
@@ -19,24 +19,24 @@ module electronic
     type, public :: ovij_1e
         integer :: n_ao = 0
         !! number of atomic orbitals
-        real(real64), dimension(:,:), allocatable :: i_j
+        real(realwp), dimension(:,:), allocatable :: i_j
         !! Store the overlap integral < i | j >
-        real(real64), dimension(:,:,:), allocatable :: i_r_j
+        real(realwp), dimension(:,:,:), allocatable :: i_r_j
         !! Store the integral < i | r | j > / r=x,y,z
-        real(real64), dimension(:,:,:), allocatable :: i_rr_j_s
+        real(realwp), dimension(:,:,:), allocatable :: i_rr_j_s
         !! Store the integral < i | r^2 | j >  (symmetric form)
         !! The elements are stored as: xx,xy,xz,yy,yz,zz
-        real(real64), dimension(:,:,:), allocatable :: i_p_j
+        real(realwp), dimension(:,:,:), allocatable :: i_p_j
         !! Store the integral < i | p | j > / p=d/dx,d/dy,d/dz
-        real(real64), dimension(:,:,:), allocatable :: i_rxp_j
+        real(realwp), dimension(:,:,:), allocatable :: i_rxp_j
         !! Store the integral < i | r x p | j >
-        real(real64), dimension(:,:,:), allocatable :: i_rrjxp_j
+        real(realwp), dimension(:,:,:), allocatable :: i_rrjxp_j
         !! Store the integral < i | (r-Rj) x p | j >
-        real(real64), dimension(:,:,:), allocatable :: i_rrijxp_j
+        real(realwp), dimension(:,:,:), allocatable :: i_rrijxp_j
         !! Store the integral < i | (r-(Ri+Rj)/2) x p | j >
-        real(real64), dimension(:,:,:), allocatable :: i_rjxr_j
+        real(realwp), dimension(:,:,:), allocatable :: i_rjxr_j
         !! Store the integral < i | Rj x r | j >
-        real(real64), dimension(:,:,:), allocatable :: i_rixr_j
+        real(realwp), dimension(:,:,:), allocatable :: i_rixr_j
         !! Store the integral < i | Ri x r | j >
     end type ovij_1e
 
@@ -78,7 +78,7 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     !! If True, the integrals are stored in dedicated binary files.
     logical, intent(in) :: inmem
     !! If True, the work arrays are stored in `ovij`
-    real(real64), dimension(:,:), intent(in) :: at_crd
+    real(realwp), dimension(:,:), intent(in) :: at_crd
     !! Atomic coordinates (in au)
     integer, dimension(:), intent(in) :: nprim_per_at
     !! Number of basis primitives per atom
@@ -94,40 +94,39 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     
     integer, parameter :: &
         dimPa = 24  ! maximum used dimension for Pascal's triangle
-    real(real64), parameter :: &
-        tol_expm = 100.0_real64, &  ! Max. value of x for e^-x to be relevant
+    real(realwp), parameter :: &
+        tol_expm = 100.0_realwp, &  ! Max. value of x for e^-x to be relevant
         sqpi3 = sqrt(pi**3)
     integer :: iu_ij, iu_p, iu_r, iu_rixr, iu_rjxr, iu_rrijxp, iu_rrjxp, &
         iu_rxp, iu_r2, lrec, ndi, ndj
     integer :: iprim, jprim 
     integer :: i, idi, idj, ix, j, ia, ia0, ii, ja, ja0, jj
     integer, dimension(:,:), allocatable :: ldi, ldj
-    real(real64), parameter :: f2 = 2.0_real64, pt5 = 0.5_real64
-    real(real64) :: a, ai, aj, cier, ebase, r2ij, x
-    real(real64), dimension(3) :: fij_p, fij_r, fij_r2, fij, fijm1, &
+    real(realwp) :: a, ai, aj, cier, ebase, r2ij, x
+    real(realwp), dimension(3) :: fij_p, fij_r, fij_r2, fij, fijm1, &
         fijp1, ri, rj
     ! Temporary arrays for one couple of primitives, store data wrt Cart. basis
-    real(real64), dimension(max_nxyz,max_nxyz) :: oij
-    real(real64), dimension(3,max_nxyz,max_nxyz) :: oij_p, oij_r, oij_rixr, &
+    real(realwp), dimension(max_nxyz,max_nxyz) :: oij
+    real(realwp), dimension(3,max_nxyz,max_nxyz) :: oij_p, oij_r, oij_rixr, &
         oij_rjxr, oij_rrijxp, oij_rrjxp, oij_rxp
-    real(real64), dimension(6,max_nxyz,max_nxyz) :: oij_r2
+    real(realwp), dimension(6,max_nxyz,max_nxyz) :: oij_r2
     ! Longer-term temporary arrays, for one initial-set primitive.
-    real(real64), dimension(MAXAO,max_nxyz) :: tij
-    real(real64), dimension(3,MAXAO,max_nxyz) :: tij_p, tij_r, tij_rixr, &
+    real(realwp), dimension(MAXAO,max_nxyz) :: tij
+    real(realwp), dimension(3,MAXAO,max_nxyz) :: tij_p, tij_r, tij_rixr, &
         tij_rjxr, tij_rrijxp, tij_rrjxp, tij_rxp
-    real(real64), dimension(6,MAXAO,max_nxyz) :: tij_r2
-    real(real64), dimension(max_nxyz,max_nxyz), target :: ident_mat
-    real(real64), dimension(:), allocatable :: ci, cj
-    real(real64), dimension(:,:), allocatable, target :: c2p_D, c2p_F, c2p_G, &
+    real(realwp), dimension(6,MAXAO,max_nxyz) :: tij_r2
+    real(realwp), dimension(max_nxyz,max_nxyz), target :: ident_mat
+    real(realwp), dimension(:), allocatable :: ci, cj
+    real(realwp), dimension(:,:), allocatable, target :: c2p_D, c2p_F, c2p_G, &
         c2p_H, c2p_I
-    real(real64), dimension(:,:), pointer :: c2pi, c2pj
+    real(realwp), dimension(:,:), pointer :: c2pi, c2pj
     class(BaseException), allocatable :: suberr
 
     err = InitError()
 
-    ident_mat = 0.0_real64
+    ident_mat = f0
     do i = 1, max_nxyz
-        ident_mat(i,i) = 1.0_real64
+        ident_mat(i,i) = f1
     end do
 
     if (n_ao > MAXAO) then
@@ -138,15 +137,15 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     write(iout, *)  'Entering overlap_ao_1e'
 
     allocate(ovij)
-    tij        = 0.0_real64
-    tij_r      = 0.0_real64
-    tij_r2     = 0.0_real64
-    tij_p      = 0.0_real64
-    tij_rxp    = 0.0_real64
-    tij_rrjxp  = 0.0_real64
-    tij_rrijxp = 0.0_real64
-    tij_rjxr   = 0.0_real64
-    tij_rixr   = 0.0_real64
+    tij        = f0
+    tij_r      = f0
+    tij_r2     = f0
+    tij_p      = f0
+    tij_rxp    = f0
+    tij_rrjxp  = f0
+    tij_rrijxp = f0
+    tij_rjxr   = f0
+    tij_rixr   = f0
 
     ! analyse qty_flag to find which quantity to retrieve
     ! if null, nothing to do
@@ -308,7 +307,7 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
                     else
                         c2pj => ident_mat
                     end if
-                    a = 1.0_real64/(ai+aj)
+                    a = f1/(ai+aj)
                     x = ai*aj*r2ij*a
                     if (x < tol_expm) then
                         ebase = sqpi3*exp(-x)
@@ -335,7 +334,7 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
                                         ldi(ix,idi), ri(ix), ai, &
                                         ldj(ix,idj)-1, rj(ix), aj, 0)
                                 else
-                                    fijm1(ix) = 0.0_real64
+                                    fijm1(ix) = f0
                                 end if
                             end do
                             fij_r = phii_xn_phij(.true., ldi(:,idi), ri, ai, &
@@ -364,19 +363,20 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
                             end if
                             if (do_rxp) &
                                 oij_rxp(:,idj,idi) = &
-                                    a*cross(fij_r, fij_p)*fij*pt5
+                                    a*cross(fij_r, fij_p)*fij*fhalf
                             if (do_rrjxp) &
                                 oij_rrjxp(:,idj,idi) = &
-                                    a*cross(fij_r-rj, fij_p)*fij*pt5
+                                    a*cross(fij_r-rj, fij_p)*fij*fhalf
                             if (do_rrijxp) &
                                 oij_rrijxp(:,idj,idi) = &
-                                    a*fij*pt5*cross(fij_r-(ri+rj)*pt5, fij_p)
+                                    a*fij*fhalf*cross(fij_r-(ri+rj)*fhalf, &
+                                                      fij_p)
                             if (do_rjxr) &
                                 oij_rjxr(:,idj,idi) = &
-                                    a*cross(fij_r, rj)*fij*pt5
+                                    a*cross(fij_r, rj)*fij*fhalf
                             if (do_rixr) &
                                 oij_rixr(:,idj,idi) = &
-                                    a*cross(fij_r, ri)*fij*pt5
+                                    a*cross(fij_r, ri)*fij*fhalf
                         end do
                     end do
 
@@ -573,15 +573,15 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
                 end if
             
                 ia0 = ia0 + bsetDB(ia,iprim)%ndim
-                if (do_ij)     tij        = 0.0_real64
-                if (do_r)      tij_r      = 0.0_real64
-                if (do_r2)     tij_r2     = 0.0_real64
-                if (do_p)      tij_p      = 0.0_real64
-                if (do_rxp)    tij_rxp    = 0.0_real64
-                if (do_rrjxp)  tij_rrjxp  = 0.0_real64
-                if (do_rrijxp) tij_rrijxp = 0.0_real64
-                if (do_rjxr)   tij_rjxr   = 0.0_real64
-                if (do_rixr)   tij_rixr   = 0.0_real64
+                if (do_ij)     tij        = f0
+                if (do_r)      tij_r      = f0
+                if (do_r2)     tij_r2     = f0
+                if (do_p)      tij_p      = f0
+                if (do_rxp)    tij_rxp    = f0
+                if (do_rrjxp)  tij_rrjxp  = f0
+                if (do_rrijxp) tij_rrijxp = f0
+                if (do_rjxr)   tij_rjxr   = f0
+                if (do_rixr)   tij_rixr   = f0
             end if
         end do
     end do
@@ -614,13 +614,13 @@ subroutine convert_AO2MO_1(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !! Number of atomic orbitals
     integer, intent(in) :: n_mo
     !! Number of molecular orbitals
-    real(real64), dimension(:,:), intent(in) :: c_ia
+    real(realwp), dimension(:,:), intent(in) :: c_ia
     !! Coefficients of MOs in AOs basis (geometry: n_mo, n_ao)
-    real(real64), dimension(:,:), intent(in) :: q_ao
+    real(realwp), dimension(:,:), intent(in) :: q_ao
     !! Quantity in AO basis
-    real(real64), dimension(:,:), intent(out) :: q_mo
+    real(realwp), dimension(:,:), intent(out) :: q_mo
     !! Quantity in MO basis
-    real(real64), dimension(:,:) :: tmp_arr
+    real(realwp), dimension(:,:) :: tmp_arr
     !! Temporary array
 
     integer :: a, b, i, j
@@ -628,7 +628,7 @@ subroutine convert_AO2MO_1(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !$omp parallel do collapse(2)
     do j = 1, n_mo
         do a = 1, n_ao
-            tmp_arr(a,j) = 0.0_real64
+            tmp_arr(a,j) = f0
             do b = 1, n_ao
                 tmp_arr(a,j) = tmp_arr(a,j) + c_ia(j,b)*q_ao(a,b)
             end do
@@ -639,7 +639,7 @@ subroutine convert_AO2MO_1(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !$omp parallel do collapse(2)
     do i = 1, n_mo
         do j = 1, n_mo
-            q_mo(i,j) = 0.0_real64
+            q_mo(i,j) = f0
             do a = 1, n_ao
                 q_mo(i,j) = q_mo(i,j) + c_ia(i,a)*tmp_arr(a,j)
             end do
@@ -661,13 +661,13 @@ subroutine convert_AO2MO_N(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !! Number of atomic orbitals
     integer, intent(in) :: n_mo
     !! Number of molecular orbitals
-    real(real64), dimension(:,:), intent(in) :: c_ia
+    real(realwp), dimension(:,:), intent(in) :: c_ia
     !! Coefficients of MOs in AOs basis (geometry: n_mo, n_ao)
-    real(real64), dimension(:,:,:), intent(in) :: q_ao
+    real(realwp), dimension(:,:,:), intent(in) :: q_ao
     !! Quantity in AO basis
-    real(real64), dimension(:,:,:), intent(out) :: q_mo
+    real(realwp), dimension(:,:,:), intent(out) :: q_mo
     !! Quantity in MO basis
-    real(real64), dimension(:,:,:) :: tmp_arr
+    real(realwp), dimension(:,:,:) :: tmp_arr
     !! Temporary array
 
     integer :: a, b, i, j
@@ -675,7 +675,7 @@ subroutine convert_AO2MO_N(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !$omp parallel do collapse(2)
     do j = 1, n_mo
         do a = 1, n_ao
-            tmp_arr(:,a,j) = 0.0_real64
+            tmp_arr(:,a,j) = f0
             do b = 1, n_ao
                 tmp_arr(:,a,j) = tmp_arr(:,a,j) + c_ia(j,b)*q_ao(:,a,b)
             end do
@@ -686,7 +686,7 @@ subroutine convert_AO2MO_N(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
     !$omp parallel do collapse(2)
     do i = 1, n_mo
         do j = 1, n_mo
-            q_mo(:,i,j) = 0.0_real64
+            q_mo(:,i,j) = f0
             do a = 1, n_ao
                 q_mo(:,i,j) = q_mo(:,i,j) + c_ia(i,a)*tmp_arr(:,a,j)
             end do
@@ -712,22 +712,22 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
     !! Number of atomic orbitals
     integer, dimension(:), intent(in) :: n_mos
     !! Number of molecular orbitals.
-    real(real64), dimension(n_ao, n_ao), intent(in) :: ovlp_ao
+    real(realwp), dimension(n_ao, n_ao), intent(in) :: ovlp_ao
     !! Overlap integrals between atomic orbitals.
-    real(real64), dimension(n_ao, n_ao, n_ab), intent(in) :: trans_el_dens
+    real(realwp), dimension(n_ao, n_ao, n_ab), intent(in) :: trans_el_dens
     !! Transition electronic density matrix
-    real(real64), dimension(n_ao, n_ao):: tmp_arr
+    real(realwp), dimension(n_ao, n_ao):: tmp_arr
     !! Temporary array
     logical, intent(in), optional :: to_MOs
     !! Convert transition amplitudes to the MO basis.
-    real(real64), dimension(:,:,:), intent(in), optional :: coefs_ia
+    real(realwp), dimension(:,:,:), intent(in), optional :: coefs_ia
     !! Coefficients of MOs in AOs basis
-    real(real64), dimension(:,:,:), allocatable, target :: eltrans_amp
+    real(realwp), dimension(:,:,:), allocatable, target :: eltrans_amp
     !! Electronic transition amplitudes
 
     integer :: i, iab, j, k, l, max_nmo
-    real(real64), dimension(:,:,:), allocatable, target :: tmp
-    real(real64), dimension(:,:,:), pointer :: amp_ao => null()
+    real(realwp), dimension(:,:,:), allocatable, target :: tmp
+    real(realwp), dimension(:,:,:), pointer :: amp_ao => null()
     logical :: to_MO
 
     if (present(to_MOs)) then
@@ -749,7 +749,7 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
         !$omp parallel do collapse(2)
         do i = 1, n_ao
             do k = 1, n_ao
-                tmp_arr(k,i) = 0.0_real64
+                tmp_arr(k,i) = f0
                 do l = 1, n_ao
                     tmp_arr(k,i) = tmp_arr(k,i) + &
                         trans_el_dens(l,k,iab)*ovlp_ao(l,i)
@@ -761,7 +761,7 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
         !$omp parallel do collapse(2)
         do i = 1, n_ao
             do j = 1, n_ao
-                amp_ao(j,i,iab) = 0.0_real64
+                amp_ao(j,i,iab) = f0
                 do k = 1, n_ao
                     amp_ao(j,i,iab) = amp_ao(j,i,iab) + &
                         ovlp_ao(j,k)*tmp_arr(k,i)

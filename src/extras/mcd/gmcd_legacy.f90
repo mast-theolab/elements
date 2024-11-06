@@ -3,7 +3,7 @@ module gmcd_legacy
     !!
     !! New or "modernized" procedures, used to preserve some of the
     !!   original behavior and facilitate the migration.
-    use iso_fortran_env, only: int32, real64
+    use numeric, only: realwp
     use exception, only: ArgumentError, BaseException, InitError, RaiseError
     use output, only: iu_out
     use electronic, only: convert_AO2MO
@@ -30,20 +30,20 @@ subroutine build_MOs(n_ab, n_ao, n_mos, c_ia, txt_fmt)
     !! Number of atomic orbitals
     integer, dimension(:), intent(in) :: n_mos
     !! Number of alpha/beta molecular orbitals
-    real(real64), dimension(:,:,:), intent(in) :: c_ia
+    real(realwp), dimension(:,:,:), intent(in) :: c_ia
     !! Coefficients of MOs in AOs basis
     logical, optional, intent(in) :: txt_fmt
     !! if present and True, save a formatted version of the file as well
 
-    integer(int32), parameter :: nfiles = 8, ncols_txt = 5
-    integer(int32), dimension(nfiles), parameter :: &
+    integer, parameter :: nfiles = 8, ncols_txt = 5
+    integer, dimension(nfiles), parameter :: &
         LPx = [3, 6, 3, 3, 3, 3, 3, 3]
         ! LPx = [3, 6, 3, 3, 3, 3, 3, 3, 3, 3]
     integer :: i, iab, ifile, iorb, irec0, iu_fi, iu_fo, iu_txt, ix, llab, &
         lrec, n_mo, N1, N2
-    real(real64), dimension(n_ao,n_ao) :: q_ao
-    real(real64), dimension(:, :), allocatable :: q_mo
-    real(real64), dimension(:, :), allocatable :: tmp_arr
+    real(realwp), dimension(n_ao,n_ao) :: q_ao
+    real(realwp), dimension(:, :), allocatable :: q_mo
+    real(realwp), dimension(:, :), allocatable :: tmp_arr
     character(len=2) :: qlab
     character(len=1), dimension(3), target :: lab_xyz = ['X', 'Y', 'Z']
     character(len=2), dimension(6), target :: &

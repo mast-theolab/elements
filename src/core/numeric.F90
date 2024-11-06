@@ -3,6 +3,25 @@ module numeric
 
     implicit none
 
+#ifdef USE_R8
+    integer, parameter :: realwp = real64
+#elif defined USE_R4
+    integer, parameter :: realwp = real32
+#else
+    integer, parameter :: realwp = real64
+#endif
+    !! Working precision for real, can be changed through 
+
+    real(realwp), parameter :: &
+        f0 = 0.0_realwp, f1 = 1.0_realwp, f2 = 2.0_realwp, &
+        f3 = 3.0_realwp, f4 = 4.0_realwp, f5 = 5.0_realwp, &
+        f6 = 6.0_realwp, f7 = 7.0_realwp, f8 = 8.0_realwp, &
+        f9 = 9.0_realwp, f10 = 10.0_realwp, &
+        fhalf = 0.5_realwp, fquart = 0.25_realwp
+
+    real(realwp), parameter :: &
+        pi = f4*atan(f1)
+
 contains
 
 ! ======================================================================
@@ -42,11 +61,11 @@ function is_real(arg) result(res)
 
     select type (arg)
         type is (real(real32))
-            res = .True.
+            res = .true.
         type is (real(real64))
-            res = .True.
+            res = .true.
         class default
-            res = .False.
+            res = .false.
     end select
 
 end function is_real
@@ -64,17 +83,17 @@ function is_number(arg) result(res)
 
     select type (arg)
         type is (integer(int16))
-            res = .True.
+            res = .true.
         type is (integer(int32))
-            res = .True.
+            res = .true.
         type is (integer(int64))
-            res = .True.
+            res = .true.
         type is (real(real32))
-            res = .True.
+            res = .true.
         type is (real(real64))
-            res = .True.
+            res = .true.
         class default
-            res = .False.
+            res = .false.
     end select
 
 end function is_number
@@ -92,11 +111,11 @@ function to_int64(arg) result(res)
 
     select type (arg)
         type is (integer(int16))
-            res = int(arg)
+            res = int(arg, kind=real32)
         type is (integer(int32))
-            res = int(arg)
+            res = int(arg, kind=real32)
         type is (integer(int64))
-            res = int(arg)
+            res = int(arg, kind=real32)
         type is (real(real32))
             res = int(arg)
         type is (real(real64))
@@ -120,11 +139,11 @@ function to_real64(arg) result(res)
 
     select type (arg)
         type is (integer(int16))
-            res = real(arg)
+            res = real(arg, kind=real64)
         type is (integer(int32))
-            res = real(arg)
+            res = real(arg, kind=real64)
         type is (integer(int64))
-            res = real(arg)
+            res = real(arg, kind=real64)
         type is (real(real32))
             res = real(arg)
         type is (real(real64))

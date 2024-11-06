@@ -1,6 +1,7 @@
 submodule (input:input_data) input_data_fchk
     !! Submodule containing the definition of procedures related to the
     !! data extraction.
+    use numeric, only: f2
     use arrays, only: symm_tri_array
     use parsefchk, only: fchkdata, fchkparser
     use basisset, only: build_bset_DB
@@ -109,7 +110,7 @@ module procedure build_bset_data_fchk
         shell_types, &   ! shell types
         prim_per_sh, &   ! number of primitives per shell
         shell_to_at      ! shell to atom mapping
-    real(real64), dimension(:), allocatable :: &
+    real(realwp), dimension(:), allocatable :: &
         coef_contr, &    ! contraction coefficients
         coef_contrSP, &  ! contraction coefficients (P(S=P))
         prim_exp         ! primitives exponents
@@ -362,8 +363,7 @@ module procedure build_exc_data_fchk
     ! We need to do the inverse operation to get the correct coefficients.
     if (dfile%check_version(major='G16')) then
         exc%g2e_dens = reshape(dbase(10)%rdata, &
-                               [n_basis,n_basis,2,exc%n_states]) &
-                       / sqrt(2.0_real64)
+                               [n_basis,n_basis,2,exc%n_states]) / sqrt(f2)
     else
         exc%g2e_dens = reshape(dbase(10)%rdata, &
                                [n_basis,n_basis,2,exc%n_states])
@@ -408,7 +408,7 @@ module procedure build_vib_data_fchk
     ]
 
     integer :: i, ia, n_at3
-    real(real64), dimension(:,:), allocatable :: evec
+    real(realwp), dimension(:,:), allocatable :: evec
     logical :: build_Lmat, build_Lmweig, ok
     type(fchkparser) :: dfchk
     type(fchkdata), dimension(:), allocatable :: dbase
@@ -486,7 +486,7 @@ module procedure get_data_from_id_fchk
     !! The procedure also takes care of doing necessary adjustments if
     !! needed.
     integer :: der_ord, i, ioff, LP
-    real(real64), dimension(:), allocatable :: tmpvec
+    real(realwp), dimension(:), allocatable :: tmpvec
     logical :: ok
     character(len=42), dimension(:), allocatable :: fchk_keys
     type(fchkparser) :: dfchk
@@ -868,7 +868,7 @@ module procedure get_data_from_tag_fchk
     !! The procedure also takes care of doing necessary adjustments if
     !! needed.
     integer :: der_ord, i, ioff, LP
-    real(real64), dimension(:), allocatable :: tmpvec
+    real(realwp), dimension(:), allocatable :: tmpvec
     logical :: ok
     character(len=42), dimension(:), allocatable :: fchk_keys
     type(fchkparser) :: dfchk
@@ -944,9 +944,9 @@ function elquad_LT_to_2D(equad_LT) result(equad_2D)
     !! XX, YY, ZZ, XY, XZ, ZZ
     !! The function builds a complete, symmetric 2D tensor, reordering
     !! the elements.
-    real(real64), dimension(:), intent(in) :: equad_LT
+    real(realwp), dimension(:), intent(in) :: equad_LT
     !! Electric quadrupole, in lower triangular form as stored by Gaussian.
-    real(real64), dimension(3,3) :: equad_2D
+    real(realwp), dimension(3,3) :: equad_2D
     !! Electric quadrupole, as symmetric tensor
     equad_2D(1,1) = equad_LT(1)
     equad_2D(2,2) = equad_LT(2)

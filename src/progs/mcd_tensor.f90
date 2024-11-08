@@ -82,6 +82,7 @@ program mcd_tensor
             write_param_char
     end interface write_param
 
+    1000 format(/,' ERROR: Failure to extract ',a,' data. Aborting.')
     1200 format(/, &
         ' > Number of excited states : ',i0,/, &
         ' > Reference excited state  : ',i0)
@@ -108,28 +109,47 @@ program mcd_tensor
         call write_err('std', &
             'Error found while parsing molecular specifications in file', &
             dfile%get_error())
-            stop 1
+        stop 1
+    end if
+    if (.not.moldb%loaded) then
+        write(iu_out, 1000) 'molecular'
+        stop 1
     end if
     bsetdb = dfile%get_bset_data()
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing basis set data in file', &
             dfile%get_error())
-            stop 1
+        stop 1
+    end if
+    if (.not.bsetdb%loaded) then
+        write(iu_out, 1000) 'basis set-related'
+        stop 1
     end if
     orbdb = dfile%get_orb_data()
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing molecular orbitals data in file', &
             dfile%get_error())
-            stop 1
+        stop 1
+    end if
+    if (.not.orbdb%loaded) then
+        write(iu_out, 1000) 'orbitals-related'
+        stop 1
     end if
     excdb = dfile%get_exc_data(get_dens=.true.)
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing electronic excitations data in file', &
             dfile%get_error())
-            stop 1
+        stop 1
+    end if
+    if (.not.excdb%prop_loaded) then
+        write(iu_out, 1000) 'excited-state'
+        stop 1
+    else if (.not.excdb%dens_loaded) then
+        write(iu_out, 1000) 'transition density'
+        stop 1
     end if
     ! if (openshell) then
     !     call write_err('gen', &
@@ -247,6 +267,10 @@ program mcd_tensor
             dfile%get_error())
             stop 1
     end if
+    if (.not.excdb%dens_loaded) then
+        write(iu_out, 1000) 'transition density'
+        stop 1
+    end if
     write(iu_out, 1200) excdb%n_states, excdb%id_state
 
     call sec_header(2, 'User overrides')
@@ -271,8 +295,6 @@ program mcd_tensor
     if (.not.exists) &
         write(iu_out, '(1x,a)') &
             'No modifications requested. Proceeding with data found.'
-
-    ! call prt_mat(g2e_dens(:,:,1,1), n_basis, n_basis)
 
     call sec_header(2, 'Definition of Transition Amplitudes')
     if (debug%timer) call write_time('Build trans. amplitudes')

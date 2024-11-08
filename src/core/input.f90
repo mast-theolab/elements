@@ -274,13 +274,15 @@ end function build_orb_data
 
 ! ----------------------------------------------------------------------
 
-module function build_exc_data(dfile, fname, ftype, err) result(exc)
+module function build_exc_data(dfile, get_dens, fname, ftype, err) result(exc)
     class(DataFile), intent(inout), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
     !! File name containing data of interest.
     character(len=*), intent(in), optional :: ftype
     !! File type, superseeds the automatic search.
+    logical, intent(in), optional :: get_dens
+    !! Load electronic transition density from data file.
     class(BaseException), allocatable, intent(out), optional :: err
     !! Error instance
     type(ExcitationDB) :: exc

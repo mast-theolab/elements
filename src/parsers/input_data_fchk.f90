@@ -275,18 +275,18 @@ module procedure build_exc_data_fchk
     !! An instance of ExcitationDB is returned.
 
     character(len=42), dimension(12), parameter :: fchk_keys = [ &
-        'Number of basis functions            ', &  !  1.
-        'Beta Orbital Energies                ', &  !  2.
-        'Total CI Density                     ', &  !  3.
-        'ETran scalars                        ', &  !  4.
-        'ETran spin                           ', &  !  5.
-        'ETran sym                            ', &  !  6.
-        'ETran state values                   ', &  !  7.
-        'Excited state NLR                    ', &  !  8.
-        'Number of g2e trans dens             ', &  !  9.
-        'G to E trans densities               ', &  ! 10.
-        'Excited state densities              ', &  ! 11.
-        'SCF Energy                           '  &  ! 12.
+        'Number of basis functions                 ', &  !  1.
+        'Beta Orbital Energies                     ', &  !  2.
+        'Total CI Density                          ', &  !  3.
+        'ETran scalars                             ', &  !  4.
+        'ETran spin                                ', &  !  5.
+        'ETran sym                                 ', &  !  6.
+        'ETran state values                        ', &  !  7.
+        'Excited state NLR                         ', &  !  8.
+        'Number of g2e trans dens                  ', &  !  9.
+        'G to E trans densities                    ', &  ! 10.
+        'Excited state densities                   ', &  ! 11.
+        'SCF Energy                                '  &  ! 12.
     ]
 
     integer :: &
@@ -353,36 +353,47 @@ module procedure build_exc_data_fchk
         exc%g2e_magdip(:,i) = dbase(7)%rdata(8+ioff:10+ioff)
     end do
 
-    ! Now extract the ground to excited transition moments
-    ! structure: n_basis, n_basis, alpha/beta, n_states
-    allocate(exc%g2e_dens(n_basis,n_basis,2,exc%n_states), &
-             exc%exc_dens(n_basis,n_basis,n_ab,exc%n_states))
-    ! WARNING: We need to be careful here!
-    ! Gaussian up to G16 included saved the transition densities with embedded
-    ! coefficients, sqrt(2) for TD and it seems 1/sqrt(2) for CI.
-    ! We need to do the inverse operation to get the correct coefficients.
-    if (dfile%check_version(major='G16')) then
-        exc%g2e_dens = reshape(dbase(10)%rdata, &
-                               [n_basis,n_basis,2,exc%n_states]) / sqrt(f2)
-    else
-        exc%g2e_dens = reshape(dbase(10)%rdata, &
-                               [n_basis,n_basis,2,exc%n_states])
+    ! -- electronic density
+    if (present(get_dens)) then
+        if (get_dens) then
+            ! Now extract the ground to excited transition moments
+            ! structure: n_basis, n_basis, alpha/beta, n_states
+            ! WARNING: We need to be careful here!
+            ! Gaussian up to G16 included saved the transition densities with
+            ! embedded coefficients, sqrt(2) for TD and it seems 1/sqrt(2) for
+            ! CI.
+            ! We need to do the inverse operation to get the correct
+            ! coefficients.
+            if (dfile%check_version(major='G16')) then
+                exc%g2e_dens = &
+                    reshape(dbase(10)%rdata, [n_basis,n_basis,2,exc%n_states])&
+                    / sqrt(f2)
+            else
+                exc%g2e_dens = reshape(dbase(10)%rdata, &
+                                       [n_basis,n_basis,2,exc%n_states])
+            end if
+
+            ! Excited-state densities are stored in lower-triangular forms.
+            ! We need to unpack them.
+            ! They are always stored for both a and b, but in case of closed-shell,
+            ! we only keep the first block (they are equal.)
+            allocate(exc%exc_dens(n_basis,n_basis,n_ab,exc%n_states))
+            
+            nbas_lt = n_basis*(n_basis+1)/2
+            do i = 1, exc%n_states
+                ioff = (i-1)*2*nbas_lt
+                do i_ab = 1, n_ab
+                    call symm_tri_array(n_basis, &
+                        dbase(11)%rdata(ioff+(i_ab-1)*nbas_lt+1:), &
+                        linear=.true., lower=.true., anti_symm=.false., &
+                        arr_new=exc%exc_dens(:,:,i_ab,i))
+                end do
+            end do
+
+            exc%dens_loaded = .true.
+        end if
     end if
 
-    ! Excited-state densities are stored in lower-triangular forms.
-    ! We need to unpack them.
-    ! They are always stored for both a and b, but in case of closed-shell.
-    nbas_lt = n_basis*(n_basis+1)/2
-    do i = 1, exc%n_states
-        ioff = (i-1)*2*nbas_lt
-        do i_ab = 1, n_ab
-            call symm_tri_array(n_basis, &
-                dbase(11)%rdata(ioff+(i_ab-1)*nbas_lt+1:), linear=.true., &
-                lower=.true., anti_symm=.false., arr_new=exc%exc_dens(:,:,i_ab,i))
-        end do
-    end do
-
-    exc%dens_loaded = .true.
     exc%prop_loaded = .true.
 
     deallocate(dbase)

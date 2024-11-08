@@ -124,7 +124,7 @@ program mcd_tensor
             dfile%get_error())
             stop 1
     end if
-    excdb = dfile%get_exc_data()
+    excdb = dfile%get_exc_data(get_dens=.true.)
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing electronic excitations data in file', &
@@ -240,7 +240,7 @@ program mcd_tensor
 
     call sec_header(1, 'Transition Data')
     if (debug%timer) call write_time('Transition data')
-    excdb = dfile%get_exc_data()
+    excdb = dfile%get_exc_data(get_dens=.true.)
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing excited-states data in file', &

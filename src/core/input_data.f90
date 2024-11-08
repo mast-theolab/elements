@@ -42,9 +42,11 @@ end function build_orb_data_fchk
 
 ! ----------------------------------------------------------------------
 
-module function build_exc_data_fchk(dfile) result(exc)
+module function build_exc_data_fchk(dfile, get_dens) result(exc)
     class(DataFile), intent(inout) :: dfile
     !! Name of the formatted checkpoint file.
+    logical, intent(in), optional :: get_dens
+    !! Load electronic transition density from data file.
     type(ExcitationDB) :: exc
     !! Electronic excitation information.
 
@@ -313,7 +315,7 @@ module procedure build_exc_data
     end if
 
     if (file%type == 'GFChk') then
-        exc = build_exc_data_fchk(file)
+        exc = build_exc_data_fchk(file, get_dens)
         if (file%error%raised() .and. .not.present(dfile)) then
             if (present(err)) then
                 err = file%error

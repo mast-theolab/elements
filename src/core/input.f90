@@ -30,8 +30,11 @@ module input
         type(ProgramInfo) :: prog
         class(BaseException), allocatable :: error
     contains
-        procedure :: build_mol_data, build_bset_data, build_orb_data, &
-            build_exc_data, build_vib_data
+        procedure :: get_mol_data => build_mol_data
+        procedure :: get_bset_data => build_bset_data
+        procedure :: get_orb_data => build_orb_data
+        procedure :: get_exc_data => build_exc_data
+        procedure :: get_vib_data => build_vib_data
         procedure, private :: get_data_from_id, get_data_from_tag
         procedure :: get_name => get_datafile_name
         procedure :: get_type => get_datafile_type

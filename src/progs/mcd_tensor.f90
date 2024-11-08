@@ -103,28 +103,28 @@ program mcd_tensor
 
     call sec_header(1, 'Data on Molecular System')
     if (debug%timer) call write_time('Molecular data')
-    moldb = dfile%build_mol_data()
+    moldb = dfile%get_mol_data()
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing molecular specifications in file', &
             dfile%get_error())
             stop 1
     end if
-    bsetdb = dfile%build_bset_data()
+    bsetdb = dfile%get_bset_data()
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing basis set data in file', &
             dfile%get_error())
             stop 1
     end if
-    orbdb = dfile%build_orb_data()
+    orbdb = dfile%get_orb_data()
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing molecular orbitals data in file', &
             dfile%get_error())
             stop 1
     end if
-    excdb = dfile%build_exc_data()
+    excdb = dfile%get_exc_data()
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing electronic excitations data in file', &
@@ -240,7 +240,7 @@ program mcd_tensor
 
     call sec_header(1, 'Transition Data')
     if (debug%timer) call write_time('Transition data')
-    excdb = dfile%build_exc_data()
+    excdb = dfile%get_exc_data()
     if (dfile%has_error()) then
         call write_err('std', &
             'Error found while parsing excited-states data in file', &

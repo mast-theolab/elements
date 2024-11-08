@@ -69,14 +69,14 @@ program test_read_vibdata
                         dfile%get_error())
             stop 1
         end if
-        mols(ifile) = dfile%build_mol_data()
+        mols(ifile) = dfile%get_mol_data()
         if (dfile%has_error()) then
             call write_err('std', &
                 'Error found while parsing molecular data in file', &
                 dfile%get_error())
                 stop 1
         end if
-        vibs(ifile) = dfile%build_vib_data()
+        vibs(ifile) = dfile%get_vib_data()
         if (dfile%has_error()) then
             call write_err('std', &
                 'Error found while parsing vibrational data in file', &

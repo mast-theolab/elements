@@ -8,7 +8,8 @@ module input
     implicit none
 
     private
-    public :: build_bset_data, build_exc_data, build_orb_data, build_vib_data
+    public :: build_bset_data, build_exc_data, build_mol_data, &
+        build_orb_data, build_vib_data
 
     type, public :: ProgramInfo
         private

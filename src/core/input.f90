@@ -225,13 +225,15 @@ end function get_error_msg
 
 ! ----------------------------------------------------------------------
 
-module function build_mol_data(dfile, fname, ftype, err) result(mol)
+module function build_mol_data(dfile, fname, ftype, get_dens, err) result(mol)
     class(DataFile), intent(inout), target, optional :: dfile
     !! DataFile instance.
     character(len=*), intent(in), optional :: fname
     !! File name containing data of interest.
     character(len=*), intent(in), optional :: ftype
     !! File type, superseeds the automatic search.
+    logical, intent(in), optional :: get_dens
+    !! Load electronic density from data file.
     class(BaseException), allocatable, intent(out), optional :: err
     !! Error instance
     type(MoleculeDB) :: mol

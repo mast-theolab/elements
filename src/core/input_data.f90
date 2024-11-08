@@ -12,9 +12,11 @@ interface
 
 ! ----------------------------------------------------------------------
 
-module function build_mol_data_fchk(dfile) result(mol)
+module function build_mol_data_fchk(dfile, get_dens) result(mol)
     class(DataFile), intent(inout) :: dfile
     !! Name of the formatted checkpoint file.
+    logical, intent(in), optional :: get_dens
+    !! Load electronic density from data file.
     type(MoleculeDB) :: mol
     !! Molecular specifications database.
 
@@ -147,7 +149,7 @@ module procedure build_mol_data
     end if
 
     if (file%type == 'GFChk') then
-        mol = build_mol_data_fchk(file)
+        mol = build_mol_data_fchk(file, get_dens)
         if (file%error%raised() .and. .not.present(dfile)) then
             if (present(err)) then
                 err = file%error

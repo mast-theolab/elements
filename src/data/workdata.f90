@@ -17,9 +17,13 @@ module workdata
             at_mas         ! atomic masses
         real(realwp), dimension(:,:), allocatable :: &
             at_crd         ! atomic coordinates
+        real(realwp), dimension(:,:,:), allocatable :: &
+            el_dens        ! electronic density
         character(len=2), dimension(:), allocatable :: &
             at_lab         ! atomic labels
-        logical :: loaded = .false.
+        logical :: &
+            loaded = .false., &
+            dens_loaded = .false.   ! electronic density has been loaded.
     end type MoleculeDB
 
     type, public :: BasisSetDB

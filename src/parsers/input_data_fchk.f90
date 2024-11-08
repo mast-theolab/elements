@@ -25,19 +25,23 @@ module procedure build_mol_data_fchk
     !! molecular specification data.
     !! An instance of MoleculeDB is returned.
 
-    character(len=42), dimension(9) :: fchk_keys = [ &
-        'Number of atoms                           ', &  ! 1
-        'Number of electrons                       ', &  ! 2
-        'Charge                                    ', &  ! 3
-        'Multiplicity                              ', &  ! 4
-        'Current cartesian coordinates             ', &  ! 5
-        'Atomic numbers                            ', &  ! 6
-        'Nuclear charges                           ', &  ! 7
-        'Real atomic weights                       ', &  ! 8
-        'Total Energy                              '  &  ! 9
+    character(len=42), dimension(12), parameter :: fchk_keys = [ &
+        'Number of atoms                           ', &  !  1
+        'Number of electrons                       ', &  !  2
+        'Charge                                    ', &  !  3
+        'Multiplicity                              ', &  !  4
+        'Current cartesian coordinates             ', &  !  5
+        'Atomic numbers                            ', &  !  6
+        'Nuclear charges                           ', &  !  7
+        'Real atomic weights                       ', &  !  8
+        'Total Energy                              ', &  !  9
+        'Number of basis functions                 ', &  ! 10.
+        'Total SCF Density                         ', &  ! 11
+        'Spin SCF Density                          '  &  ! 12
     ]
 
-    integer :: ia
+    integer :: ia, n_ab, n_basis
+    real(realwp), dimension(:), allocatable :: tmparr
     logical :: ok
     type(fchkparser) :: dfchk
     type(fchkdata), dimension(:), allocatable :: dbase
@@ -75,6 +79,32 @@ module procedure build_mol_data_fchk
     ! -- energy
     mol%energy = dbase(9)%rdata(1)
 
+    ! -- electronic density
+    if (present(get_dens)) then
+        if (get_dens) then
+            ! If Spin SCF density absent, the molecule should be closed-shell
+            if (dbase(12)%dtype == '0') then
+                n_ab = 1
+            else
+                n_ab = 2
+            end if
+            n_basis = dbase(10)%idata(1)
+            ! Check that the dimensions make sense. This should never fail.
+            if (n_basis*(n_basis+1)/2 /= size(dbase(11)%rdata)) &
+                stop 'Inconsistency in SCF density size'
+            allocate(mol%el_dens(n_basis,n_basis,n_ab))
+            call symm_tri_array(n_basis, dbase(11)%rdata, linear=.true., &
+                lower=.true., anti_symm=.false., arr_new=mol%el_dens(:,:,1))
+            if (n_ab == 2) then
+                tmparr = dbase(11)%rdata - dbase(12)%rdata
+                call symm_tri_array(n_basis, tmparr, linear=.true., &
+                    lower=.true., anti_symm=.false., &
+                    arr_new=mol%el_dens(:,:,2))
+            end if
+        end if
+        mol%dens_loaded = .true.
+    end if
+
     mol%loaded = .true.
 
     deallocate(dbase)
@@ -90,7 +120,7 @@ module procedure build_bset_data_fchk
     !! set information data.
     !! An instance of BasisSetDB is returned.
 
-    character(len=42), dimension(12) :: fchk_keys = [ &
+    character(len=42), dimension(12), parameter :: fchk_keys = [ &
         'Number of atoms                           ', &  !  1
         'Number of basis functions                 ', &  !  2
         'Number of independent functions           ', &  !  3
@@ -186,7 +216,7 @@ module procedure build_orb_data_fchk
     !! molecular specification data.
     !! An instance of OrbitalsDB is returned.
 
-    character(len=42), dimension(7) :: fchk_keys = [ &
+    character(len=42), dimension(7), parameter :: fchk_keys = [ &
         'Number of alpha electrons                 ', &  ! 1
         'Number of beta electrons                  ', &  ! 2
         'Number of basis functions                 ', &  ! 3
@@ -257,7 +287,7 @@ module procedure build_orb_data_fchk
         end do
         deallocate(dbase(5)%rdata)
     end if
-    
+
     orb%loaded = .true.
 
     deallocate(dbase)

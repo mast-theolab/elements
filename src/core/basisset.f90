@@ -299,11 +299,11 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
             ! - sqrt(int_xn_e2ax2(2*2, alpha)*int_xn_e2ax2(1*2, alpha)
             !     *int_xn_e2ax2(0, alpha))
             ! - sqrt(int_xn_e2ax2(2*1, alpha)**3
-            cnorm = sqrt(f2sqal**7/(sq2pi**3))
+            cnorm = sqrt(f2sqal**9/(sq2pi**3))
             new_coefs(0) = coef
             new_coefs(3) = coef*cnorm
-            new_coefs(2) = new_coefs(1)/sqrt(f3)
-            new_coefs(1) = new_coefs(2)/sqrt(15.0_realwp)
+            new_coefs(2) = new_coefs(3)/sqrt(f3)
+            new_coefs(1) = new_coefs(3)/sqrt(15.0_realwp)
             indexes(:,3) = [1, 1, 1]
             indexes(:,2) = [0, 1, 2]
             indexes(:,1) = [0, 0, 3]
@@ -802,15 +802,25 @@ subroutine set_primC_comp(bfunc, ndimC, lxyz, coefs, err)
         case ('F')
             ndimC = 10
             allocate(lxyz(3,ndimC), coefs(ndimC))
+            ! lxyz(:, 1) = [3, 0, 0]
+            ! lxyz(:, 2) = [0, 3, 0]
+            ! lxyz(:, 3) = [0, 0, 3]
+            ! lxyz(:, 4) = [1, 2, 0]
+            ! lxyz(:, 5) = [2, 1, 0]
+            ! lxyz(:, 6) = [2, 0, 1]
+            ! lxyz(:, 7) = [1, 0, 2]
+            ! lxyz(:, 8) = [0, 1, 2]
+            ! lxyz(:, 9) = [0, 2, 1]
+            ! lxyz(:,10) = [1, 1, 1]
             lxyz(:, 1) = [3, 0, 0]
             lxyz(:, 2) = [0, 3, 0]
             lxyz(:, 3) = [0, 0, 3]
-            lxyz(:, 4) = [1, 2, 0]
-            lxyz(:, 5) = [2, 1, 0]
-            lxyz(:, 6) = [2, 0, 1]
-            lxyz(:, 7) = [1, 0, 2]
-            lxyz(:, 8) = [0, 1, 2]
-            lxyz(:, 9) = [0, 2, 1]
+            lxyz(:, 4) = [2, 1, 0]
+            lxyz(:, 5) = [2, 0, 1]
+            lxyz(:, 6) = [1, 2, 0]
+            lxyz(:, 7) = [0, 2, 1]
+            lxyz(:, 8) = [1, 0, 2]
+            lxyz(:, 9) = [0, 1, 2]
             lxyz(:,10) = [1, 1, 1]
             coefs( 1: 3) = bfunc%coeff(1)
             coefs( 4: 9) = bfunc%coeff(2)

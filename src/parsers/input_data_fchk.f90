@@ -581,17 +581,58 @@ module procedure get_data_from_id_fchk
 
     ! Now extract information
     select case(identifier)
+    case(50)
+        prop%order = der_ord
+        ! Electronic transition moment
+        if (prop%states(1) == 0) then
+            fchk_keys = [ &
+                'Nonadiabatic coupling                ', &  !  1.
+                'ETran scalars                        ', &  !  2.
+                'Number of atoms                      '  &  !  3.
+            ]
+            dbase = dfchk%read(fchk_keys)
+            if (dbase(2)%dtype == '0') then
+                prop%istat = 2
+                return
+            end if
+            LP = 1  ! we could use prop%pdim but not much sense.
+            if (prop%order == 0) then
+                block
+                integer :: exc_state, lblock, n_at3, n_LR, n_states
+                n_states = dbase(2)%idata(1)
+                exc_state = dbase(2)%idata(5)
+                lblock = dbase(2)%idata(2)
+                n_LR = dbase(2)%idata(3)
+                n_at3 = 3 * dbase(3)%idata(1)
+                if (exc_state /= prop%states(2) .and. &
+                        prop%states(2) /= -1) then
+                    prop%istat = 2
+                    return
+                end if
+                allocate(prop%data(LP*n_at3))
+                prop%data = dbase(1)%rdata
+                prop%loaded = .true.
+                prop%shape = [n_at3]
+                prop%dim_shape = [1]
+                end block
+            else
+                prop%istat = 1
+            end if
+        else
+            prop%istat = 1
+        end if
     case(101)
         prop%order = der_ord
         if (prop%states(1) /= prop%states(2)) then
             ! Electronic transition moment
             if (prop%states(1) == 0) then
                 fchk_keys = [ &
-                    'ETran scalars                        ', &  !  1.
-                    'ETran state values                   '  &  !  2.
+                    'ETran state values                   ', &  !  1.
+                    'ETran scalars                        ', &  !  2.
+                    'Number of atoms                      '  &  !  3.
                 ]
                 dbase = dfchk%read(fchk_keys)
-                if (dbase(1)%dtype == '0') then
+                if (dbase(2)%dtype == '0') then
                     prop%istat = 2
                     return
                 end if
@@ -599,8 +640,8 @@ module procedure get_data_from_id_fchk
                 if (prop%order == 0) then
                     block
                     integer :: n_states, lblock
-                    n_states = dbase(1)%idata(1)
-                    lblock = dbase(1)%idata(2)
+                    n_states = dbase(2)%idata(1)
+                    lblock = dbase(2)%idata(2)
                     if (n_states < prop%states(2)) then
                         prop%istat = 2
                         return
@@ -610,7 +651,7 @@ module procedure get_data_from_id_fchk
                         do i = 1, n_states
                             ioff = (i-1)*lblock
                             prop%data((i-1)*LP+1:i*LP) = &
-                                dbase(2)%rdata(2+ioff:4+ioff)
+                                dbase(1)%rdata(2+ioff:4+ioff)
                         end do
                         prop%loaded = .true.
                         prop%shape = [LP, n_states]
@@ -618,7 +659,7 @@ module procedure get_data_from_id_fchk
                     else
                         allocate(prop%data(LP))
                         ioff = (prop%states(2)-1)*lblock
-                        prop%data = dbase(2)%rdata(2+ioff:4+ioff)
+                        prop%data = dbase(1)%rdata(2+ioff:4+ioff)
                         prop%loaded = .true.
                         prop%shape = [LP]
                         prop%dim_shape = [1]
@@ -627,11 +668,11 @@ module procedure get_data_from_id_fchk
                 else if (prop%order == 1) then
                     block
                     integer :: exc_state, lblock, n_at3, n_LR, n_states
-                    n_states = dbase(1)%idata(1)
-                    exc_state = dbase(1)%idata(5)
-                    lblock = dbase(1)%idata(2)
-                    n_LR = dbase(1)%idata(3)
-                    n_at3 = dbase(1)%idata(6) - 3  ! 3*natoms + 3 (elec. field)
+                    n_states = dbase(2)%idata(1)
+                    exc_state = dbase(2)%idata(5)
+                    lblock = dbase(2)%idata(2)
+                    n_LR = dbase(2)%idata(3)
+                    n_at3 = 3*dbase(3)%idata(1)
                     if (exc_state /= prop%states(2) .and. &
                             prop%states(2) /= -1) then
                         prop%istat = 2
@@ -641,7 +682,7 @@ module procedure get_data_from_id_fchk
                     ioff = lblock*n_states*n_LR + 3*lblock + 2
                     do i = 0, n_at3 - 1
                         prop%data(i*LP+1:i*LP+3) = &
-                            dbase(2)%rdata(ioff+i*lblock:ioff+i*lblock+2)
+                            dbase(1)%rdata(ioff+i*lblock:ioff+i*lblock+2)
                     end do
                     prop%loaded = .true.
                     prop%shape = [LP, n_at3]
@@ -663,11 +704,12 @@ module procedure get_data_from_id_fchk
             ! Electronic transition moment
             if (prop%states(1) == 0) then
                 fchk_keys = [ &
-                    'ETran scalars                        ', &  !  1.
-                    'ETran state values                   '  &  !  2.
+                    'ETran state values                   ', &  !  1.
+                    'ETran scalars                        ', &  !  2.
+                    'Number of atoms                      '  &  !  3.
                 ]
                 dbase = dfchk%read(fchk_keys)
-                if (dbase(1)%dtype == '0') then
+                if (dbase(2)%dtype == '0') then
                     prop%istat = 2
                     return
                 end if
@@ -675,8 +717,8 @@ module procedure get_data_from_id_fchk
                 if (prop%order == 0) then
                     block
                     integer :: n_states, lblock
-                    n_states = dbase(1)%idata(1)
-                    lblock = dbase(1)%idata(2)
+                    n_states = dbase(2)%idata(1)
+                    lblock = dbase(2)%idata(2)
                     if (n_states < prop%states(2)) then
                         prop%istat = 2
                         return
@@ -686,7 +728,7 @@ module procedure get_data_from_id_fchk
                         do i = 1, n_states
                             ioff = (i-1)*lblock
                             prop%data((i-1)*LP+1:i*LP) = &
-                                dbase(2)%rdata(5+ioff:7+ioff)
+                                dbase(1)%rdata(5+ioff:7+ioff)
                         end do
                         prop%loaded = .true.
                         prop%shape = [LP, n_states]
@@ -694,7 +736,7 @@ module procedure get_data_from_id_fchk
                     else
                         allocate(prop%data(LP))
                         ioff = (prop%states(2)-1)*lblock
-                        prop%data = dbase(2)%rdata(5+ioff:7+ioff)
+                        prop%data = dbase(1)%rdata(5+ioff:7+ioff)
                         prop%loaded = .true.
                         prop%shape = [LP]
                         prop%dim_shape = [1]
@@ -703,11 +745,11 @@ module procedure get_data_from_id_fchk
                 else if (prop%order == 1) then
                     block
                     integer :: exc_state, lblock, n_at3, n_LR, n_states
-                    n_states = dbase(1)%idata(1)
-                    exc_state = dbase(1)%idata(5)
-                    lblock = dbase(1)%idata(2)
-                    n_LR = dbase(1)%idata(3)
-                    n_at3 = dbase(1)%idata(6) - 3  ! 3*natoms + 3 (elec. field)
+                    n_states = dbase(2)%idata(1)
+                    exc_state = dbase(2)%idata(5)
+                    lblock = dbase(2)%idata(2)
+                    n_LR = dbase(2)%idata(3)
+                    n_at3 = 3 * dbase(3)%idata(1)
                     if (exc_state /= prop%states(2) .and. &
                             prop%states(2) /= -1) then
                         prop%istat = 2
@@ -717,7 +759,7 @@ module procedure get_data_from_id_fchk
                     ioff = lblock*n_states*n_LR + 3*lblock + 5
                     do i = 0, n_at3 - 1
                         prop%data(i*LP+1:i*LP+3) = &
-                            dbase(2)%rdata(ioff+i*lblock:ioff+i*lblock+2)
+                            dbase(1)%rdata(ioff+i*lblock:ioff+i*lblock+2)
                     end do
                     prop%loaded = .true.
                     prop%shape = [LP, n_at3]
@@ -739,11 +781,12 @@ module procedure get_data_from_id_fchk
             ! Electronic transition moment
             if (prop%states(1) == 0) then
                 fchk_keys = [ &
-                    'ETran scalars                        ', &  !  1.
-                    'ETran state values                   '  &  !  2.
+                    'ETran state values                   ', &  !  1.
+                    'ETran scalars                        ', &  !  2.
+                    'Number of atoms                      '  &  !  3.
                 ]
                 dbase = dfchk%read(fchk_keys)
-                if (dbase(1)%dtype == '0') then
+                if (dbase(2)%dtype == '0') then
                     prop%istat = 2
                     return
                 end if
@@ -751,8 +794,8 @@ module procedure get_data_from_id_fchk
                 if (prop%order == 0) then
                     block
                     integer :: n_states, lblock
-                    n_states = dbase(1)%idata(1)
-                    lblock = dbase(1)%idata(2)
+                    n_states = dbase(2)%idata(1)
+                    lblock = dbase(2)%idata(2)
                     if (n_states < prop%states(2)) then
                         prop%istat = 2
                         return
@@ -762,7 +805,7 @@ module procedure get_data_from_id_fchk
                         do i = 1, n_states
                             ioff = (i-1)*lblock
                             prop%data((i-1)*LP+1:i*LP) = &
-                                dbase(2)%rdata(8+ioff:10+ioff)
+                                dbase(1)%rdata(8+ioff:10+ioff)
                         end do
                         prop%loaded = .true.
                         prop%shape = [LP, n_states]
@@ -770,7 +813,7 @@ module procedure get_data_from_id_fchk
                     else
                         allocate(prop%data(LP))
                         ioff = (prop%states(2)-1)*lblock
-                        prop%data = dbase(2)%rdata(8+ioff:10+ioff)
+                        prop%data = dbase(1)%rdata(8+ioff:10+ioff)
                         prop%loaded = .true.
                         prop%shape = [LP]
                         prop%dim_shape = [1, 1]
@@ -779,11 +822,11 @@ module procedure get_data_from_id_fchk
                 else if (prop%order == 1) then
                     block
                     integer :: exc_state, lblock, n_at3, n_LR, n_states
-                    n_states = dbase(1)%idata(1)
-                    exc_state = dbase(1)%idata(5)
-                    lblock = dbase(1)%idata(2)
-                    n_LR = dbase(1)%idata(3)
-                    n_at3 = dbase(1)%idata(6) - 3  ! 3*natoms + 3 (elec. field)
+                    n_states = dbase(2)%idata(1)
+                    exc_state = dbase(2)%idata(5)
+                    lblock = dbase(2)%idata(2)
+                    n_LR = dbase(2)%idata(3)
+                    n_at3 = 3 * dbase(3)%idata(1)
                     if (exc_state /= prop%states(2) .and. &
                             prop%states(2) /= -1) then
                         prop%istat = 2
@@ -793,7 +836,7 @@ module procedure get_data_from_id_fchk
                     ioff = lblock*n_states*n_LR + 3*lblock + 8
                     do i = 0, n_at3 - 1
                         prop%data(i*LP+1:i*LP+3) = &
-                            dbase(2)%rdata(ioff+i*lblock:ioff+i*lblock+2)
+                            dbase(1)%rdata(ioff+i*lblock:ioff+i*lblock+2)
                     end do
                     prop%loaded = .true.
                     prop%shape = [LP, n_at3]
@@ -815,11 +858,12 @@ module procedure get_data_from_id_fchk
             ! Electronic transition moment
             if (prop%states(1) == 0) then
                 fchk_keys = [ &
-                    'ETran scalars                        ', &  !  1.
-                    'ETran state values                   '  &  !  2.
+                    'ETran state values                   ', &  !  1.
+                    'ETran scalars                        ', &  !  2.
+                    'Number of atoms                      '  &  !  3.
                 ]
                 dbase = dfchk%read(fchk_keys)
-                if (dbase(1)%dtype == '0') then
+                if (dbase(2)%dtype == '0') then
                     prop%istat = 2
                     return
                 end if
@@ -828,8 +872,8 @@ module procedure get_data_from_id_fchk
                     block
                     integer :: n_states, lblock
                     allocate(tmpvec(LP))
-                    n_states = dbase(1)%idata(1)
-                    lblock = dbase(1)%idata(2)
+                    n_states = dbase(2)%idata(1)
+                    lblock = dbase(2)%idata(2)
                     if (n_states < prop%states(2)) then
                         prop%istat = 2
                         return
@@ -838,7 +882,7 @@ module procedure get_data_from_id_fchk
                         allocate(prop%data(LP*n_states))
                         do i = 1, n_states
                             ioff = (i-1)*lblock
-                            tmpvec = dbase(2)%rdata(11+ioff:16+ioff)
+                            tmpvec = dbase(1)%rdata(11+ioff:16+ioff)
                             prop%data((i-1)*LP+1:i*LP) = &
                                 reshape(elquad_LT_to_2D(tmpvec), [LP])
                         end do
@@ -848,7 +892,7 @@ module procedure get_data_from_id_fchk
                     else
                         allocate(prop%data(LP))
                         ioff = (prop%states(2)-1)*lblock
-                        tmpvec = dbase(2)%rdata(11+ioff:16+ioff)
+                        tmpvec = dbase(1)%rdata(11+ioff:16+ioff)
                         prop%data = reshape(elquad_LT_to_2D(tmpvec), [LP])
                         prop%loaded = .true.
                         prop%shape = prop%pdim
@@ -858,11 +902,11 @@ module procedure get_data_from_id_fchk
                 else if (prop%order == 1) then
                     block
                     integer :: exc_state, lblock, n_at3, n_LR, n_states
-                    n_states = dbase(1)%idata(1)
-                    exc_state = dbase(1)%idata(5)
-                    lblock = dbase(1)%idata(2)
-                    n_LR = dbase(1)%idata(3)
-                    n_at3 = dbase(1)%idata(6) - 3  ! 3*natoms + 3 (elec. field)
+                    n_states = dbase(2)%idata(1)
+                    exc_state = dbase(2)%idata(5)
+                    lblock = dbase(2)%idata(2)
+                    n_LR = dbase(2)%idata(3)
+                    n_at3 = 3 * dbase(3)%idata(1)
                     if (exc_state /= prop%states(2) .and. &
                             prop%states(2) /= -1) then
                         prop%istat = 2
@@ -871,7 +915,7 @@ module procedure get_data_from_id_fchk
                     allocate(prop%data(LP*n_at3))
                     ioff = lblock*n_states*n_LR + 3*lblock + 11
                     do i = 0, n_at3 - 1
-                        tmpvec = dbase(2)%rdata(ioff+i*lblock:ioff+i*lblock+5)
+                        tmpvec = dbase(1)%rdata(ioff+i*lblock:ioff+i*lblock+5)
                         prop%data(i*LP+1:i*LP+9) = &
                             reshape(elquad_LT_to_2D(tmpvec), [LP])
                     end do

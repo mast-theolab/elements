@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added support of non-adiabatic couplings in `Datafile.getdata`.
 - New character function `timestamp` to return a formatted string of the current date and time.
 - New "real work precision" (`realwp`) provided by module `numeric`.  The precision can be set through preprocessor directives (`-DUSE_R4`, `-DUSE_R8`).
 - Core and data modules that do not provide versions for different real precisions use `realwp` internally.
@@ -17,6 +18,7 @@
 
 ### Changed
 
+- `DataFile.getdata` extracts explicitly the number of atoms internally for derivatives, since the transition scalar with the total number of derivatives may be missing in some older chk/fchk.
 - Software-specific parsing features are moved to new directory `parsers/`; this includes the parsing tools and the interfaces for `input`.
 - `input_extract` is renamed `input_data` for better clarity.
 - Module `transdata` is renamed `excdata` for consistency.

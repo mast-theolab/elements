@@ -31,6 +31,12 @@ subroutine load_propinfo_from_id(property, identifier)
     !! Identifier of the property of interest.
 
     select case(identifier)
+    case(50)
+        property%label = 'nac'
+        property%name = 'non-adiabatic couplings'
+        property%unit = 'a0^-1'
+        property%pdim = [1]
+        property%known = .true.
     case(101)
         property%label = 'eldip'
         property%name = 'electric dipole'

@@ -81,7 +81,7 @@ program test_getdata
         else
             ider = 0
         end if
-        if (opts%is_user_set('g2e')) then
+        if (opts%is_user_set('eltrans')) then
             do_g2e = .true.
         else
             do_g2e = .false.

@@ -73,6 +73,18 @@ target("userdoc")
     add_files("doc/*.adoc")
 
 
+target("blas_drv")
+    set_kind("static")
+    add_packages("openblas")
+    add_files("src/drivers/blas.f90")
+
+
+target("lapack_drv")
+    set_kind("static")
+    add_packages("openblas")
+    add_files("src/drivers/lapack.f90")
+
+
 target("corelib")
     set_kind("static")
     add_packages("openmp")

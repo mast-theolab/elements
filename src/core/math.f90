@@ -12,10 +12,286 @@ module math
     real(real32), parameter :: pi_r32 = 4.0_real32*atan(1.0_real32)
 
     interface cross
-        module procedure scross, dcross
+        module procedure s_cross, d_cross
     end interface cross
 
+    interface inv_mat
+        module procedure s_inv_mat, d_inv_mat, c_inv_mat, z_inv_mat
+    end interface inv_mat
+
+    interface det
+        module procedure s_det, d_det, c_det, z_det
+    end interface det
+
 contains
+
+! ======================================================================
+
+subroutine s_inv_mat(A, A_inv)
+    !! Invert a real (32 bits) matrix using LAPACK.
+    use lapack_drv, only: xgetrf, xgetri
+
+    real(real32), dimension(:, :), intent(in)  :: A
+    !! Input matrix A of size (n, n)
+    real(real32), dimension(:, :), intent(out) :: A_inv
+    !! Inverse of the input matrix A
+
+    real(real32), allocatable :: work(:)
+    integer, allocatable     :: ipiv(:)
+    integer                  :: n, info
+
+    n = size(A,1)
+    if (size(A,2) /= n) then
+        stop 'Matrix must be square!'
+    end if
+
+    allocate(ipiv(n), work(2*n))
+    A_inv = A
+
+    call xgetrf(n, n, A_inv, n, ipiv, info)
+    if (info /= 0) stop 'Matrix is numerically singular!'
+
+    call xgetri(n, A_inv, n, ipiv, work, 2*n, info)
+    if (info /= 0) stop 'Matrix inversion failed!'
+
+end subroutine s_inv_mat
+
+! ======================================================================
+
+subroutine d_inv_mat(A, A_inv)
+    !! Invert a real (64 bits) matrix using LAPACK.
+    use lapack_drv, only: xgetrf, xgetri
+
+    real(real64), dimension(:, :), intent(in)  :: A
+    !! Input matrix A of size (n, n)
+    real(real64), dimension(:, :), intent(out) :: A_inv
+    !! Inverse of the input matrix A
+
+    real(real64), allocatable :: work(:)
+    integer, allocatable     :: ipiv(:)
+    integer                  :: n, info
+
+    n = size(A,1)
+    if (size(A,2) /= n) then
+        stop 'Matrix must be square!'
+    end if
+
+    allocate(ipiv(n), work(2*n))
+    A_inv = A
+
+    call xgetrf(n, n, A_inv, n, ipiv, info)
+    if (info /= 0) stop 'Matrix is numerically singular!'
+
+    call xgetri(n, A_inv, n, ipiv, work, 2*n, info)
+    if (info /= 0) stop 'Matrix inversion failed!'
+
+end subroutine d_inv_mat
+
+! ======================================================================
+
+subroutine c_inv_mat(A, A_inv)
+    !! Invert a complex (32 bits) matrix using LAPACK.
+    use lapack_drv, only: xgetrf, xgetri
+
+    complex(real32), dimension(:, :), intent(in)  :: A
+    !! Input complex matrix A of size (n, n)
+    complex(real32), dimension(:, :), intent(out) :: A_inv
+    !! Inverse of the input complex matrix A
+
+    complex(real32), allocatable :: work(:)
+    integer, allocatable         :: ipiv(:)
+    integer                      :: n, info
+
+    n = size(A,1)
+    if (size(A,2) /= n) then
+        stop 'Matrix must be square!'
+    end if
+
+    allocate(ipiv(n), work(2*n))
+    A_inv = A
+
+    call xgetrf(n, n, A_inv, n, ipiv, info)
+    if (info /= 0) stop 'Matrix is numerically singular!'
+
+    call xgetri(n, A_inv, n, ipiv, work, 2*n, info)
+    if (info /= 0) stop 'Matrix inversion failed!'
+
+end subroutine c_inv_mat
+
+! ======================================================================
+
+subroutine z_inv_mat(A, A_inv)
+    !! Invert a complex (64 bits) matrix using LAPACK.
+    use lapack_drv, only: xgetrf, xgetri
+
+    complex(real64), dimension(:, :), intent(in)  :: A
+    !! Input complex matrix A of size (n, n)
+    complex(real64), dimension(:, :), intent(out) :: A_inv
+    !! Inverse of the input complex matrix A
+
+    complex(real64), allocatable :: work(:)
+    integer, allocatable         :: ipiv(:)
+    integer                      :: n, info
+
+    n = size(A,1)
+    if (size(A,2) /= n) then
+        stop 'Matrix must be square!'
+    end if
+
+    allocate(ipiv(n), work(2*n))
+    A_inv = A
+
+    call xgetrf(n, n, A_inv, n, ipiv, info)
+    if (info /= 0) stop 'Matrix is numerically singular!'
+
+    call xgetri(n, A_inv, n, ipiv, work, 2*n, info)
+    if (info /= 0) stop 'Matrix inversion failed!'
+
+end subroutine z_inv_mat
+
+! ======================================================================
+
+function s_det(A) result(det_A)
+    !! Compute the determinant of a real (32 bits) matrix.
+    use lapack_drv, only: xgetrf
+
+    real(real32), dimension(:, :), intent(in) :: A
+    !! Input matrix A of size (n, n)
+    real(real32) :: det_A
+    !! Output determinant det_A
+
+    real(real32), allocatable :: work(:)
+    integer, allocatable      :: ipiv(:)
+    integer                   :: n, i, info
+
+    n = size(A,1)
+
+    allocate(ipiv(n))
+    allocate(work(2*n))
+
+    call xgetrf(n, n, A, n, ipiv, info)
+    if (info /= 0) stop 'Matrix is numerically singular!'
+
+    det_A = 0.0_real32
+    do i = 1, n
+        det_A = det_A * A(i, i)
+    end do
+
+    do i = 1, n
+        if (ipiv(i) /= i) then
+            det_A = -det_A
+        end if
+    end do
+
+end function s_det
+
+! ======================================================================
+
+function d_det(A) result(det_A)
+    !! Compute the determinant of a real (64 bits) matrix.
+    use lapack_drv, only: xgetrf
+
+    real(real64), dimension(:, :), intent(in) :: A
+    !! Input matrix A of size (n, n)
+    real(real64) :: det_A
+    !! Output determinant det_A
+
+    real(real64), allocatable :: work(:)
+    integer, allocatable      :: ipiv(:)
+    integer                   :: n, i, info
+
+    n = size(A,1)
+
+    allocate(ipiv(n))
+    allocate(work(2*n))
+
+    call xgetrf(n, n, A, n, ipiv, info)
+    if (info /= 0) stop 'Matrix is numerically singular!'
+
+    det_A = 0.0_real64
+    do i = 1, n
+        det_A = det_A * A(i, i)
+    end do
+
+    do i = 1, n
+        if (ipiv(i) /= i) then
+            det_A = -det_A
+        end if
+    end do
+
+end function d_det
+
+! ======================================================================
+
+function c_det(A) result(det_A)
+    !! Compute the determinant of a complex (32 bits) matrix.
+    use lapack_drv, only: xgetrf
+
+    complex(real32), dimension(:, :), intent(in) :: A
+    !! Input complex matrix A of size (n, n)
+    complex(real32) :: det_A
+    !! Output determinant det_A
+
+    complex(real32), allocatable :: work(:)
+    integer, allocatable         :: ipiv(:)
+    integer                      :: n, i, info
+
+    n = size(A,1)
+
+    allocate(ipiv(n))
+    allocate(work(2*n))
+
+    call xgetrf(n, n, A, n, ipiv, info)
+    if (info /= 0) stop 'Matrix is numerically singular!'
+
+    det_A = (0.0_real32, 0.0_real32)
+    do i = 1, n
+        det_A = det_A * A(i, i)
+    end do
+
+    do i = 1, n
+        if (ipiv(i) /= i) then
+            det_A = -det_A
+        end if
+    end do
+
+end function c_det
+
+! ======================================================================
+
+function z_det(A) result(det_A)
+    !! Compute the determinant of a complex (64 bits) matrix.
+    use lapack_drv, only: xgetrf
+
+    complex(real64), dimension(:, :), intent(in) :: A
+    !! Input complex matrix A of size (n, n)
+    complex(real64) :: det_A
+    !! Output determinant det_A
+
+    complex(real64), allocatable :: work(:)
+    integer, allocatable         :: ipiv(:)
+    integer                      :: n, i, info
+
+    n = size(A,1)
+
+    allocate(ipiv(n))
+    allocate(work(2*n))
+
+    call xgetrf(n, n, A, n, ipiv, info)
+    if (info /= 0) stop 'Matrix is numerically singular!'
+
+    det_A = (0.0_real64, 0.0_real64)
+    do i = 1, n
+        det_A = det_A * A(i, i)
+    end do
+
+    do i = 1, n
+        if (ipiv(i) /= i) then
+            det_A = -det_A
+        end if
+    end do
+
+end function z_det
 
 ! ======================================================================
 
@@ -41,7 +317,7 @@ end function factorial
 
 ! ======================================================================
 
-function dcross(vecA, vecB) result(vecC)
+function d_cross(vecA, vecB) result(vecC)
     !! Compute the cross product: C = A x B
     !!
     !! Computes the cross vector between 2 Cartesian vectors.
@@ -58,11 +334,11 @@ function dcross(vecA, vecB) result(vecC)
     VecC(3) = vecA(1)*VecB(2) - VecA(2)*VecB(1)
 
     return
-end function dcross
+end function d_cross
 
 ! ======================================================================
 
-function scross(vecA, vecB) result(vecC)
+function s_cross(vecA, vecB) result(vecC)
     !! Compute the cross product: C = A x B
     !!
     !! Computes the cross vector between 2 Cartesian vectors.
@@ -79,7 +355,7 @@ function scross(vecA, vecB) result(vecC)
     VecC(3) = vecA(1)*VecB(2) - VecA(2)*VecB(1)
 
     return
-end function scross
+end function s_cross
 
 ! ======================================================================
 

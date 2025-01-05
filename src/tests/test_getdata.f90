@@ -4,7 +4,7 @@ program test_getdata
     use input, only: DataFile
     use parse_cmdline, only: CmdArgDB
     use output, only: iu_out, prt_mat, write_err, sec_header
-    use workdata, only: PropertyDB
+    use datatypes, only: PropertyDB
 
     integer :: i, iprp, ider, LP
     integer, parameter :: MAXFILES = 1

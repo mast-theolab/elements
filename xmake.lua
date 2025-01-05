@@ -73,60 +73,70 @@ target("userdoc")
     add_files("doc/*.adoc")
 
 
-target("blas_drv")
-    set_kind("static")
-    add_packages("openblas")
-    add_files("src/drivers/blas.f90")
-
-
-target("lapack_drv")
-    set_kind("static")
-    add_packages("openblas")
-    add_files("src/drivers/lapack.f90")
-
-
 target("corelib")
+    -- Core library: contains basic routines/constants
     set_kind("static")
     add_packages("openmp")
     add_files("src/core/exception.f90")
     add_files("src/core/numeric.F90")
     add_files("src/core/arrays.f90")
-    add_files("src/core/math.f90")
     add_files("src/core/physics.f90")
     add_files("src/core/string.f90")
-    add_files("src/data/atominfo.f90")
     add_files("src/core/output.f90")
-    add_files("src/core/basisset.f90")
-    add_files("src/core/electronic.f90")
-
-
-target("parselib")
-    set_kind("static")
-    add_packages("openmp")
-    add_deps("corelib")
     add_files("src/core/parse_cmdline.f90")
     add_files("src/core/parse_cmdline_*.f90")
+    add_files("src/data/datatypes.f90")
+    add_files("src/data/atominfo.f90")
+
+
+target("mathlib")
+    -- Math and lineary algebra library
+    set_kind("static")
+    add_packages("openblas")
+    add_files("src/drivers/blas.f90")
+    add_files("src/drivers/lapack.f90")
+    add_files("src/core/math.f90")
 
 
 target("datalib")
+    -- Library to process and store input data.
     set_kind("static")
     add_packages("openmp")
     add_deps("corelib")
+    add_deps("mathlib")
     add_files("src/parsers/parse_fchk.f90")
-    add_files("src/data/workdata.f90")
     add_files("src/data/propinfo.f90")
+    add_files("src/core/basisset.f90")
     add_files("src/core/input.f90")
     add_files("src/core/input_*.f90")
     add_files("src/parsers/input_data_*.f90")
 
 
+target("eleclib")
+    -- Electronic structure-related resources
+    set_kind("static")
+    add_deps("corelib")
+    add_deps("datalib")
+    add_deps("mathlib")
+    add_files("src/core/electronic.f90")
+
+
+target("elements")
+    -- Full ELEMENTS library
+    set_kind("static")
+    add_deps("corelib")
+    add_deps("mathlib")
+    add_deps("datalib")
+    add_deps("eleclib")
+    add_files("src/core/exc_sos.f90")
+
+
 target("mcd_tensor")
+    -- Program to compute the MCD tensor.
+    set_default(false)
     set_kind("binary")
     add_packages("openmp")
-    add_deps("corelib")
-    add_deps("parselib")
-    add_deps("datalib")
-    add_files("src/core/exc_sos.f90")
+    add_deps("elements")
     add_files("src/extras/mcd/gmcd_output.f90")
     add_files("src/extras/mcd/gmcd_legacy.f90")
     add_files("src/progs/mcd_tensor.f90")
@@ -243,7 +253,6 @@ target("test_read_vib")
     set_rundir("$(projectdir)/tests")
     add_deps("datalib")
     add_deps("corelib")
-    add_deps("parselib")
     add_files("src/tests/read_vibdat.f90")
     add_tests("default",
               {runargs = {"-f", "H2CO_S0_frq.fchk", "-o", "test_vib_def.txt"}})
@@ -256,7 +265,6 @@ target("gen_py_atomDB")
     set_rundir("$(projectdir)/tests")
     add_deps("corelib")
     add_deps("datalib")
-    add_deps("parselib")
     add_files("src/progs/gen_py_atomdb.f90")
     add_tests("to_ang", {runargs = {"atom_ang.py"}})
     add_tests("to_au", {runargs = {"atom_bohr.py"}})
@@ -265,8 +273,7 @@ target("test_blas_ops")
     set_default(false)
     set_rundir("$(projectdir)/tests")
     add_deps("corelib")
-    add_packages("openblas")
-    add_files("src/drivers/blas.f90")
+    add_deps("mathlib")
     add_files("src/tests/blas_ops.f90")
     add_tests("default")
 
@@ -275,7 +282,6 @@ target("test_get_data")
     set_rundir("$(projectdir)/tests")
     add_deps("datalib")
     add_deps("corelib")
-    add_deps("parselib")
     add_files("src/tests/test_getdata.f90")
     add_tests("h2co",
               {runargs = {"-f", "H2CO_S2_frq.fchk",

@@ -1,6 +1,6 @@
 module propinfo
     !! Module providing basic information on supported quantities
-    use workdata, only: PropertyDB
+    use datatypes, only: PropertyDB
     use exception, only: BaseException, ArgumentError
 
     implicit none

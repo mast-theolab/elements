@@ -3,7 +3,7 @@ module input
     !!
     !! Contains data and procedures to process input data/options.
     use exception, only: BaseException
-    use workdata
+    use datatypes
 
     implicit none
 

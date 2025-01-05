@@ -7,12 +7,12 @@ module electronic
     !! * integral calculations
 
     use numeric, only: realwp, f0, f1, f2, fhalf, pi
+    use datatypes, only: PrimitiveFunction
     use output, only: iu_out
     use exception, only: ArgumentError, BaseException, InitError, &
         RaiseArgError, RaiseError
     use math, only: build_PascalTriangle, cross, itri_pa, phii_xn_phij
-    use basisset, only: max_nxyz, PrimitiveFunction, set_primC_comp, &
-        transfo_cart2pure
+    use basisset, only: max_nxyz, set_primC_comp, transfo_cart2pure
 
     implicit none
 

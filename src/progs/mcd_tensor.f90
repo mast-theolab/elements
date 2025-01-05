@@ -13,7 +13,7 @@ program mcd_tensor
     use electronic, only: convert_AO2MO, eltrans_amp, overlap_ao_1e, ovij_1e
     use exc_sos, only: sos_eiOg, sos_ejOei, sos_prefac_ejOei, &
         sos_MCD_tensor_LORG_corr
-    use workdata, only: MoleculeDB, BasisSetDB, OrbitalsDB, ExcitationDB
+    use datatypes, only: MoleculeDB, BasisSetDB, OrbitalsDB, ExcitationDB
 
     implicit none
 

@@ -7,7 +7,7 @@ module gmcd_legacy
     use exception, only: ArgumentError, BaseException, InitError, RaiseError
     use output, only: iu_out
     use electronic, only: convert_AO2MO
-    use workdata, only: MoleculeDB, BasisSetDB, OrbitalsDB
+    use datatypes, only: MoleculeDB, BasisSetDB, OrbitalsDB
     use physics, only: PhysFact
     use gmcd_output, only: shell_lmxyz
 

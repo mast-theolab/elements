@@ -4,7 +4,7 @@ program test_read_vibdata
     use input, only: DataFile
     use parse_cmdline, only: CmdArgDB
     use output, only: prt_mat, write_err
-    use workdata, only: MoleculeDB, VibrationsDB
+    use datatypes, only: MoleculeDB, VibrationsDB
 
     integer :: ifile, iu_out, nfiles
     integer, parameter :: MAXFILES = 2

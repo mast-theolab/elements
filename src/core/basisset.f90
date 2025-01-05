@@ -8,37 +8,11 @@ module basisset
     use exception, only: BaseException, ArgumentError, InitError, RaiseError, &
         RaiseArgError
     use output, only: iu_out, len_int
+    use datatypes, only: PrimitiveFunction
 
     implicit none
 
     integer, parameter :: max_nxyz = 28
-    type, public :: PrimitiveFunction
-        !! primitive basis function.
-        !! alpha and coeffs are coeffs for hybrid functions (ex: SP)
-        character(len=2) :: shelltype
-        !! Shell type (of the contracted shell)
-        integer ::  L
-        !! principal angular momentum
-        ! character(len=1) :: functype
-        ! !! type of the function: S, P...
-        integer :: shellid
-        !! main shell id
-        integer :: ndim
-        !! number of components (dimension)
-        logical :: pure
-        !! true if spherical harmonics, Cartesian otherwise
-        logical :: shell_first
-        !! true if first primitive of shell
-        logical :: shell_last
-        !! true if last primitive of shell
-        real(realwp) :: alpha
-        !! alpha: primitive exponent
-        real(realwp), dimension(:), allocatable :: coeff
-        !! Unique normalized contraction coefficients
-        !! indexes: 0, -1... : non-normalized original coeffs.
-        integer, dimension(:,:), allocatable :: lxyz
-        !! Indexes for each unique contraction coefficient
-    end type PrimitiveFunction
 
 contains
 

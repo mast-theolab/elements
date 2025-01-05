@@ -1,7 +1,7 @@
 submodule (input:input_data) input_data_fchk
     !! Submodule containing the definition of procedures related to the
     !! data extraction.
-    use numeric, only: f2
+    use numeric, only: realwp, f2
     use arrays, only: symm_tri_array
     use parsefchk, only: fchkdata, fchkparser
     use basisset, only: build_bset_DB

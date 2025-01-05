@@ -2,7 +2,7 @@ submodule (input) input_data
     !! Submodule containing the definition of procedures related to the
     !! data extraction.
     use string, only: locase
-    use workdata
+    use datatypes
     use exception, only: Error, InitError, RaiseArgError, &
         FileError, QuantityError
 

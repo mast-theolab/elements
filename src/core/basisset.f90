@@ -897,6 +897,13 @@ function transfo_cart2pure(L_ang) result(convmat)
             convmat(1,1) = f1
             convmat(2,2) = f1
             convmat(3,3) = f1
+        case (-1)
+            allocate(convmat(4,4))
+            convmat = f0
+            convmat(1,1) = f1
+            convmat(2,2) = f1
+            convmat(3,3) = f1
+            convmat(4,4) = f1
         case (2)
             allocate(convmat(5,6))
             convmat = f0
@@ -946,6 +953,9 @@ function transfo_cart2pure(L_ang) result(convmat)
             npure = 2*L_ang + 1
             allocate(convmat(npure,ncart))
             call coef_transfo_P2C(L_ang, ncart, npure, convmat, tempmat)
+        case default
+            write(iu_out, '("Unsupported angular momentum: ",i0)') L_ang
+            error stop 1
     end select
 
 end function transfo_cart2pure

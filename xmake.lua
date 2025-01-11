@@ -7,12 +7,29 @@ rule("ford")
     set_extensions(".md", ".markdown")
     on_build_file(function (target, sourcefile, opt)
         import("core.project.depend")
+        import("lib.detect.find_tool")
         import("utils.progress")
         -- make sure build directory exists
         os.mkdir(target:targetdir())
         -- systematically rebuild the API system
-        progress.show(opt.progress, "${color.build.object}reading %s", sourcefile)
-        os.execv("ford", {"-g", sourcefile, "-o", target:targetdir()})
+        progress.show(opt.progress, "${color.build.object}reading %s",
+                      sourcefile)
+        local extra_args = {}
+        local comp = find_tool("gfortran")
+        if comp then
+            table.insert(extra_args, "preprocessor='gfortran -E'")
+        elseif not find_tool("pcpp") then
+            table.insert(extra_args, "preprocess=false")
+        end
+        if extra_args then
+            config = string.format(" --config=\"%s\"",
+                                   table.concat(extra_args, "; "))
+        else
+            config = ''
+        end
+        local base_args = {"-g", sourcefile, "-o", target:targetdir()}
+        cmd = "ford " .. table.concat(base_args, ' ') .. config
+        os.exec(cmd)
     end)
 
 rule("adoc")

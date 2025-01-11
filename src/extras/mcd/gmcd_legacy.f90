@@ -134,7 +134,7 @@ end subroutine build_MOs
 ! ======================================================================
 
 subroutine write_control(iout, moldb, bsetdb, orbdb, err)
-    !! SOS: writes control output
+    !! From SOS: writes control output
     !!
     !! This subroutine reproduces the behavior of SOS [writecon]
     !! with ndiff = 0

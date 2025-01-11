@@ -46,6 +46,8 @@ build/
 /local/*
 
 # Added
+/doc/api
 /mytests
 /tests
+/bugs
 !/tests/*.ref

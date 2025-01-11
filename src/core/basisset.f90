@@ -18,44 +18,43 @@ contains
 
 ! ======================================================================
 
-
-
-! ======================================================================
-
 subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
                          prim_per_sh, shell_to_at, coef_contr, coef_contrSP, &
                          prim_exp, nprim_per_at, bset, err)
-    !! Build basis set database
+    !! Build basis set database.
     !!
     !! Builds a list of the basis functions sorted by atoms and
-    !!   primitives.
-    integer, intent(in) :: n_at
-    !! Number of atoms
-    integer, intent(in) :: n_shells
-    !! Number of contracted shells
-    logical, intent(in) :: pureD
-    !! If True, spherical harm. are used for D orbitals, Cart. otherwise
-    logical, intent(in) :: pureF
-    !! If True, spherical harmonics are used for F and above
-    integer, dimension(:), intent(in) :: shell_types
-    !! Shell types, as integers
-    integer, dimension(:), intent(in) :: prim_per_sh
-    !! number of primitives per shell
-    integer, dimension(:), intent(in) :: shell_to_at
-    !! shell to atom mapping
-    real(realwp), dimension(:), intent(in) :: coef_contr
-    !! contraction coefficients
-    real(realwp), dimension(:), allocatable, intent(in) :: coef_contrSP
-    !! contraction coefficients for shells of type S=P
-    real(realwp), dimension(:), intent(in) :: prim_exp
-    !! primitives exponents
-    integer, dimension(:), allocatable, intent(out) :: nprim_per_at
-    !! Number of primitive per atom
-    type(PrimitiveFunction), dimension(:,:), allocatable, intent(out) :: bset
-    !! Basis set DB
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
+    !! primitives.
 
+    ! Arguments
+    integer, intent(in) :: n_at
+    !! Number of atoms.
+    integer, intent(in) :: n_shells
+    !! Number of contracted shells.
+    logical, intent(in) :: pureD
+    !! If True, spherical harm. are used for D orbitals, Cart. otherwise.
+    logical, intent(in) :: pureF
+    !! If True, spherical harmonics are used for F and above.
+    integer, dimension(:), intent(in) :: shell_types
+    !! Shell types, as integers.
+    integer, dimension(:), intent(in) :: prim_per_sh
+    !! number of primitives per shell.
+    integer, dimension(:), intent(in) :: shell_to_at
+    !! shell to atom mapping.
+    real(realwp), dimension(:), intent(in) :: coef_contr
+    !! contraction coefficients.
+    real(realwp), dimension(:), allocatable, intent(in) :: coef_contrSP
+    !! contraction coefficients for shells of type S=P.
+    real(realwp), dimension(:), intent(in) :: prim_exp
+    !! primitives exponents.
+    integer, dimension(:), allocatable, intent(out) :: nprim_per_at
+    !! Number of primitive per atom.
+    type(PrimitiveFunction), dimension(:,:), allocatable, intent(out) :: bset
+    !! Basis set DB.
+    class(BaseException), allocatable, intent(out) :: err
+    !! Error instance.
+
+    ! Local
     integer :: i, ia, ippa, iprim, iptot, L_ang, ndim, ntot_AOs
     integer :: ish
     integer, dimension(:), allocatable :: shell_per_at
@@ -192,11 +191,153 @@ end subroutine build_bset_DB
 
 ! ======================================================================
 
+subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh)
+    !! Check basis set redundancy.
+    !!
+    !! Checks any redundancy within basis set functions.
+
+    ! Arguments
+    integer, intent(in) :: n_ao
+    !! Number of atomic orbitals.
+    real(realwp), dimension(n_ao,n_ao), intent(in) :: ovint_i_j
+    !! Overlap integrals between atomic orbitals, < i | j >.
+    real(realwp), intent(in), optional :: thresh
+    !! Threshold to consider redundancy (redundancy if norm below).
+
+    ! Local
+    integer :: iao, jao, kao, lao
+    real(realwp) :: norm, ovlp, thresh0
+    real(realwp), dimension(n_ao,n_ao) :: trial
+    logical, dimension(n_ao) :: is_red
+    character(len=60) :: fmt_red
+
+    if (present(thresh)) then
+        thresh0 = thresh
+        if (thresh0 < epsilon(thresh0)) then
+            write(iu_out, '(a)') &
+                'WARNING: Threshold for redundancy check too low'
+            write(iu_out, '(9x,a,e12.4)') 'Resetting to:', epsilon(thresh0)
+            thresh0 = epsilon(thresh0)
+        end if
+    else
+        thresh0 = 1.0e-6_realwp
+    end if
+
+    write(fmt_red, '("(""Orbital num. "",i",i0,","" - Rest norm:"",f12.8,&
+        &:,"" ["",a,""]"")")') len_int(n_ao)
+
+    ! Initialize trial matrix to check overlap
+    trial = f0
+    do iao = 1, n_ao
+        trial(iao,iao) = f1
+    end do
+    is_red = .false.
+
+    do iao = 1, n_ao
+        do jao = 1, iao-1
+            if (.not.is_red(jao)) then
+                ovlp = f0
+                do kao = 1, iao
+                    do lao = 1, iao
+                        ovlp = ovlp + &
+                            trial(iao,kao)*ovint_i_j(kao,lao)*trial(jao,lao)
+                    end do
+                end do
+                trial(iao,:iao) = trial(iao,:iao) - ovlp*trial(jao,:iao)
+            end if
+        end do
+        norm = 0.0
+        do kao = 1, iao
+            do lao = 1, iao
+                norm = norm + trial(iao,kao)*ovint_i_j(kao,lao)*trial(iao,lao)
+            end do
+        end do
+        if (norm > thresh0) then
+            write(iu_out, fmt_red) iao, norm
+        else
+            write(iu_out, fmt_red) iao, norm, 'redundant'
+            is_red(iao) = .True.
+        end if
+        trial(iao,:iao) = trial(iao,:iao)/sqrt(norm)
+    end do
+
+end subroutine chk_bset_redundancy
+
+! ======================================================================
+
+function coef_C2P(L, M, Lx, Ly) result(coef)
+    !! Calculate the coefficient from Cartesian to pure.
+    !!
+    !! Calculates the coefficient for the conversion from the normalized
+    !! Cartesian component Lx,Ly,Lz=L-Lx-Ly to the spherical harmonics
+    !! component L,M.
+
+    ! Arguments
+    real(realwp) :: coef
+    integer, intent(in) :: L
+    !! Angular moment
+    integer, intent(in) :: M
+    !! M component of the spherical harmonics
+    integer, intent(in) :: Lx
+    !! Lx component of the Cartesian function
+    integer, intent(in) :: Ly
+    !! Ly component of the Cartesian function
+
+    ! Local
+    integer :: i, j, k, Lx2k, Lz, Ma
+    real(realwp) :: a, b, c, d, e, g
+
+    Lz = L - Lx - Ly
+    Ma = Abs(M)
+    if (Ma > L .or. Lz < 0) then
+        coef = f0
+        return
+    end if
+    a = sqrt(real(fac(2*Lx)*fac(2*Ly)*fac(2*Lz)*fac(L), kind=realwp) &
+             / (fac(2*L)*fac(Lx)*fac(Ly)*fac(Lz)))
+    b = sqrt(real(fac(L-Ma), kind=realwp)/fac(L+Ma))/((2**L)*fac(L))
+    j = (L-Ma-Lz)/2
+    g = f0
+    if (2*j == L-Ma-Lz) then
+        do i = 0, (L-Ma)/2
+            c = f0
+            if (j >= 0 .and. j <= i) then
+                c = (real(fac(L), kind=realwp)/(fac(i)*fac(L-i))) &
+                    *(real(fac(2*L-2*i)*((-1)**i), kind=realwp)/fac(L-Ma-2*i)) &
+                    *(real(fac(i), kind=realwp)/(fac(j)*fac(i-j)))
+                do k = 0, j
+                    d = f0
+                    Lx2k = Lx-2*k
+                    if (Lx2k >= 0 .and. Lx2k <= Ma) then
+                        d = (real(fac(j), kind=realwp)/(fac(k)*fac(j-k))) &
+                            *(real(fac(Ma), kind=realwp) &
+                                /(fac(Lx2k)*fac(Ma-Lx2k)))
+                        e = f0
+                        if (M==0 .and. mod(Lx,2) == 0) e = (-1)**(-Lx2k/2)
+                        if (M > 0 .and. mod(abs(Ma-Lx),2) == 0) &
+                            e = Sqrt(f2)*(-1)**((Ma-Lx2k)/2)
+                        if (M < 0 .and. mod(abs(Ma-Lx),2) == 1) &
+                            e = Sqrt(f2)*(-1)**((Ma-Lx2k)/2)
+                        g = g + c*d*e
+                    end if
+                end do
+            end if
+        end do
+    end if
+    coef = a*b*g
+
+    return
+end function coef_C2P
+
+! ======================================================================
+
 subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
-    !! Calculate the normalized coefficients for a given primitive shell
+    !! Calculate the normalized coefficients for a given primitive shell.
     !!
     !! Computes and returned the unique normalized coefficients relevant
-    !!   for a given primitive shell
+    !! for a given primitive shell.
+
+    ! Arguments
     character(len=*), intent(in) :: shtype
     !! Shell type
     real(realwp), intent(in) :: coef
@@ -212,6 +353,7 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
     class(BaseException), allocatable, intent(out) :: err
     !! Error instance
 
+    ! Local
     real(realwp), parameter :: sq2pi = sqrt(f2*pi)
     integer :: i, ix, iy, iz, L
     real(realwp) :: cnorm, f2sqal
@@ -354,10 +496,12 @@ end subroutine coefs_norm_sh
 ! ======================================================================
 
 subroutine coef_transfo_P2C(L_ang, Ncart, Npure, coef2P, coef2C)
-    !! Generate coefficients for conversion between pure and Cart. bases
+    !! Generate coefficients for conversion between pure and Cart. bases.
     !!
-    !! Generates the coefficients to transform between normalized Cart.
-    !!   Gaussians and normalized spherical harmonics (pure).
+    !! Generates the coefficients to transform between normalized
+    !! Cartesian and normalized spherical harmonics (pure).
+
+    ! Arguments
     integer, intent(in) :: L_ang
     !! Angular momentum to transform
     integer, intent(in) :: Ncart
@@ -369,9 +513,11 @@ subroutine coef_transfo_P2C(L_ang, Ncart, Npure, coef2P, coef2C)
     real(realwp), dimension(Ncart,Npure), intent(out) :: coef2C
     !! Transformation coefficients to Cartesian
 
+    ! Local
     integer :: i1, i2, k, Lx, Lx1, Lx2, Lxyz, Ly, Ly1, Ly2, Lz, Lz1, &
         Lz2, M
     real(realwp) :: a1, a2, s
+
     ! Form coef2P
     Lxyz = 0
     do Lx = 0, L_ang
@@ -420,92 +566,32 @@ end subroutine coef_transfo_P2C
 
 ! ======================================================================
 
-function coef_C2P(L, M, Lx, Ly) result(coef)
-    !! Calculate the coefficient from Cartesian to pure
-    !!
-    !! Calculates the coefficient for the conversion from the normalized
-    !!   Cartesian component Lx,Ly,Lz=L-Lx-Ly to the spherical harmonics
-    !!   component L,M
-    real(realwp) :: coef
-    integer, intent(in) :: L
-    !! Angular moment
-    integer, intent(in) :: M
-    !! M component of the spherical harmonics
-    integer, intent(in) :: Lx
-    !! Lx component of the Cartesian function
-    integer, intent(in) :: Ly
-    !! Ly component of the Cartesian function
-
-    integer :: i, j, k, Lx2k, Lz, Ma
-    real(realwp) :: a, b, c, d, e, g
-
-    Lz = L - Lx - Ly
-    Ma = Abs(M)
-    if (Ma > L .or. Lz < 0) then
-        coef = f0
-        return
-    end if
-    a = sqrt(real(fac(2*Lx)*fac(2*Ly)*fac(2*Lz)*fac(L), kind=realwp) &
-             / (fac(2*L)*fac(Lx)*fac(Ly)*fac(Lz)))
-    b = sqrt(real(fac(L-Ma), kind=realwp)/fac(L+Ma))/((2**L)*fac(L))
-    j = (L-Ma-Lz)/2
-    g = f0
-    if (2*j == L-Ma-Lz) then
-        do i = 0, (L-Ma)/2
-            c = f0
-            if (j >= 0 .and. j <= i) then
-                c = (real(fac(L), kind=realwp)/(fac(i)*fac(L-i))) &
-                    *(real(fac(2*L-2*i)*((-1)**i), kind=realwp)/fac(L-Ma-2*i)) &
-                    *(real(fac(i), kind=realwp)/(fac(j)*fac(i-j)))
-                do k = 0, j
-                    d = f0
-                    Lx2k = Lx-2*k
-                    if (Lx2k >= 0 .and. Lx2k <= Ma) then
-                        d = (real(fac(j), kind=realwp)/(fac(k)*fac(j-k))) &
-                            *(real(fac(Ma), kind=realwp) &
-                                /(fac(Lx2k)*fac(Ma-Lx2k)))
-                        e = f0
-                        if (M==0 .and. mod(Lx,2) == 0) e = (-1)**(-Lx2k/2)
-                        if (M > 0 .and. mod(abs(Ma-Lx),2) == 0) &
-                            e = Sqrt(f2)*(-1)**((Ma-Lx2k)/2)
-                        if (M < 0 .and. mod(abs(Ma-Lx),2) == 1) &
-                            e = Sqrt(f2)*(-1)**((Ma-Lx2k)/2)
-                        g = g + c*d*e
-                    end if
-                end do
-            end if
-        end do
-    end if
-    coef = a*b*g
-
-    return
-end function coef_C2P
-
-! ======================================================================
-
 subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
                         debug)
     !! Correct basis sets coefficients to normalize the AOs.
     !!
     !! Checks if atomic orbitals are normalized and otherwise correct
-    !!   the coefficients to ensure the normalization.
-    integer, intent(in) :: iout
-    !! Unit for output
-    integer, intent(in) :: n_at
-    !! Number of atoms
-    integer, intent(in) :: n_ao
-    !! Number of atomic orbitals
-    real(realwp), dimension(:,:), intent(in) :: at_crd
-    !! Atomic coordinates (in au)
-    integer, dimension(:), intent(in) :: nprim_per_at
-    !! Number of basis primitives per atom
-    type(PrimitiveFunction), dimension(:,:), intent(inout) :: bsetDB
-    !! Basis set DB
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
-    logical, intent(in), optional :: debug
-    !! Enable debugging printing
+    !! the coefficients to ensure the normalization.
 
+    ! Arguments
+    integer, intent(in) :: iout
+    !! Unit for output.
+    integer, intent(in) :: n_at
+    !! Number of atoms.
+    integer, intent(in) :: n_ao
+    !! Number of atomic orbitals.
+    real(realwp), dimension(:,:), intent(in) :: at_crd
+    !! Atomic coordinates (in au).
+    integer, dimension(:), intent(in) :: nprim_per_at
+    !! Number of basis primitives per atom.
+    type(PrimitiveFunction), dimension(:,:), intent(inout) :: bsetDB
+    !! Basis set DB.
+    class(BaseException), allocatable, intent(out) :: err
+    !! Error instance.
+    logical, intent(in), optional :: debug
+    !! Enable debugging printing.
+
+    ! Local
     integer, parameter :: &
         dimPa = 24  ! maximum used dimension for Pascal's triangle
     real(realwp), parameter :: &
@@ -722,19 +808,21 @@ end subroutine fix_norm_AOs
 ! ======================================================================
 
 subroutine set_primC_comp(bfunc, ndimC, lxyz, coefs, err)
-    !! Set component for a Cartesian primitive
+    !! Set component for a Cartesian primitive.
     !!
     !! Builds the list of Cartesian components and the associated
-    !!   coefficients for a primitive function based on the information
-    !!   in `bfunc`.
+    !! coefficients for a primitive function based on the information
+    !! in `bfunc`.
+
+    ! Arguments
     type(PrimitiveFunction), intent(in) :: bfunc
-    !! Basis set function
+    !! Basis set function.
     integer, intent(out) :: ndimC
-    !! True number of dimension
+    !! True number of dimension.
     integer, dimension(:,:), allocatable, intent(out) :: lxyz
-    !! Number of occurrence of each x,y,z coordinate for each dimension
+    !! Number of occurrence of each x,y,z coordinate for each dimension.
     real(realwp), dimension(:), allocatable, intent(out) :: coefs
-    !! Contraction coefficient for each dimension
+    !! Contraction coefficient for each dimension.
     class(BaseException), allocatable, intent(out) :: err
     !! Error instance
 
@@ -827,60 +915,67 @@ function transfo_cart2pure(L_ang) result(convmat)
     !! Provides the transformation matrix from Cartesian to pure
     !!
     !! Provides the conversion matrix to convert from a basis set in
-    !!   Cartesian coordinates to a one with spherical harmonics
-    !! The conversion table is taken from SOS:
+    !! Cartesian coordinates to a one with spherical harmonics.
     !!
-    !! ## For D orbitals
+    !! The conversion table is taken from SOS.
+    !!
+    !! **For *f* orbitals**
     !!
     !! Conversion table:
     !!
-    !!    |          |    1  |   2  |    3  |   4  |   5  |   6 |
-    !!    |          |   xx  |  yy  |   zz  |  xy  |  xz  |  yz |
-    !! ---|----------|-------|------|-------|------|------|-----|-----
-    !!  1 | 3z^2-R^2 |   -1  |  -1  |    2  |   0  |   0  |   0 | *s1
-    !!  2 |    xz    |    0  |   0  |    0  |   0  |   1  |   0 |
-    !!  3 |    yz    |    0  |   0  |    0  |   0  |   0  |   1 |
-    !!  4 |  x^2-y^2 |    1  |  -1  |    0  |   0  |   0  |   0 | *s5
-    !!  5 |    xy    |    0  |   0  |    0  |   1  |   0  |   0 |
+    !! |    |          |    1  |   2  |    3  |   4  |   5  |   6 |      |
+    !! | ---|----------|-------|------|-------|------|------|-----|----- |
+    !! |    |          |   xx  |  yy  |   zz  |  xy  |  xz  |  yz |      | 
+    !! | ---|----------|-------|------|-------|------|------|-----|----- |
+    !! |  1 | 3z^2-R^2 |   -1  |  -1  |    2  |   0  |   0  |   0 | *s1  |
+    !! |  2 |    xz    |    0  |   0  |    0  |   0  |   1  |   0 |      |
+    !! |  3 |    yz    |    0  |   0  |    0  |   0  |   0  |   1 |      |
+    !! |  4 |  x^2-y^2 |    1  |  -1  |    0  |   0  |   0  |   0 | *s5  |
+    !! |  5 |    xy    |    0  |   0  |    0  |   1  |   0  |   0 |      |
     !!
     !! s1 = 1/2 ; s5 = sqrt(3)/2
     !!
-    !! ## For F orbitals
+    !! **For *f* orbitals**
     !!
-    !!       |     spherical  |  cartesian
-    !!  -----|----------------|------------
-    !!     1 |  5z^3-3R^2z    |     xxx
-    !!     2 |  x(5z^2-R^2)   |     yyy
-    !!     3 |  y(5z^2-R^2)   |     zzz
-    !!     4 |  xyz           |     xxy
-    !!     5 |  z(x^2-y^2)    |     xxz
-    !!     6 |  y(y^2-3x^2)   |     yyx
-    !!     7 |  x(x^2-3y^2)   |     yyz
-    !!     8 |  -             |     zzx
-    !!     9 |  -             |     zzy
-    !!    10 |  -             |     xyz
+    !! |      |     spherical  |  cartesian  |
+    !! | -----|----------------|------------ |
+    !! |    1 |  5z^3-3R^2z    |     xxx     |
+    !! |    2 |  x(5z^2-R^2)   |     yyy     |
+    !! |    3 |  y(5z^2-R^2)   |     zzz     |
+    !! |    4 |  xyz           |     xxy     |
+    !! |    5 |  z(x^2-y^2)    |     xxz     |
+    !! |    6 |  y(y^2-3x^2)   |     yyx     |
+    !! |    7 |  x(x^2-3y^2)   |     yyz     |
+    !! |    8 |  -             |     zzx     |
+    !! |    9 |  -             |     zzy     |
+    !! |   10 |  -             |     xyz     |
     !!
     !! Conversion table
     !!
-    !!    |  1  |   2 |    3 |   4 |   5 |   6 |   7 |   8 |   9 |  10 |
-    !!    | xxx | yyy |  zzz | xxy | xxz | yyx | yyz | zzx | zzy | xyz |
-    !! ---|-----|-----|------|-----|-----|-----|-----|-----|-----|-----|-----
-    !!  1 |   0 |   0 | 2*v5 |   0 |  -3 |   0 |  -3 |   0 |   0 |   0 | *s1
-    !!  2 | -v5 |   0 |    0 |   0 |   0 |  -1 |   0 |   4 |   0 |   0 | *s2
-    !!  3 |   0 | -v5 |    0 |  -1 |   0 |   0 |   0 |   0 |   4 |   0 | *s3
-    !!  4 |   0 |   0 |    0 |   0 |   1 |   0 |  -1 |   0 |   0 |   0 | *s4
-    !!  5 |   0 |   0 |    0 |   0 |   0 |   0 |   0 |   0 |   0 |   1 | *s5
-    !!  6 |  v5 |   0 |    0 |   0 |   0 |  -3 |   0 |   0 |   0 |   0 | *s6
-    !!  7 |   0 | -v5 |    0 |   3 |   0 |   0 |   0 |   0 |   0 |   0 | *s7
+    !! |    |  1  |   2 |    3 |   4 |   5 |   6 |   7 |   8 |   9 |  10 |      |
+    !! | ---|-----|-----|------|-----|-----|-----|-----|-----|-----|-----|----- |
+    !! |    | xxx | yyy |  zzz | xxy | xxz | yyx | yyz | zzx | zzy | xyz |      |
+    !! | ---|-----|-----|------|-----|-----|-----|-----|-----|-----|-----|----- |
+    !! |  1 |   0 |   0 | 2*v5 |   0 |  -3 |   0 |  -3 |   0 |   0 |   0 | *s1  |
+    !! |  2 | -v5 |   0 |    0 |   0 |   0 |  -1 |   0 |   4 |   0 |   0 | *s2  |
+    !! |  3 |   0 | -v5 |    0 |  -1 |   0 |   0 |   0 |   0 |   4 |   0 | *s3  |
+    !! |  4 |   0 |   0 |    0 |   0 |   1 |   0 |  -1 |   0 |   0 |   0 | *s4  |
+    !! |  5 |   0 |   0 |    0 |   0 |   0 |   0 |   0 |   0 |   0 |   1 | *s5  |
+    !! |  6 |  v5 |   0 |    0 |   0 |   0 |  -3 |   0 |   0 |   0 |   0 | *s6  |
+    !! |  7 |   0 | -v5 |    0 |   3 |   0 |   0 |   0 |   0 |   0 |   0 | *s7  |
     !!
-    !! @Warning: The function does not check explicitly if the shell is
-    !!           supported. Calling procedure should check if the array is
-    !!           allocated on exit.
+    !! @warning
+    !! The function does not check explicitly if the shell is supported.
+    !! Calling procedure should check if the array is allocated on exit.
+    !! @endwarning
+
+    ! Arguments
     integer, intent(in) :: L_ang
     !! Angular momentum for the shell of interest
     real(realwp), dimension(:,:), allocatable :: convmat
     !! Conversion matrix of dimension (npure,ncart)
 
+    ! Local
     integer :: ncart, npure
     real(realwp), parameter :: sq2=sqrt(f2), sq3=sqrt(f3), sq5=sqrt(f5), &
         sq10=sqrt(f10)
@@ -959,78 +1054,6 @@ function transfo_cart2pure(L_ang) result(convmat)
     end select
 
 end function transfo_cart2pure
-
-! ======================================================================
-
-subroutine chk_bset_redundancy(n_ao, ovint_i_j, thresh)
-    !! Check basis set redundancy
-    !!
-    !! Checks any redundancy within basis set functions.
-    !!
-    integer, intent(in) :: n_ao
-    !! Number of atomic orbitals
-    real(realwp), dimension(n_ao,n_ao), intent(in) :: ovint_i_j
-    !! Overlap integrals between atomic orbitals, < i | j >
-    real(realwp), intent(in), optional :: thresh
-    !! Threshold to consider redundancy (redundancy if norm below).
-
-    integer :: iao, jao, kao, lao
-    real(realwp) :: norm, ovlp, thresh0
-    real(realwp), dimension(n_ao,n_ao) :: trial
-    logical, dimension(n_ao) :: is_red
-    character(len=60) :: fmt_red
-
-    if (present(thresh)) then
-        thresh0 = thresh
-        if (thresh0 < epsilon(thresh0)) then
-            write(iu_out, '(a)') &
-                'WARNING: Threshold for redundancy check too low'
-            write(iu_out, '(9x,a,e12.4)') 'Resetting to:', epsilon(thresh0)
-            thresh0 = epsilon(thresh0)
-        end if
-    else
-        thresh0 = 1.0e-6_realwp
-    end if
-
-    write(fmt_red, '("(""Orbital num. "",i",i0,","" - Rest norm:"",f12.8,&
-        &:,"" ["",a,""]"")")') len_int(n_ao)
-
-    ! Initialize trial matrix to check overlap
-    trial = f0
-    do iao = 1, n_ao
-        trial(iao,iao) = f1
-    end do
-    is_red = .false.
-
-    do iao = 1, n_ao
-        do jao = 1, iao-1
-            if (.not.is_red(jao)) then
-                ovlp = f0
-                do kao = 1, iao
-                    do lao = 1, iao
-                        ovlp = ovlp + &
-                            trial(iao,kao)*ovint_i_j(kao,lao)*trial(jao,lao)
-                    end do
-                end do
-                trial(iao,:iao) = trial(iao,:iao) - ovlp*trial(jao,:iao)
-            end if
-        end do
-        norm = 0.0
-        do kao = 1, iao
-            do lao = 1, iao
-                norm = norm + trial(iao,kao)*ovint_i_j(kao,lao)*trial(iao,lao)
-            end do
-        end do
-        if (norm > thresh0) then
-            write(iu_out, fmt_red) iao, norm
-        else
-            write(iu_out, fmt_red) iao, norm, 'redundant'
-            is_red(iao) = .True.
-        end if
-        trial(iao,:iao) = trial(iao,:iao)/sqrt(norm)
-    end do
-            
-end subroutine chk_bset_redundancy
 
 ! ======================================================================
 

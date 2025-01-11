@@ -439,7 +439,7 @@ module procedure build_vib_data_fchk
     !! relevant information related to vibrations.
     !! An instance of VibrationsDB is returned.
     !!
-    !! See [[build_vibdata(proc)]] for details.
+    !! See [[build_vib_data(proc)]] for details.
 
     character(len=42), dimension(4), parameter :: fchk_keys = [ &
         'Number of Normal Modes               ', &  !  1.

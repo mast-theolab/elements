@@ -138,6 +138,14 @@ target("eleclib")
     add_files("src/core/electronic.f90")
 
 
+target("speclib")
+    -- Spectroscopy-related resources
+    set_kind("static")
+    add_deps("corelib")
+    add_deps("mathlib")
+    add_files("src/spectro/vibronic*.f90")
+
+
 target("elements")
     -- Full ELEMENTS library
     set_kind("static")
@@ -145,6 +153,7 @@ target("elements")
     add_deps("mathlib")
     add_deps("datalib")
     add_deps("eleclib")
+    add_deps("speclib")
     add_files("src/core/exc_sos.f90")
 
 

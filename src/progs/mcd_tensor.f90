@@ -184,7 +184,7 @@ program mcd_tensor
     ! normalization coeffs
     if (debug%timer) call write_time('Check AO normalization')
     call fix_norm_AOs(iu_out, moldb%n_at, orbdb%n_ao, moldb%at_crd, &
-                      bsetdb%nprim_per_at, bsetdb%info, err, debug%print)
+                      bsetdb, err, debug%print)
     if (err%raised()) then
         select type(err)
             class is (Error)

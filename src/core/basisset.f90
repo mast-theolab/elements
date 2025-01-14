@@ -8,11 +8,291 @@ module basisset
     use exception, only: BaseException, ArgumentError, InitError, RaiseError, &
         RaiseArgError
     use output, only: iu_out, len_int
-    use datatypes, only: PrimitiveFunction
+    use datatypes, only: BasisSetDB, PrimitiveFunction
 
     implicit none
 
-    integer, parameter :: max_nxyz = 28
+    private
+    public :: build_bset_DB, chk_bset_redundancy, coef_C2P, coef_transfo_P2C, &
+        coefs_norm_sh, set_primC_comp, transfo_cart2pure
+    public :: convert_pure2cart, fix_norm_AOs, len_shells_on_atom, &
+        num_cart_AOs, num_shells_on_atom
+    integer, parameter, public :: max_nxyz = 28
+
+! ----------------------------------------------------------------------
+
+    interface convert_pure2cart
+        !! Convert a quantity expressed in pure to Cartesian.
+        !!
+        !! convert_pure2cart_matrix: convert a matrix
+        !! convert_pure2cart_bset: convert basis set information
+
+        module subroutine convert_pure2cart_bsetBF( &
+                bsetBF, nprim_per_atom, bsetBF_cart)
+            !! Convert basis set information from pure to Cartesian.
+            !!
+            !! Converts the information for pure basis functions to Cartesian
+            !! functions.
+            !!
+            !! This version expects basis set information as separate arguments.
+
+            type(PrimitiveFunction), dimension(:,:), intent(in) :: bsetBF
+            !! Basis set's basis function information (pure).
+            integer, dimension(:), intent(in) :: nprim_per_atom
+            !! Number of basis primitives per atom.
+            type(PrimitiveFunction), dimension(:,:), intent(out) :: bsetBF_cart
+            !! Basis set's basis function information (Cartesian).
+
+        end subroutine convert_pure2cart_bsetBF
+
+        module subroutine convert_pure2cart_bsetDB(bsetDB, bsetBF_cart)
+            !! Convert basis set information from pure to Cartesian.
+            !!
+            !! Converts the information for pure basis functions to Cartesian
+            !! functions.
+            !!
+            !! This version expects a basis set database as argument.
+
+            type(BasisSetDB), intent(in) :: bsetDB
+            !! Basis set database (pure).
+            type(PrimitiveFunction), dimension(:,:), intent(out) :: bsetBF_cart
+            !! Basis set's basis function information (Cartesian).
+
+        end subroutine convert_pure2cart_bsetDB
+
+        module subroutine convert_pure2cart_matrix_bsetBF( &
+                bsetBF, nprim_per_atom, matrix_pure, matrix_cart)
+            !! Convert matrix from pure to Cartesian basis.
+            !!
+            !! Converts a matrix from pure to Cartesian basis.
+            !!
+            !! This version expects basis set information as separate arguments.
+
+            type(PrimitiveFunction), dimension(:,:), intent(in) :: bsetBF
+            !! Basis set's basis function information (pure).
+            integer, dimension(:), intent(in) :: nprim_per_atom
+            !! Number of basis primitives per atom.
+            real(realwp), dimension(:,:), intent(in) :: matrix_pure
+            !! Input matrix, in pure basis.
+            real(realwp), dimension(:,:), intent(out) :: matrix_cart
+            !! Output matrix, in Cartesian basis.
+
+        end subroutine convert_pure2cart_matrix_bsetBF
+
+        module subroutine convert_pure2cart_matrix_bsetDB( &
+                bsetDB, matrix_pure, matrix_cart)
+            !! Convert matrix from pure to Cartesian basis.
+            !!
+            !! Converts a matrix from pure to Cartesian basis.
+            !!
+            !! This version expects basis set information as separate arguments.
+            !!
+            !! This version expects a basis set database as argument.
+
+            type(BasisSetDB), intent(in) :: bsetDB
+            !! Basis set database (pure).
+            real(realwp), dimension(:,:), intent(in) :: matrix_pure
+            !! Input matrix, in pure basis.
+            real(realwp), dimension(:,:), intent(out) :: matrix_cart
+            !! Output matrix, in Cartesian basis.
+
+        end subroutine convert_pure2cart_matrix_bsetDB
+
+    end interface convert_pure2cart
+
+! ----------------------------------------------------------------------
+
+    interface fix_norm_AOs
+        !! Fix normalization of atomic orbitals
+        module subroutine fix_norm_AOs_bsetBF( &
+                iout, n_at, n_ao, at_crd, nprim_per_at, bsetBF, err, debug)
+            !! Correct basis sets coefficients to normalize the AOs.
+            !!
+            !! Checks if atomic orbitals are normalized and otherwise correct
+            !! the coefficients to ensure the normalization.
+            !!
+            !! This version expects basis set information as separate arguments.
+
+            integer, intent(in) :: iout
+            !! Unit for output.
+            integer, intent(in) :: n_at
+            !! Number of atoms.
+            integer, intent(in) :: n_ao
+            !! Number of atomic orbitals.
+            real(realwp), dimension(:,:), intent(in) :: at_crd
+            !! Atomic coordinates (in au).
+            integer, dimension(:), intent(in) :: nprim_per_at
+            !! Number of basis primitives per atom.
+            type(PrimitiveFunction), dimension(:,:), intent(inout) :: bsetBF
+            !! Basis set's basis function information.
+            class(BaseException), allocatable, intent(out) :: err
+            !! Error instance.
+            logical, intent(in), optional :: debug
+            !! Enable debugging printing.
+
+        end subroutine fix_norm_AOs_bsetBF
+
+        module subroutine fix_norm_AOs_bsetDB( &
+                iout, n_at, n_ao, at_crd, bsetDB, err, debug)
+            !! Correct basis sets coefficients to normalize the AOs.
+            !!
+            !! Checks if atomic orbitals are normalized and otherwise correct
+            !! the coefficients to ensure the normalization.
+            !!
+            !! This version expects a basis set database as argument.
+
+            ! Arguments
+            integer, intent(in) :: iout
+            !! Unit for output.
+            integer, intent(in) :: n_at
+            !! Number of atoms.
+            integer, intent(in) :: n_ao
+            !! Number of atomic orbitals.
+            real(realwp), dimension(:,:), intent(in) :: at_crd
+            !! Atomic coordinates (in au).
+            type(BasisSetDB), intent(inout) :: bsetDB
+            !! Basis set's basis function information.
+            class(BaseException), allocatable, intent(out) :: err
+            !! Error instance.
+            logical, intent(in), optional :: debug
+            !! Enable debugging printing.
+
+        end subroutine fix_norm_AOs_bsetDB
+
+    end interface fix_norm_AOs
+
+! ----------------------------------------------------------------------
+
+    interface len_shells_on_atom
+        !! Get length of shells centered on chosen atom.
+        module function len_shells_on_atom_bsetBF( &
+                bsetBF, nprim_per_atom, num_shells, ia) &
+                result(len_shells_on_atom)
+            !! Length of each shell on atom `ia`.
+            !!
+            !! Calculates the length of each shell centered on atom given in
+            !! input.
+            !!
+            !! This version expects basis set information as separate arguments.
+
+            type(PrimitiveFunction), dimension(:), intent(in) :: bsetBF
+            !! Basis set's basis function information.
+            integer, dimension(:), intent(in) :: nprim_per_atom
+            !! Number of basis primitives per atom.
+            integer, intent(in) :: num_shells
+            !! Number of shells
+            integer, intent(in) :: ia
+            !! Atom index.
+            integer, dimension(num_shells) :: len_shells_on_atom
+            !! Size of each shell on atom `ia`.
+
+        end function len_shells_on_atom_bsetBF
+
+        module function len_shells_on_atom_bsetDB(bsetDB, num_shells, ia) &
+                result(len_shells_on_atom)
+            !! Length of each shell on atom `ia`.
+            !!
+            !! Calculates the length of each shell centered on atom given in
+            !! input.
+            !!
+            !! This version expects a basis set database as argument.
+
+            type(BasisSetDB), intent(in) :: bsetDB
+            !! Basis set database.
+            integer, intent(in) :: num_shells
+            !! Number of shells
+            integer, intent(in) :: ia
+            !! Atom index.
+            integer, dimension(num_shells) :: len_shells_on_atom
+            !! Size of each shell on atom `ia`.
+
+        end function len_shells_on_atom_bsetDB
+    end interface len_shells_on_atom
+
+! ----------------------------------------------------------------------
+
+    interface num_cart_AOs
+        !! Number of Cartesian atomic orbitals based on pure.
+        module function num_cart_AOs_bsetBF(n_ao, bsetBF, nprim_per_atom) &
+                result(num_cart_AOs)
+            !! Number of Cartesian atomic orbitals.
+            !!
+            !! Computes the number of Cartesian-type atomic orbitals.
+            !!
+            !! This version expects basis set information as separate arguments.
+
+            integer, intent(in) :: n_ao
+            !! Number of atomic orbitals.
+            type(PrimitiveFunction), dimension(:,:), intent(in) :: bsetBF
+            !! Basis set's basis function information (pure).
+            integer, dimension(:), intent(in) :: nprim_per_atom
+            !! Number of basis primitives per atom.
+            integer :: num_cart_AOs
+            !! Number of Cartesian atomic orbitals.
+
+        end function num_cart_AOs_bsetBF
+
+        ! ----------------------------------------------------------------------
+
+        module function num_cart_AOs_bsetDB(n_ao, bsetDB) result(num_cart_AOs)
+            !! Number of Cartesian atomic orbitals.
+            !!
+            !! Computes the number of Cartesian-type atomic orbitals.
+            !!
+            !! This version expects a basis set database as argument.
+
+            integer, intent(in) :: n_ao
+            !! Number of atomic orbitals.
+            type(BasisSetDB), intent(in) :: bsetDB
+            !! Basis set database (pure).
+            integer :: num_cart_AOs
+            !! Number of Cartesian atomic orbitals.
+
+        end function num_cart_AOs_bsetDB
+
+    end interface num_cart_AOs
+
+! ----------------------------------------------------------------------
+
+    interface num_shells_on_atom
+        !! Get the number of shells centered on chosen atom.
+        module function num_shells_on_atom_bsetBF(bsetBF, nprim_per_atom, ia) &
+                result(num_shells_on_atom)
+            !! Number of shells on atom `ia`.
+            !!
+            !! Calculates the number of shells centered on atom given in input.
+            !!
+            !! This version expects basis set information as separate arguments.
+
+            type(PrimitiveFunction), dimension(:), intent(in) :: bsetBF
+            !! Basis set's basis function information.
+            integer, dimension(:), intent(in) :: nprim_per_atom
+            !! Number of basis primitives per atom.
+            integer, intent(in) :: ia
+            !! Atom index.
+            integer :: num_shells_on_atom
+            !! Number of shells on atom of interest.
+
+        end function num_shells_on_atom_bsetBF
+
+        module function num_shells_on_atom_bsetDB(bsetDB, ia) &
+                result(num_shells_on_atom)
+            !! Number of shells on atom `ia`.
+            !!
+            !! Calculates the number of shells centered on atom given in input.
+            !!
+            !! This version expects a basis set database as argument.
+
+            type(BasisSetDB), intent(in) :: bsetDB
+            !! Basis set database.
+            integer, intent(in) :: ia
+            !! Atom index.
+            integer :: num_shells_on_atom
+            !! Number of shells on atom of interest.
+
+        end function num_shells_on_atom_bsetDB
+    end interface num_shells_on_atom
+
 
 contains
 
@@ -50,7 +330,7 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
     integer, dimension(:), allocatable, intent(out) :: nprim_per_at
     !! Number of primitive per atom.
     type(PrimitiveFunction), dimension(:,:), allocatable, intent(out) :: bset
-    !! Basis set DB.
+    !! Basis set database.
     class(BaseException), allocatable, intent(out) :: err
     !! Error instance.
 
@@ -566,247 +846,6 @@ end subroutine coef_transfo_P2C
 
 ! ======================================================================
 
-subroutine fix_norm_AOs(iout, n_at, n_ao, at_crd, nprim_per_at, bsetDB, err, &
-                        debug)
-    !! Correct basis sets coefficients to normalize the AOs.
-    !!
-    !! Checks if atomic orbitals are normalized and otherwise correct
-    !! the coefficients to ensure the normalization.
-
-    ! Arguments
-    integer, intent(in) :: iout
-    !! Unit for output.
-    integer, intent(in) :: n_at
-    !! Number of atoms.
-    integer, intent(in) :: n_ao
-    !! Number of atomic orbitals.
-    real(realwp), dimension(:,:), intent(in) :: at_crd
-    !! Atomic coordinates (in au).
-    integer, dimension(:), intent(in) :: nprim_per_at
-    !! Number of basis primitives per atom.
-    type(PrimitiveFunction), dimension(:,:), intent(inout) :: bsetDB
-    !! Basis set DB.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance.
-    logical, intent(in), optional :: debug
-    !! Enable debugging printing.
-
-    ! Local
-    integer, parameter :: &
-        dimPa = 24  ! maximum used dimension for Pascal's triangle
-    real(realwp), parameter :: &
-        tol_expm = 100.0_realwp, &  ! Max. value of x for e^-x to be relevant
-        sqpi3 = sqrt(pi**3)
-    integer :: ndi, ndj
-    integer :: i, idi, idj, iprim, j, jj, jprim
-    integer :: ia, ia0, ja, ja0
-    integer, dimension(:,:), allocatable :: ldi, ldj
-    real(realwp) :: a, ai, aj, cijer, cjer, ebase, r2ij, x
-    real(realwp), dimension(3) :: ri, rj, ovi
-    real(realwp), dimension(max_nxyz,max_nxyz) :: ovlp_ij
-    real(realwp), dimension(max_nxyz,max_nxyz), target :: allones
-    real(realwp), dimension(:), allocatable :: ao_norms, ci, cj
-    real(realwp), dimension(:,:), allocatable :: ao_ovlp
-    real(realwp), dimension(:,:), allocatable, target :: c2p_D, c2p_F, c2p_G, &
-        c2p_H, c2p_I
-    real(realwp), dimension(:,:), pointer :: c2pi, c2pj
-    logical :: dbg_print = .false.
-    class(BaseException), allocatable :: suberr
-
-    err = InitError()
-
-    if (present(debug)) dbg_print = debug
-
-    if (.not.allocated(itri_pa)) then
-        call build_PascalTriangle(dimPa)
-    else
-        if (size(itri_pa, 1) < 24) then
-            deallocate(itri_pa)
-            call build_PascalTriangle(dimPa)
-        end if
-    end if
-    ! build an array of ones as reference for the conversion Cart -> Pure if
-    !   primitive already in Cartesian.
-
-    if (dbg_print) then
-        1000 format(1x,i0,' orbitals read on ',i0,' atoms')
-        write(iout, 1000) n_ao, n_at
-    end if
-
-    allocate(ao_norms(n_ao), ao_ovlp(max_nxyz,n_ao))
-    ao_norms = f0
-    ao_ovlp = f0
-
-    ia0 = 0
-    do ia = 1, n_at
-        ri = at_crd(:,ia)
-        do iprim = 1, nprim_per_at(ia)
-            ai = bsetDB(ia,iprim)%alpha
-            call set_primC_comp(bsetDB(ia,iprim), ndi, ldi, ci, suberr)
-            if (suberr%raised()) then
-                select type(suberr)
-                    class is (ArgumentError)
-                        call RaiseError(err, &
-                                        'Unrecognized shell type for iprim')
-                        return
-                    class default
-                        call RaiseError(err, 'Generic error')
-                        return
-                end select
-            end if
-            if (bsetDB(ia,iprim)%pure) then
-                select case (bsetDB(ia,iprim)%shelltype)
-                    case ('D')
-                        if (.not.allocated(c2p_D)) &
-                            c2p_D = transfo_cart2pure(bsetDB(ia,iprim)%L)
-                        c2pi => c2p_D
-                    case ('F')
-                        if (.not.allocated(c2p_F)) &
-                            c2p_F = transfo_cart2pure(bsetDB(ia,iprim)%L)
-                        c2pi => c2p_F
-                    case ('G')
-                        if (.not.allocated(c2p_G)) &
-                            c2p_G = transfo_cart2pure(bsetDB(ia,iprim)%L)
-                        c2pi => c2p_G
-                    case ('H')
-                        if (.not.allocated(c2p_H)) &
-                            c2p_H = transfo_cart2pure(bsetDB(ia,iprim)%L)
-                        c2pi => c2p_H
-                    case ('I')
-                        if (.not.allocated(c2p_I)) &
-                            c2p_I = transfo_cart2pure(bsetDB(ia,iprim)%L)
-                        c2pi => c2p_I
-                    case default
-                        c2pi => allones
-                end select
-            else
-                c2pi => allones
-            end if
-            ja0 = 0
-            do ja = 1, n_at
-                rj = at_crd(:,ja)
-                r2ij = sum((rj-ri)**2)
-                do jprim = 1, nprim_per_at(ja)
-                    aj = bsetDB(ja,jprim)%alpha
-                    call set_primC_comp(bsetDB(ja,jprim), ndj, ldj, cj, suberr)
-                    if (suberr%raised()) then
-                        select type(suberr)
-                            class is (ArgumentError)
-                                call RaiseError(&
-                                    err, 'Unrecognized shell type for jprim')
-                                return
-                            class default
-                                call RaiseError(err, 'Generic error')
-                                return
-                        end select
-                    end if
-                    if (bsetDB(ja,jprim)%pure) then
-                        select case (bsetDB(ja,jprim)%shelltype)
-                            case ('D')
-                                if (.not.allocated(c2p_D)) &
-                                    c2p_D = transfo_cart2pure(bsetDB(ja,jprim)%L)
-                                c2pj => c2p_D
-                            case ('F')
-                                if (.not.allocated(c2p_F)) &
-                                    c2p_F = transfo_cart2pure(bsetDB(ja,jprim)%L)
-                                c2pj => c2p_F
-                            case ('G')
-                                if (.not.allocated(c2p_G)) &
-                                    c2p_G = transfo_cart2pure(bsetDB(ja,jprim)%L)
-                                c2pj => c2p_G
-                            case ('H')
-                                if (.not.allocated(c2p_H)) &
-                                    c2p_H = transfo_cart2pure(bsetDB(ja,jprim)%L)
-                                c2pj => c2p_H
-                            case ('I')
-                                if (.not.allocated(c2p_I)) &
-                                    c2p_I = transfo_cart2pure(bsetDB(ja,jprim)%L)
-                                c2pj => c2p_I
-                            case default
-                                c2pj => allones
-                        end select
-                    else
-                        c2pj => allones
-                    end if
-                    a = f1 / (ai+aj)
-                    x = ai*aj*r2ij*a
-                    if (x < tol_expm) then
-                        ebase = sqpi3*exp(-x)
-                    else
-                        if (bsetDB(ja,jprim)%shell_last) &
-                            ja0 = ja0 + bsetDB(ja,jprim)%ndim
-                        cycle
-                    end if
-
-                    ! Now loop over orbitals to which primitives contribute
-                    do idj = 1, ndj
-                        cjer = ebase*cj(idj)
-                        do idi = 1, ndi
-                            cijer = cjer*ci(idi)
-                            ovi = phii_xn_phij(.true., ldi(:,idi), ri, ai, &
-                                               ldj(:,idj), rj, aj, 0)
-                            ovlp_ij(idi,idj) = product(ovi)*cijer
-                        end do
-                    end do
-
-                    ! Check now if we need to convert to pure basis
-                    if (bsetDB(ia,iprim)%pure .or. bsetDB(ja,jprim)%pure) then
-                        do i = 1, bsetDB(ia,iprim)%ndim
-                            do j = 1, bsetDB(ja,jprim)%ndim
-                                jj = ja0 + j
-                                do idi = 1, ndi
-                                    x = c2pi(i,idi)
-                                    do idj = 1, ndj
-                                        ao_ovlp(i,jj) = ao_ovlp(i,jj) &
-                                            + x*ovlp_ij(idi,idj)*c2pj(j,idj)
-                                    end do
-                                end do
-                            end do
-                        end do
-                    else
-                        do idi = 1, ndi
-                            do idj = 1, ndj
-                                ao_ovlp(idi,ja0+idj) = ao_ovlp(idi,ja0+idj) &
-                                    + ovlp_ij(idi,idj)
-                            end do
-                        end do
-                    end if
-                    if (bsetDB(ja,jprim)%shell_last) &
-                        ja0 = ja0 + bsetDB(ja,jprim)%ndim
-                end do
-            end do
-            if (bsetDB(ia,iprim)%shell_last) then
-                do i = 1, bsetDB(ia,iprim)%ndim
-                    ao_norms(ia0+i) = ao_ovlp(i,ia0+i)
-                end do
-                ia0 = ia0 + bsetDB(ia,iprim)%ndim
-                ao_ovlp = f0
-            end if
-        end do
-    end do
-
-    if (dbg_print) then
-        write(iout, '(a)') 'atomic orbital norms before normalization:'
-        write(iout, '(6f12.6)') (ao_norms(i),i=1,n_ao)
-    end if
-
-    ! Now normalize
-    ia0 = 1
-    do ia = 1, n_at
-        ri = at_crd(:,ia)
-        do iprim = 1, nprim_per_at(ia)
-            a = f1 / sqrt(ao_norms(ia0))
-            bsetDB(ia,iprim)%coeff = bsetDB(ia,iprim)%coeff*a
-            if (bsetDB(ia,iprim)%shell_last) ia0 = ia0 + bsetDB(ia,iprim)%ndim
-        end do
-    end do
-
-    return
-end subroutine fix_norm_AOs
-
-
-! ======================================================================
-
 subroutine set_primC_comp(bfunc, ndimC, lxyz, coefs, err)
     !! Set component for a Cartesian primitive.
     !!
@@ -925,7 +964,7 @@ function transfo_cart2pure(L_ang) result(convmat)
     !!
     !! |    |          |    1  |   2  |    3  |   4  |   5  |   6 |      |
     !! | ---|----------|-------|------|-------|------|------|-----|----- |
-    !! |    |          |   xx  |  yy  |   zz  |  xy  |  xz  |  yz |      | 
+    !! |    |          |   xx  |  yy  |   zz  |  xy  |  xz  |  yz |      |
     !! | ---|----------|-------|------|-------|------|------|-----|----- |
     !! |  1 | 3z^2-R^2 |   -1  |  -1  |    2  |   0  |   0  |   0 | *s1  |
     !! |  2 |    xz    |    0  |   0  |    0  |   0  |   1  |   0 |      |

@@ -408,18 +408,22 @@ end subroutine sec_header
 
 ! ======================================================================
 
-subroutine write_err(nature, msg, error)
+subroutine write_err(nature, msg, extra, place)
     !! Writes error message on default unit.
     !!
     !! Writes an error message.  The formatting depends on the nature
     !!   of the error:
     !! * Generic/gen: generic error
     !! * Basic/std: basic/standard error
+    !! * Developer/dev: coding/development error
     character(len=*), intent(in) :: nature
     !! Nature of the error
     character(len=*), intent(in) :: msg
-    !! General error message
-    character(len=*), intent(in), optional :: error
+    !! General error message.
+    character(len=*), intent(in), optional :: extra
+    !! Extra information on nature of the error, e.g., reason.
+    character(len=*), intent(in), optional :: place
+    !! Place (procedure, execution sequence...) where error occured.
 
     select case (locase(trim(nature)))
         case ('generic', 'gen')
@@ -427,7 +431,15 @@ subroutine write_err(nature, msg, error)
             write(iu_out, '(a)') 'Stopping'
         case ('basic', 'std')
             write(iu_out, '(a)') trim(msg)
-            write(iu_out, '("Reason:",/,4x,a)') trim(error)
+            write(iu_out, '("Reason:",/,4x,a)') trim(extra)
+        case ('deverr', 'dev')
+            if (present(place)) then
+                write(iu_out, '("Error in [",a,"]: ",a)') &
+                    trim(place), trim(msg)
+            else
+                write(iu_out, '("Internal Error: ",a)') trim(msg)
+            end if
+            write(iu_out, '("Reason:",/,4x,a)') trim(extra)
         case default
             write(iu_out, '("Uncategorized error:",4x,a)') trim(msg)
     end select

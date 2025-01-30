@@ -496,12 +496,7 @@ module procedure build_vib_data_fchk
 
     ! Now extract eigenvectors and do necessary operations/conversions
     evec = reshape(dbase(4)%rdata, [n_at3,vib%n_vib])
-    if (build_Lmweig) then
-        allocate(vib%L_mwg(n_at3,vib%n_vib))
-        do i = 1, vib%n_vib
-            vib%L_mwg(:,i) = evec(:,i)/sqrt(vib%red_mass(i))
-        end do
-    end if
+    if (build_Lmweig) vib%L_mwg = evec
 
     if (build_Lmat) then
         allocate(vib%L_mat(n_at3,vib%n_vib))

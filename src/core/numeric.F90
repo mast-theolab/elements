@@ -21,6 +21,12 @@ module numeric
         f8th = 0.125_realwp, f16th = 0.0625_realwp
 
     real(realwp), parameter :: &
+        small = 1.0e-6_realwp, &
+        !! Values can be considered with respect to typical precision.
+        near0 = epsilon(0.0_realwp)*f10
+        !! Lower values are negligible for a suitable unit of the quantity.
+
+    real(realwp), parameter :: &
         pi = f4*atan(f1)
 
 contains

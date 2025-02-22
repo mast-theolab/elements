@@ -6,6 +6,7 @@
 * Operator `.iscloseto.` (`numeric`) tests closeness of 2 values or arrays with sensible thresholds for numeric simulations.
 * Function `is_close_to` (`numeric`) tests the closeness, with absolute and relative thresholds that can be set by developers.
 * Module `numeric` now has internal "sensible" thresholds for numeric simulations, to be used as defaults in "closeness" tests.
+* New methods `copy_to` and `copy_from` added to `MoleculeDB` facilitate copies between databases.  Test on overlaps between source and destination must be done a priori to avoid an error.
 
 ### Fixed
 * Mass-weighted normal coordinates vectors was not properly normalized after extraction from fchk files.

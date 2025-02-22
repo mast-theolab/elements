@@ -81,6 +81,9 @@ module datatypes
         logical :: &
             loaded = .false., &
             dens_loaded = .false.   ! electronic density has been loaded.
+    contains
+        procedure :: copy_to => copy_molDB_to
+        procedure :: copy_from => copy_molDB_from
     end type MoleculeDB
 
     type, public :: OrbitalsDB
@@ -184,6 +187,58 @@ module datatypes
     end type VibrationsDB
 
 contains
+
+! ======================================================================
+
+subroutine copy_molDB_to(this, mol)
+    !! Copy content of MoleculeDB `this` to `mol`.
+    !!
+    !! Copies the values of the attributes of MoleculeDB object `this`
+    !! into a new object `mol`, overwriting any existing value.
+    class(MoleculeDB), intent(in) :: this
+    !! Original object.
+    class(MoleculeDB), intent(inout) :: mol
+    !! Destination object for the copy.
+    mol%charge = this%charge
+    mol%multip = this%multip
+    mol%n_at = this%n_at
+    mol%n_el = this%n_el
+    mol%at_num = this%at_num
+    mol%energy = this%energy
+    mol%at_chg = this%at_chg
+    mol%at_mas = this%at_mas
+    mol%at_crd = this%at_crd
+    mol%el_dens = this%el_dens
+    mol%at_lab = this%at_lab
+    mol%loaded = this%loaded
+    mol%dens_loaded = this%dens_loaded
+end subroutine copy_molDB_to
+
+! ======================================================================
+
+subroutine copy_molDB_from(this, mol)
+    !! Set content of MoleculeDB `this` from `mol`.
+    !!
+    !! Copies the values of the attributes of MoleculeDB object `mol`
+    !! from those of object `mol`, overwriting any existing value.
+    class(MoleculeDB), intent(inout) :: this
+    !! Destination object.
+    class(MoleculeDB), intent(in) :: mol
+    !! Source object for the copy
+    this%charge = mol%charge
+    this%multip = mol%multip
+    this%n_at = mol%n_at
+    this%n_el = mol%n_el
+    this%at_num = mol%at_num
+    this%energy = mol%energy
+    this%at_chg = mol%at_chg
+    this%at_mas = mol%at_mas
+    this%at_crd = mol%at_crd
+    this%el_dens = mol%el_dens
+    this%at_lab = mol%at_lab
+    this%loaded = mol%loaded
+    this%dens_loaded = mol%dens_loaded
+end subroutine copy_molDB_from
 
 ! ======================================================================
 

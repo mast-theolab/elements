@@ -130,6 +130,16 @@ target("datalib")
     add_files("src/parsers/input_data_*.f90")
 
 
+target("molelib")
+    -- Molecular structure-related resources
+    set_kind("static")
+    add_packages("openmp")
+    add_deps("corelib")
+    add_deps("datalib")
+    add_deps("mathlib")
+    add_files("src/core/geometry.f90")
+
+
 target("eleclib")
     -- Electronic structure-related resources
     set_kind("static")
@@ -153,6 +163,7 @@ target("elements")
     add_deps("corelib")
     add_deps("mathlib")
     add_deps("datalib")
+    add_deps("molelib")
     add_deps("eleclib")
     add_deps("speclib")
     add_files("src/core/exc_sos.f90")
@@ -322,4 +333,12 @@ target("test_timestamp")
     set_rundir("$(projectdir)/tests")
     add_deps("corelib")
     add_files("src/tests/test_timestamp.f90")
+    add_tests("default")
+
+target("test_geom_ops")
+    set_default(false)
+    add_packages("openmp")
+    set_rundir("$(projectdir)/tests")
+    add_deps("molelib")
+    add_files("src/tests/geom_ops.f90")
     add_tests("default")

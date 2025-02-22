@@ -7,6 +7,11 @@
 * Function `is_close_to` (`numeric`) tests the closeness, with absolute and relative thresholds that can be set by developers.
 * Module `numeric` now has internal "sensible" thresholds for numeric simulations, to be used as defaults in "closeness" tests.
 * New methods `copy_to` and `copy_from` added to `MoleculeDB` facilitate copies between databases.  Test on overlaps between source and destination must be done a priori to avoid an error.
+* New module `geometry` related to operations on molecular structures.
+* New function interface `center_of_mass` (`geometry`) to compute the center of mass for a given geometry, given as array or though a `MoleculeDB` type.
+* New function interface `inertia moment` (`geometry`) to compute the inertia moments tensor related to a given geometry, given as an array or through a `MoleculeDB` type.
+* New subroutine interface `Eckart_orient` (`geometry`) to transform a given geometry, given as an array or as a `MoleculeDB` type, into an orientation satisfying Eckart's conditions.  The transformation may not be unique and depends on the original orientation.
+* New subroutine interface `superpose` (`geometry`) to superpose a given structure, given as an array or as a `MoleculeDB` type, onto an existing one, given as an array.  The subroutine supports different weight models and masks to perform the superposition on a subset of atoms.
 
 ### Fixed
 * Mass-weighted normal coordinates vectors was not properly normalized after extraction from fchk files.

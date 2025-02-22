@@ -2,6 +2,11 @@
 
 ## 0.25.02
 
+### Added
+* Operator `.iscloseto.` (`numeric`) tests closeness of 2 values or arrays with sensible thresholds for numeric simulations.
+* Function `is_close_to` (`numeric`) tests the closeness, with absolute and relative thresholds that can be set by developers.
+* Module `numeric` now has internal "sensible" thresholds for numeric simulations, to be used as defaults in "closeness" tests.
+
 ### Fixed
 * Mass-weighted normal coordinates vectors was not properly normalized after extraction from fchk files.
 

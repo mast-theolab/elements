@@ -15,6 +15,7 @@
 
 ### Fixed
 * Mass-weighted normal coordinates vectors was not properly normalized after extraction from fchk files.
+* Calculation of the number of Cartesian atomic orbitals/basis functions (`basisset: num_cart_AOs`).
 
 
 ## 0.25.01

@@ -78,7 +78,6 @@ module procedure convert_pure2cart_matrix_bsetBF
         len_mu_P, offset_mu, shell_mu, shell_per_atom_mu
     integer :: center_nu, l_nu, len_nu_C, id_nu_C, id_nu_P, &
         len_nu_P, offset_nu, shell_nu, shell_per_atom_nu
-    integer :: sp_i, sp_j
     integer, dimension(:), allocatable :: len_shell_per_atom_mu, len_shell_per_atom_nu
     real(realwp), dimension(:,:), allocatable :: mu_t, nu_t
     ! real(realwp), dimension(size(matrix_cart, 1), size(matrix_pure, 1)) :: tmp
@@ -166,7 +165,6 @@ module procedure convert_pure2cart_matrix_bsetDB
         len_mu_P, offset_mu, shell_mu, shell_per_atom_mu
     integer :: center_nu, l_nu, len_nu_C, id_nu_C, id_nu_P, &
         len_nu_P, offset_nu, shell_nu, shell_per_atom_nu
-    integer :: sp_i, sp_j
     integer, dimension(:), allocatable :: len_shell_per_atom_mu, len_shell_per_atom_nu
     real(realwp), dimension(:,:), allocatable :: mu_t, nu_t
     ! real(realwp), dimension(size(matrix_cart, 1), size(matrix_pure, 1)) :: tmp
@@ -726,23 +724,35 @@ end procedure len_shells_on_atom_bsetDB
 
 module procedure num_cart_AOs_bsetBF
 
-    integer :: n_ao_cartesian, n_d, n_f
-
     ! Local
     integer :: i, center
 
     num_cart_AOs = 0
-    n_d = 0
-    n_f = 0
 
     do center = 1, size(bsetBF, 1)
         do i = 1, nprim_per_atom(center)
-            if (bsetBF(center, i)%shell_first) then
-                if (bsetBF(center, i)%shelltype == 'D' ) then
-                    n_d = n_d + 1
-                else if (bsetBF(center, i)%shelltype == 'F' ) then
-                    n_f = n_f + 1
-                endif
+            if (bsetBF(center,i)%shell_first) then
+                select case (bsetBF(center,i)%shelltype)
+                    case ('SP')
+                        num_cart_AOs = num_cart_AOs + 4
+                    case ('S')
+                        num_cart_AOs = num_cart_AOs + 1
+                    case ('P')
+                        num_cart_AOs = num_cart_AOs + 3
+                    case ('D')
+                        num_cart_AOs = num_cart_AOs + 6
+                    case ('F')
+                        num_cart_AOs = num_cart_AOs + 10
+                    case ('G')
+                        num_cart_AOs = num_cart_AOs + 15
+                    case ('H')
+                        num_cart_AOs = num_cart_AOs + 21
+                    case ('I')
+                        num_cart_AOs = num_cart_AOs + 28
+                    case default
+                        print *, 'Unsupported basis function'
+                        stop 99
+                end select
             endif
         enddo
     enddo
@@ -762,16 +772,31 @@ module procedure num_cart_AOs_bsetDB
 
     do center = 1, size(bsetDB%info, 1)
         do i = 1, bsetDB%nprim_per_at(center)
-            if (bsetDB%info(center, i)%shell_first) then
-                if (bsetDB%info(center, i)%shelltype == 'D' ) then
-                    n_d = n_d + 1
-                else if (bsetDB%info(center, i)%shelltype == 'F' ) then
-                    n_f = n_f + 1
-                endif
+            if (bsetDB%info(center,i)%shell_first) then
+                select case (bsetDB%info(center,i)%shelltype)
+                    case ('SP')
+                        num_cart_AOs = num_cart_AOs + 4
+                    case ('S')
+                        num_cart_AOs = num_cart_AOs + 1
+                    case ('P')
+                        num_cart_AOs = num_cart_AOs + 3
+                    case ('D')
+                        num_cart_AOs = num_cart_AOs + 6
+                    case ('F')
+                        num_cart_AOs = num_cart_AOs + 10
+                    case ('G')
+                        num_cart_AOs = num_cart_AOs + 15
+                    case ('H')
+                        num_cart_AOs = num_cart_AOs + 21
+                    case ('I')
+                        num_cart_AOs = num_cart_AOs + 28
+                    case default
+                        print *, 'Unsupported basis function'
+                        stop 99
+                end select
             endif
         enddo
     enddo
-    num_cart_AOs = n_ao + n_d + n_f * 3
 
 end procedure num_cart_AOs_bsetDB
 

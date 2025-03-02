@@ -1,6 +1,32 @@
 module lapack_drv
-    
+
     implicit none
+
+! ----------------------------------------------------------------------
+
+    interface xgeqrf
+        !! Generic interface to LAPACK QR factorization routines xGEQRF
+        subroutine sgeqrf(m, n, A, lda, tau, work, lwork, info)
+            integer :: m, n, lda, lwork, info
+            real, dimension(lda,*) :: A
+            real, dimension(*) :: work, tau
+        end subroutine sgeqrf
+        subroutine dgeqrf(m, n, A, lda, tau, work, lwork, info)
+            integer :: m, n, lda, lwork, info
+            double precision, dimension(lda,*) :: A
+            double precision, dimension(*) :: work, tau
+        end subroutine dgeqrf
+        subroutine cgeqrf(m, n, A, lda, tau, work, lwork, info)
+            integer :: m, n, lda, lwork, info
+            complex, dimension(lda,*) :: A
+            complex, dimension(*) :: work, tau
+        end subroutine cgeqrf
+        subroutine zgeqrf(m, n, A, lda, tau, work, lwork, info)
+            integer :: m, n, lda, lwork, info
+            complex*16, dimension(lda,*) :: A
+            complex*16, dimension(*) :: work, tau
+        end subroutine zgeqrf
+    end interface xgeqrf
 
 ! ----------------------------------------------------------------------
 
@@ -57,6 +83,32 @@ module lapack_drv
             complex*16, dimension(*) :: work
         end subroutine zgetri
     end interface xgetri
+
+! ----------------------------------------------------------------------
+
+    interface xorgqr
+        !! Generic interface to LAPACK xORGQR to generate Q from xGEQRF
+        subroutine sorgqr(m, n, k, A, lda, tau, work, lwork, info)
+            integer :: k, info, lda, lwork, m, n
+            real, dimension(lda,*) :: A
+            real, dimension(*) :: work, tau
+        end subroutine sorgqr
+        subroutine dorgqr(m, n, k, A, lda, tau, work, lwork, info)
+            integer :: k, info, lda, lwork, m, n
+            double precision, dimension(lda,*) :: A
+            double precision, dimension(*) :: work, tau
+        end subroutine dorgqr
+        subroutine corgqr(m, n, k, A, lda, tau, work, lwork, info)
+            integer :: k, info, lda, lwork, m, n
+            complex, dimension(lda,*) :: A
+            complex, dimension(*) :: work, tau
+        end subroutine corgqr
+        subroutine zorgqr(m, n, k, A, lda, tau, work, lwork, info)
+            integer :: k, info, lda, lwork, m, n
+            complex*16, dimension(lda,*) :: A
+            complex*16, dimension(*) :: work, tau
+        end subroutine zorgqr
+    end interface xorgqr
 
 ! ----------------------------------------------------------------------
 

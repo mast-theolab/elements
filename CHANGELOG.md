@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.03
+
+### Added
+* An instance of `PhysFact`, `phys_conv`, is now provided by the `physics` module as well.
+
+
 ## 0.25.02
 
 ### Added

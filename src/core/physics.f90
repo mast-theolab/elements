@@ -4,11 +4,11 @@ module physics
     !! Provides common phyical constants and subroutines.
     !! Content:
     !! - PhysFact : derived-type with physical conversion factors
-    !! - PhysConst : derived-typw with physical constants 
+    !! - phys_conv: Instance of PhysFact
     use iso_fortran_env, only: real32, real64
 
     implicit none
-    
+
     private
 
     real(real64), parameter, public :: &
@@ -43,6 +43,8 @@ module physics
             generic, public :: cal2J => s_conv_cal_to_J, d_conv_cal_to_J
             generic, public :: Eh2J => s_conv_hartree_to_J, d_conv_hartree_to_J
     end type PhysFact
+
+    type(PhysFact), public :: phys_conv
 
 contains
 

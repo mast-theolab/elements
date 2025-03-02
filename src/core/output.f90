@@ -8,12 +8,11 @@ module output
     !! - print atomic coordinates -> prt_coord
     use iso_fortran_env, only: real32, real64, int32, int64, output_unit
     use string, only: locase
-    use physics, only: PhysFact
+    use physics, only: phys => phys_conv
 
     implicit none
 
     integer :: iu_out = output_unit
-    type(PhysFact), private :: phys
 
     interface prt_mat
         module procedure :: prt_mat_r32, prt_mat_r64

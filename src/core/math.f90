@@ -11,8 +11,18 @@ module math
     real(real64), parameter :: pi_r64 = 4.0_real64*atan(1.0_real64)
     real(real32), parameter :: pi_r32 = 4.0_real32*atan(1.0_real32)
 
+    interface operator(.x.)
+        module procedure s_cross, d_cross, &
+            s_cross_vec_mat, d_cross_vec_mat, &
+            s_cross_mat_vec, d_cross_mat_vec, &
+            s_cross_mat_mat, d_cross_mat_mat
+    end interface operator(.x.)
+
     interface cross
-        module procedure s_cross, d_cross
+        module procedure s_cross, d_cross, &
+            s_cross_vec_mat, d_cross_vec_mat, &
+            s_cross_mat_vec, d_cross_mat_vec, &
+            s_cross_mat_mat, d_cross_mat_mat
     end interface cross
 
     interface inv_mat
@@ -322,19 +332,119 @@ function d_cross(vecA, vecB) result(vecC)
     !!
     !! Computes the cross vector between 2 Cartesian vectors.
     !! @note: double precision version
-    real(real64), dimension(3) :: vecA
+    real(real64), dimension(3), intent(in) :: vecA
     !! vector A
-    real(real64), dimension(3) :: vecB
+    real(real64), dimension(3), intent(in) :: vecB
     !! vector B
     real(real64), dimension(3) :: vecC
     !! vector C
 
-    VecC(1) = vecA(2)*VecB(3) - VecA(3)*VecB(2)
-    VecC(2) = vecA(3)*VecB(1) - VecA(1)*VecB(3)
-    VecC(3) = vecA(1)*VecB(2) - VecA(2)*VecB(1)
+    vecC(1) = vecA(2)*vecB(3) - vecA(3)*vecB(2)
+    vecC(2) = vecA(3)*vecB(1) - vecA(1)*vecB(3)
+    vecC(3) = vecA(1)*vecB(2) - vecA(2)*vecB(1)
 
-    return
 end function d_cross
+
+! ======================================================================
+
+function d_cross_vec_mat(vecA, matB) result(matC)
+    !! Compute the cross product: C(,:) = A x B(,:)
+    !!
+    !! Computes the cross vector between 1 Cartesian vector and a list
+    !! of vectors.
+    !!
+    !! @note "version"
+    !! * double precision version
+    !! * B is a matrix of dimension(3:N)
+    !! @endnote
+    real(real64), dimension(3), intent(in) :: vecA
+    !! vector A.
+    real(real64), dimension(:,:), intent(in) :: matB
+    !! list of vectors B.
+    real(real64), dimension(:,:), allocatable :: matC
+    !! list of vectors C.
+
+    integer :: i, n
+
+    n = size(matB,2)
+
+    allocate(matC(3,n))
+
+    do i = 1, n
+        matC(1,i) = vecA(2)*matB(3,i) - VecA(3)*matB(2,i)
+        matC(2,i) = vecA(3)*matB(1,i) - VecA(1)*matB(3,i)
+        matC(3,i) = vecA(1)*matB(2,i) - VecA(2)*matB(1,i)
+    end do
+
+end function d_cross_vec_mat
+
+! ======================================================================
+
+function d_cross_mat_vec(matA, vecB) result(matC)
+    !! Compute the cross product: C(,:) = A(,:) x B
+    !!
+    !! Computes the cross vector between 1 list of Cartesian vectors
+    !! and one Cartesian vector.
+    !!
+    !! @note "version"
+    !! * double precision version
+    !! * A is a matrix of dimension(3:N)
+    !! @endnote
+    real(real64), dimension(:,:), intent(in) :: matA
+    !! vector A.
+    real(real64), dimension(3), intent(in) :: vecB
+    !! list of vectors B.
+    real(real64), dimension(:,:), allocatable :: matC
+    !! list of vectors C.
+
+    integer :: i, m
+
+    m = size(matA,2)
+
+    allocate(matC(3,m))
+
+    do i = 1, m
+        matC(1,i) = matA(2,i)*vecB(3) - matA(3,i)*vecB(2)
+        matC(2,i) = matA(3,i)*vecB(1) - matA(1,i)*vecB(3)
+        matC(3,i) = matA(1,i)*vecB(2) - matA(2,i)*vecB(1)
+    end do
+
+end function d_cross_mat_vec
+
+! ======================================================================
+
+function d_cross_mat_mat(matA, matB) result(matC)
+    !! Compute the cross product: C(:,:) = A(,:) x B(,:)
+    !!
+    !! Computes the cross vector between 2 lists of Cartesian vectors.
+    !! @note "version"
+    !! * double precision version
+    !! * A is a matrix of dimension(3:M)
+    !! * B is a matrix of dimension(3:N)
+    !! @endnote
+    real(real64), dimension(:,:), intent(in) :: matA
+    !! list of vectors A.
+    real(real64), dimension(:,:), intent(in) :: matB
+    !! list of vectors B.
+    real(real64), dimension(:,:,:), allocatable :: matC
+    !! list of lists of vectors C.
+
+    integer :: i, j, m, n
+    real(real64), dimension(3) :: vec
+
+    m = size(matA, 2) ; n = size(matB, 2)
+    allocate(matC(3,m,n))
+
+    do i = 1, n
+        vec = matB(:,i)
+        do j = 1, m
+            matC(1,j,i) = matA(2,j)*vec(3) - matA(3,j)*vec(2)
+            matC(2,j,i) = matA(3,j)*vec(1) - matA(1,j)*vec(3)
+            matC(3,j,i) = matA(1,j)*vec(2) - matA(2,j)*vec(1)
+        end do
+    end do
+
+end function d_cross_mat_mat
 
 ! ======================================================================
 
@@ -343,9 +453,9 @@ function s_cross(vecA, vecB) result(vecC)
     !!
     !! Computes the cross vector between 2 Cartesian vectors.
     !! @note: simple precision version
-    real(real32), dimension(3) :: vecA
+    real(real32), dimension(3), intent(in) :: vecA
     !! vector A
-    real(real32), dimension(3) :: vecB
+    real(real32), dimension(3), intent(in) :: vecB
     !! vector B
     real(real32), dimension(3) :: vecC
     !! vector C
@@ -356,6 +466,107 @@ function s_cross(vecA, vecB) result(vecC)
 
     return
 end function s_cross
+
+! ======================================================================
+
+function s_cross_vec_mat(vecA, matB) result(matC)
+    !! Compute the cross product: C(,:) = A x B(,:)
+    !!
+    !! Computes the cross vector between 1 Cartesian vector and a list
+    !! of vectors.
+    !!
+    !! @note "version"
+    !! * single precision version
+    !! * B is a matrix of dimension(3:N)
+    !! @endnote
+    real(real32), dimension(3), intent(in) :: vecA
+    !! vector A.
+    real(real32), dimension(:,:), intent(in) :: matB
+    !! list of vectors B.
+    real(real32), dimension(:,:), allocatable :: matC
+    !! list of vectors C.
+
+    integer :: i, n
+
+    n = size(matB,2)
+
+    allocate(matC(3,n))
+
+    do i = 1, n
+        matC(1,i) = vecA(2)*matB(3,i) - VecA(3)*matB(2,i)
+        matC(2,i) = vecA(3)*matB(1,i) - VecA(1)*matB(3,i)
+        matC(3,i) = vecA(1)*matB(2,i) - VecA(2)*matB(1,i)
+    end do
+
+end function s_cross_vec_mat
+
+! ======================================================================
+
+function s_cross_mat_vec(matA, vecB) result(matC)
+    !! Compute the cross product: C(,:) = A(,:) x B
+    !!
+    !! Computes the cross vector between 1 list of Cartesian vectors
+    !! and one Cartesian vector.
+    !!
+    !! @note "version"
+    !! * single precision version
+    !! * A is a matrix of dimension(3:N)
+    !! @endnote
+    real(real32), dimension(:,:), intent(in) :: matA
+    !! vector A.
+    real(real32), dimension(3), intent(in) :: vecB
+    !! list of vectors B.
+    real(real32), dimension(:,:), allocatable :: matC
+    !! list of vectors C.
+
+    integer :: i, m
+
+    m = size(matA,2)
+
+    allocate(matC(3,m))
+
+    do i = 1, m
+        matC(1,i) = matA(2,i)*vecB(3) - matA(3,i)*vecB(2)
+        matC(2,i) = matA(3,i)*vecB(1) - matA(1,i)*vecB(3)
+        matC(3,i) = matA(1,i)*vecB(2) - matA(2,i)*vecB(1)
+    end do
+
+end function s_cross_mat_vec
+
+! ======================================================================
+
+function s_cross_mat_mat(matA, matB) result(matC)
+    !! Compute the cross product: C(:,:) = A(,:) x B(,:)
+    !!
+    !! Computes the cross vector between 2 lists of Cartesian vectors.
+    !! @note "version"
+    !! * double precision version
+    !! * A is a matrix of dimension(3:M)
+    !! * B is a matrix of dimension(3:N)
+    !! @endnote
+    real(real32), dimension(:,:), intent(in) :: matA
+    !! list of vectors A.
+    real(real32), dimension(:,:), intent(in) :: matB
+    !! list of vectors B.
+    real(real32), dimension(:,:,:), allocatable :: matC
+    !! list of lists of vectors C.
+
+    integer :: i, j, m, n
+    real(real32), dimension(3) :: vec
+
+    m = size(matA, 2) ; n = size(matB, 2)
+    allocate(matC(3,m,n))
+
+    do i = 1, n
+        vec = matB(:,i)
+        do j = 1, m
+            matC(1,j,i) = matA(2,j)*vec(3) - matA(3,j)*vec(2)
+            matC(2,j,i) = matA(3,j)*vec(1) - matA(1,j)*vec(3)
+            matC(3,j,i) = matA(1,j)*vec(2) - matA(2,j)*vec(1)
+        end do
+    end do
+
+end function s_cross_mat_mat
 
 ! ======================================================================
 

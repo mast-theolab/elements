@@ -10,6 +10,9 @@
 * New interfaces to LAPACK routines dedicated to QR factorization, `xGEQRF` and `xORGQR`.
 * Added support of potential energy in `PropertyDB` (`datatypes`).
 * Added extraction of potential energy from Gaussian formatted checkpoint file in `get_data` (`input`), as electronic transition moments or state-specific quantities, including derivatives.
+* Added operator `.x.` for cross product in `math`.
+* Cross product can now be applied to list(s) of vectors (`math`).
+
 
 ## 0.25.02
 

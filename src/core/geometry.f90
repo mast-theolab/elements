@@ -20,8 +20,11 @@ module geometry
 
     interface Eckart_orient
         module procedure Eckart_orient_arr, &
+            Eckart_orient_arr_upd, &
             Eckart_orient_dim, &
-            Eckart_orient_mol
+            Eckart_orient_dim_upd, &
+            Eckart_orient_mol, &
+            Eckart_orient_mol_upd
     end interface Eckart_orient
 
     interface inertia_moments
@@ -149,6 +152,7 @@ function center_of_mass_mol(mol) result(com)
 
 end function center_of_mass_mol
 
+
 ! ======================================================================
 
 subroutine Eckart_orient_arr(at_crd, at_mass, rot_mat, p_mom, new_crd, &
@@ -165,9 +169,8 @@ subroutine Eckart_orient_arr(at_crd, at_mass, rot_mat, p_mom, new_crd, &
     !! The output quantities are all optional, it is possible to choose
     !! which quantity to get in return.
     !!
-    !! `new_crd` is built at the end, so `at_crd` and `new_crd` can
-    !! be the same.  For this reason, both arguments have intent
-    !! `inout`.
+    !! `at_crd` and `new_crd` are expected different because of the
+    !! strict intent, but the code itself is safe for overlapping data.
     !!
     !! @note "Flavor"
     !! This version takes data arrays as elements, recovering dimensions
@@ -175,7 +178,7 @@ subroutine Eckart_orient_arr(at_crd, at_mass, rot_mat, p_mom, new_crd, &
     !! Information that can be easily recovered, like the number of
     !! atoms from the array sizes, is recomputed.
     !! @endnote
-    real(realwp), dimension(:,:), intent(inout) :: at_crd
+    real(realwp), dimension(:,:), intent(in) :: at_crd
     !! Atomic coordinates.
     real(realwp), dimension(:), intent(in) :: at_mass
     !! Atomic masses.
@@ -246,6 +249,99 @@ end subroutine Eckart_orient_arr
 
 ! ======================================================================
 
+subroutine Eckart_orient_arr_upd(at_crd, at_mass, update, rot_mat, p_mom, &
+                                 trans_vec)
+    !! Get Eckart orientation parameters.
+    !!
+    !! Builds transformation information to Eckart orientation
+    !!
+    !! * rot_mat : rotation matrix from input to Eckart orientation.
+    !! * p_mom : principal moments of inertia (in Eckart orientation).
+    !! * new_crd : new geometry, in Eckart orientation
+    !! * trans_vec : translation vector to center of mass.
+    !!
+    !! The output quantities are all optional, it is possible to choose
+    !! which quantity to get in return.
+    !!
+    !! `at_crd` is rewritten if `update` is true.
+    !!
+    !! @note "Flavor"
+    !! This version takes data arrays as elements, recovering dimensions
+    !! from their shape.
+    !! Information that can be easily recovered, like the number of
+    !! atoms from the array sizes, is recomputed.
+    !! @endnote
+    real(realwp), dimension(:,:), intent(inout) :: at_crd
+    !! Atomic coordinates.
+    real(realwp), dimension(:), intent(in) :: at_mass
+    !! Atomic masses.
+    logical, intent(in) :: update
+    !! Update `at_crd` with the new coordinates.
+    real(realwp), dimension(3,3), intent(out), optional :: rot_mat
+    !! Rotation matrix to Eckart orientation.
+    real(realwp), dimension(3), intent(out), optional :: p_mom
+    !! Principal moments of inertia.
+    real(realwp), dimension(3), intent(out), optional :: trans_vec
+    !! Translation vector to Eckart orientation (center of mass).
+
+    integer :: ia, info, n_at
+    real(realwp) :: x
+    real(realwp), dimension(3) :: com, eval
+    real(realwp), dimension(9) :: scratch
+    real(realwp), dimension(3,3) :: evec, tensor
+    real(realwp), dimension(3,size(at_crd, 2)) :: crd
+    character(len=256) :: msg
+
+
+    if (size(at_crd, 2) /= size(at_mass)) then
+        write(msg, '(i0," atoms from masses vs ",i0," from coordinates")') &
+            size(at_mass), size(at_crd, 2)
+        call write_err('dev', &
+            'Inconsistency between atomic masses and coordinates', msg, &
+            'Eckart_orient')
+        stop 1
+    end if
+
+    n_at = size(at_mass)
+    com = center_of_mass_dim(n_at, at_crd, at_mass)
+    do ia = 1, n_at
+        crd(:,ia) = at_crd(:,ia) - com
+    end do
+    tensor = inertia_moments_dim(n_at, crd, at_mass)
+
+    if (abs(tensor(1,2)) + abs(tensor(1,3)) + abs(tensor(2,3)) < small) then
+        eval(1) = tensor(1,1)
+        eval(2) = tensor(2,2)
+        eval(3) = tensor(3,3)
+        evec = f0
+        evec(1,1) = f1
+        evec(2,2) = f1
+        evec(3,3) = f1
+    else
+        call xsyev('V', 'L', 3, tensor, 3, eval, scratch, 9, info)
+        if (info /= 0) then
+            write(msg, '("xSyEV failed in row: ",i0)') info
+            call write_err('std', &
+                'Failure to diagonalize the inertia tensor matrix', msg)
+            stop 1
+        end if
+        evec = tensor
+    end if
+    ! Check that the chirality is preserved
+    x = evec(1,1)*(evec(2,2)*evec(3,3) - evec(3,2)*evec(2,3)) &
+        + evec(1,2)*(evec(2,3)*evec(3,1) - evec(2,1)*evec(3,3)) &
+        + evec(1,3)*(evec(2,1)*evec(3,2) - evec(2,2)*evec(3,1))
+    if (x < f0) evec(:,1) = -evec(:,1)
+
+    if (present(rot_mat)) rot_mat = evec
+    if (present(p_mom)) p_mom = eval
+    if (update) at_crd = matmul(transpose(evec), crd)
+    if (present(trans_vec)) trans_vec = -com
+
+end subroutine Eckart_orient_arr_upd
+
+! ======================================================================
+
 subroutine Eckart_orient_dim(n_at, at_crd, at_mass, rot_mat, p_mom, new_crd, &
                              trans_vec)
     !! Get Eckart orientation parameters.
@@ -260,9 +356,9 @@ subroutine Eckart_orient_dim(n_at, at_crd, at_mass, rot_mat, p_mom, new_crd, &
     !! The output quantities are all optional, it is possible to choose
     !! which quantity to get in return.
     !!
-    !! `new_crd` is built at the end, so `at_crd` and `new_crd` can
-    !! be the same.  For this reason, both arguments have intent
-    !! `inout`.
+    !!
+    !! `at_crd` and `new_crd` are expected different because of the
+    !! strict intent, but the code itself is safe for overlapping data.
     !!
     !! @note "Flavor"
     !! This version takes data arrays and explicit size specifications.
@@ -271,7 +367,7 @@ subroutine Eckart_orient_dim(n_at, at_crd, at_mass, rot_mat, p_mom, new_crd, &
     !! @endnote
     integer, intent(in) :: n_at
     !! Number of atoms.
-    real(realwp), dimension(3,n_at), intent(inout) :: at_crd
+    real(realwp), dimension(3,n_at), intent(in) :: at_crd
     !! Atomic coordinates.
     real(realwp), dimension(n_at), intent(in) :: at_mass
     !! Atomic masses.
@@ -279,7 +375,7 @@ subroutine Eckart_orient_dim(n_at, at_crd, at_mass, rot_mat, p_mom, new_crd, &
     !! Rotation matrix to Eckart orientation.
     real(realwp), dimension(3), intent(out), optional :: p_mom
     !! Principal moments of inertia.
-    real(realwp), dimension(:,:), intent(inout), optional :: new_crd
+    real(realwp), dimension(:,:), intent(out), optional :: new_crd
     !! Coordinates after orientation.
     real(realwp), dimension(3), intent(out), optional :: trans_vec
     !! Translation vector to Eckart orientation (center of mass).
@@ -332,8 +428,91 @@ end subroutine Eckart_orient_dim
 
 ! ======================================================================
 
-subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, &
-                             new_mol, trans_vec)
+subroutine Eckart_orient_dim_upd(n_at, at_crd, at_mass, update, rot_mat, &
+                                 p_mom, trans_vec)
+    !! Get Eckart orientation parameters.
+    !!
+    !! Builds transformation information to Eckart orientation
+    !!
+    !! * rot_mat : rotation matrix from input to Eckart orientation.
+    !! * p_mom : principal moments of inertia (in Eckart orientation).
+    !! * new_crd : new geometry, in Eckart orientation
+    !! * trans_vec : translation vector to center of mass.
+    !!
+    !! The output quantities are all optional, it is possible to choose
+    !! which quantity to get in return.
+    !!
+    !! `at_crd` is rewritten if `update` is true.
+    !!
+    !! @note "Flavor"
+    !! This version takes data arrays and explicit size specifications.
+    !! No check on arrays size is done besides the explicit
+    !! specification.
+    !! @endnote
+    integer, intent(in) :: n_at
+    !! Number of atoms.
+    real(realwp), dimension(3,n_at), intent(inout) :: at_crd
+    !! Atomic coordinates.
+    real(realwp), dimension(n_at), intent(in) :: at_mass
+    !! Atomic masses.
+    logical, intent(in) :: update
+    !! Update `at_crd` with the new coordinates.
+    real(realwp), dimension(3,3), intent(out), optional :: rot_mat
+    !! Rotation matrix to Eckart orientation.
+    real(realwp), dimension(3), intent(out), optional :: p_mom
+    !! Principal moments of inertia.
+    real(realwp), dimension(3), intent(out), optional :: trans_vec
+    !! Translation vector to Eckart orientation (center of mass).
+
+    integer :: ia, info
+    real(realwp) :: x
+    real(realwp), dimension(3) :: com, eval
+    real(realwp), dimension(9) :: scratch
+    real(realwp), dimension(3,3) :: evec, tensor
+    real(realwp), dimension(3,n_at) :: crd
+    character(len=256) :: msg
+
+    com = center_of_mass_dim(n_at, at_crd, at_mass)
+    do ia = 1, n_at
+        crd(:,ia) = at_crd(:,ia) - com
+    end do
+    tensor = inertia_moments_dim(n_at, crd, at_mass)
+
+    if (abs(tensor(1,2)) + abs(tensor(1,3)) + abs(tensor(2,3)) < small) then
+        eval(1) = tensor(1,1)
+        eval(2) = tensor(2,2)
+        eval(3) = tensor(3,3)
+        evec = f0
+        evec(1,1) = f1
+        evec(2,2) = f1
+        evec(3,3) = f1
+    else
+        call xsyev('V', 'L', 3, tensor, 3, eval, scratch, 9, info)
+        if (info /= 0) then
+            write(msg, '("xSyEV failed in row: ",i0)') info
+            call write_err('std', &
+                'Failure to diagonalize the inertia tensor matrix', msg)
+            stop 1
+        end if
+        evec = tensor
+    end if
+
+    ! Check that the chirality is preserved
+    x = evec(1,1)*(evec(2,2)*evec(3,3) - evec(3,2)*evec(2,3)) &
+        + evec(1,2)*(evec(2,3)*evec(3,1) - evec(2,1)*evec(3,3)) &
+        + evec(1,3)*(evec(2,1)*evec(3,2) - evec(2,2)*evec(3,1))
+    if (x < f0) evec(:,1) = -evec(:,1)
+
+    if (present(rot_mat)) rot_mat = evec
+    if (present(p_mom)) p_mom = eval
+    if (update) at_crd = matmul(transpose(evec), crd)
+    if (present(trans_vec)) trans_vec = -com
+
+end subroutine Eckart_orient_dim_upd
+
+! ======================================================================
+
+subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, new_mol, trans_vec)
     !! Get Eckart orientation parameters.
     !!
     !! Builds transformation information to Eckart orientation
@@ -347,22 +526,21 @@ subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, &
     !! The output quantities are all optional, it is possible to choose
     !! which quantity to get in return.
     !!
-    !! `new_mol` is built at the end, so `new_mol` and `mol` can
-    !! be the same.  For this reason, both arguments have intent
-    !! `inout`.
+    !! `mol` and `new_mol` are expected different because of the strict
+    !! intent, but the code itself is safe for overlapping data.
     !!
     !! @note "Flavor"
     !! This version takes a moleculeDB object as argument.
     !! @endnote
-    class(MoleculeDB), intent(inout), target :: mol
+    class(MoleculeDB), intent(in), target :: mol
     !! Molecule database.
     real(realwp), dimension(3,3), intent(out), optional :: rot_mat
     !! Rotation matrix to Eckart orientation.
     real(realwp), dimension(3), intent(out), optional :: p_mom
     !! Principal moments of inertia.
-    real(realwp), dimension(:,:), intent(inout), optional :: new_crd
+    real(realwp), dimension(:,:), intent(out), optional :: new_crd
     !! Coordinates after orientation.
-    class(MoleculeDB), intent(inout), target, optional :: new_mol
+    class(MoleculeDB), intent(out), target, optional :: new_mol
     !! Molecule database.
     real(realwp), dimension(3), intent(out), optional :: trans_vec
     !! Translation vector to Eckart orientation (center of mass).
@@ -420,6 +598,88 @@ subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, &
     if (present(trans_vec)) trans_vec = -com
 
 end subroutine Eckart_orient_mol
+
+! ======================================================================
+
+subroutine Eckart_orient_mol_upd(mol, update, rot_mat, p_mom, new_crd, &
+                                 trans_vec)
+    !! Get Eckart orientation parameters.
+    !!
+    !! Builds transformation information to Eckart orientation
+    !!
+    !! * rot_mat : rotation matrix from input to Eckart orientation.
+    !! * p_mom : principal moments of inertia (in Eckart orientation).
+    !! * new_crd : new geometry, in Eckart orientation, as an array
+    !! * new_mol : new molecule database, with geom. in Eckart orient.
+    !! * trans_vec : translation vector to center of mass.
+    !!
+    !! The output quantities are all optional, it is possible to choose
+    !! which quantity to get in return.
+    !!
+    !! `mol` is rewritten if `update` is true.
+    !!
+    !! @note "Flavor"
+    !! This version takes a moleculeDB object as argument.
+    !! @endnote
+    class(MoleculeDB), intent(inout) :: mol
+    !! Molecule database.
+    logical, intent(in) :: update
+    !! Update `at_crd` with the new coordinates.
+    real(realwp), dimension(3,3), intent(out), optional :: rot_mat
+    !! Rotation matrix to Eckart orientation.
+    real(realwp), dimension(3), intent(out), optional :: p_mom
+    !! Principal moments of inertia.
+    real(realwp), dimension(:,:), intent(out), optional :: new_crd
+    !! Coordinates after orientation.
+    real(realwp), dimension(3), intent(out), optional :: trans_vec
+    !! Translation vector to Eckart orientation (center of mass).
+
+    integer :: ia, info
+    real(realwp) :: x
+    real(realwp), dimension(3) :: com, eval
+    real(realwp), dimension(9) :: scratch
+    real(realwp), dimension(3,3) :: evec, tensor
+    real(realwp), dimension(3,mol%n_at) :: crd
+    character(len=256) :: msg
+
+    com = center_of_mass_mol(mol)
+    do ia = 1, mol%n_at
+        crd(:,ia) = mol%at_crd(:,ia) - com
+    end do
+    tensor = inertia_moments_dim(mol%n_at, crd, mol%at_mas)
+
+    if (abs(tensor(1,2)) + abs(tensor(1,3)) + abs(tensor(2,3)) < small) then
+        eval(1) = tensor(1,1)
+        eval(2) = tensor(2,2)
+        eval(3) = tensor(3,3)
+        evec = f0
+        evec(1,1) = f1
+        evec(2,2) = f1
+        evec(3,3) = f1
+    else
+        call xsyev('V', 'L', 3, tensor, 3, eval, scratch, 9, info)
+        if (info /= 0) then
+            write(msg, '("xSyEV failed in row: ",i0)') info
+            call write_err('std', &
+                'Failure to diagonalize the inertia tensor matrix', msg)
+            stop 1
+        end if
+        evec = tensor
+    end if
+
+    ! Check that the chirality is preserved
+    x = evec(1,1)*(evec(2,2)*evec(3,3) - evec(3,2)*evec(2,3)) &
+        + evec(1,2)*(evec(2,3)*evec(3,1) - evec(2,1)*evec(3,3)) &
+        + evec(1,3)*(evec(2,1)*evec(3,2) - evec(2,2)*evec(3,1))
+    if (x < f0) evec(:,1) = -evec(:,1)
+
+    if (present(rot_mat)) rot_mat = evec
+    if (present(p_mom)) p_mom = eval
+    if (present(new_crd)) new_crd = matmul(transpose(evec), crd)
+    if (update) mol%at_crd = matmul(transpose(evec), crd)
+    if (present(trans_vec)) trans_vec = -com
+
+end subroutine Eckart_orient_mol_upd
 
 ! ======================================================================
 

@@ -9,6 +9,7 @@
 * New interface to LAPACK sorting routines `xLASRT` for quick sorting of lists of real numbers.
 * New interfaces to LAPACK routines dedicated to QR factorization, `xGEQRF` and `xORGQR`.
 * Added support of potential energy in `PropertyDB` (`datatypes`).
+* Added extraction of potential energy from Gaussian formatted checkpoint file in `get_data` (`input`), as electronic transition moments or state-specific quantities, including derivatives.
 
 ## 0.25.02
 

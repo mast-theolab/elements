@@ -576,6 +576,135 @@ module procedure get_data_from_id_fchk
 
     ! Now extract information
     select case(identifier)
+    case(1)
+        LP = 1  ! we could use prop%pdim but not much sense.
+        prop%order = der_ord
+        if (prop%states(1) /= prop%states(2)) then
+            ! Electronic transition moment
+            if (prop%states(1) == 0) then
+                fchk_keys = [ &
+                    'ETran state values                   ', &  !  1.
+                    'ETran scalars                        ', &  !  2.
+                    'Number of atoms                      '  &  !  3.
+                ]
+                dbase = dfchk%read(fchk_keys)
+                if (dbase(2)%dtype == '0') then
+                    prop%istat = 2
+                    return
+                end if
+                if (prop%order == 0) then
+                    block
+                    integer :: n_states, lblock
+                    n_states = dbase(2)%idata(1)
+                    lblock = dbase(2)%idata(2)
+                    if (n_states < prop%states(2)) then
+                        prop%istat = 2
+                        return
+                    end if
+                    if (prop%states(2) == -1) then
+                        allocate(prop%data(LP*n_states))
+                        do i = 1, n_states
+                            prop%data(i) = dbase(1)%rdata(1+(i-1)*lblock)
+                        end do
+                        prop%loaded = .true.
+                        prop%shape = [n_states]
+                        prop%dim_shape = [1]
+                    else
+                        allocate(prop%data(LP))
+                        ioff = (prop%states(2)-1)*lblock
+                        prop%data(1) = dbase(1)%rdata(1+ioff)
+                        prop%loaded = .true.
+                        prop%shape = [LP]
+                        prop%dim_shape = [1]
+                    end if
+                    end block
+                else if (prop%order == 1) then
+                    block
+                    integer :: exc_state, lblock, n_at3, n_LR, n_states
+                    n_states = dbase(2)%idata(1)
+                    exc_state = dbase(2)%idata(5)
+                    lblock = dbase(2)%idata(2)
+                    n_LR = dbase(2)%idata(3)
+                    n_at3 = 3*dbase(3)%idata(1)
+                    if (exc_state /= prop%states(2) .and. &
+                            prop%states(2) /= -1) then
+                        prop%istat = 2
+                        return
+                    end if
+                    allocate(prop%data(LP*n_at3))
+                    ioff = lblock*n_states*n_LR + 3*lblock + 1
+                    do i = 0, n_at3 - 1
+                        prop%data(i+1) = dbase(1)%rdata(ioff+i*lblock)
+                    end do
+                    prop%loaded = .true.
+                    prop%shape = [n_at3]
+                    prop%dim_shape = [1]
+                    end block
+                else
+                    prop%istat = 1
+                end if
+            else
+                prop%istat = 1
+            end if
+        else
+            ! Reference state
+            if (prop%order == 0) then
+                fchk_keys = [ &
+                    'Total Energy                         '  &  !  1.
+                ]
+                dbase = dfchk%read(fchk_keys)
+                if (dbase(1)%dtype == '0') then
+                    prop%istat = 2
+                    return
+                end if
+                allocate(prop%data(LP))
+                prop%data = dbase(1)%rdata
+                prop%loaded = .true.
+                prop%shape = [LP]
+                prop%dim_shape = [1]
+            else if (prop%order == 1) then
+                fchk_keys = [ &
+                    'Cartesian Gradient                   ', &  !  1.
+                    'Number of atoms                      '  &  !  2.
+                ]
+                dbase = dfchk%read(fchk_keys)
+                if (dbase(1)%dtype == '0') then
+                    prop%istat = 2
+                    return
+                end if
+                block
+                integer :: n_at3
+                n_at3 = 3*dbase(2)%idata(1)
+                allocate(prop%data(LP*n_at3))
+                prop%data = dbase(1)%rdata
+                prop%loaded = .true.
+                prop%shape = [n_at3]
+                prop%dim_shape = [1]
+                end block
+            else if (prop%order == 2) then
+                fchk_keys = [ &
+                    'Cartesian Force Constants            ', &  !  1.
+                    'Number of atoms                      '  &  !  2.
+                ]
+                dbase = dfchk%read(fchk_keys)
+                if (dbase(1)%dtype == '0') then
+                    prop%istat = 2
+                    return
+                end if
+                block
+                integer :: n_at3, n_at3tt
+                n_at3 = 3*dbase(2)%idata(1)
+                n_at3tt = n_at3*(n_at3+1)/2
+                allocate(prop%data(LP*n_at3tt))
+                prop%data = dbase(1)%rdata
+                prop%loaded = .true.
+                prop%shape = [n_at3tt]
+                prop%dim_shape = [2]
+                end block
+            else
+                prop%istat = 1
+            end if
+        end if
     case(50)
         prop%order = der_ord
         ! Electronic transition moment

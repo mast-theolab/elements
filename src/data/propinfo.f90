@@ -31,6 +31,12 @@ subroutine load_propinfo_from_id(property, identifier)
     !! Identifier of the property of interest.
 
     select case(identifier)
+    case(1)
+        property%label = 'V'
+        property%name = 'potential energy'
+        property%unit = 'Eh'
+        property%pdim = [1]
+        property%known = .true.
     case(50)
         property%label = 'nac'
         property%name = 'non-adiabatic couplings'

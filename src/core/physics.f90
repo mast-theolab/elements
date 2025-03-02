@@ -35,13 +35,16 @@ module physics
                 s_conv_amu_to_kg, d_conv_amu_to_kg, &
                 s_conv_e_to_C, d_conv_e_to_C, &
                 s_conv_cal_to_J, d_conv_cal_to_J, &
-                s_conv_hartree_to_J, d_conv_hartree_to_J
+                s_conv_hartree_to_J, d_conv_hartree_to_J, &
+                s_conv_au_freq_to_cm1, d_conv_au_freq_to_cm1
             generic, public :: bohr2Ang => s_conv_bohr_to_Ang, d_conv_bohr_to_Ang
             generic, public :: Ang2bohr => s_conv_Ang_to_bohr, d_conv_Ang_to_bohr
             generic, public :: amu2kg => s_conv_amu_to_kg, d_conv_amu_to_kg
             generic, public :: e2C => s_conv_e_to_C, d_conv_e_to_C
             generic, public :: cal2J => s_conv_cal_to_J, d_conv_cal_to_J
             generic, public :: Eh2J => s_conv_hartree_to_J, d_conv_hartree_to_J
+            generic, public :: au2cm1 => s_conv_au_freq_to_cm1, &
+                d_conv_au_freq_to_cm1
     end type PhysFact
 
     type(PhysFact), public :: phys_conv
@@ -117,6 +120,22 @@ elemental real(real64) function d_conv_cal_to_J(x)
     real(real64), intent(in) :: x
     d_conv_cal_to_J = x * calorie
 end function d_conv_cal_to_J
+
+! ======================================================================
+
+elemental real(real32) function s_conv_au_freq_to_cm1(x)
+    !! Convert frequency in atomic unit to energy in cm-1.
+    real(real32), intent(in) :: x
+    s_conv_au_freq_to_cm1 = x * real(E_hartree/(planck*slight), kind=real32)
+end function s_conv_au_freq_to_cm1
+
+! ======================================================================
+
+elemental real(real64) function d_conv_au_freq_to_cm1(x)
+    !! Convert frequency in atomic unit to energy in cm-1.
+    real(real64), intent(in) :: x
+    d_conv_au_freq_to_cm1 = x * E_hartree / (planck * slight)
+end function d_conv_au_freq_to_cm1
 
 ! ======================================================================
 

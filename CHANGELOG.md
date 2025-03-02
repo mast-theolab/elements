@@ -4,6 +4,7 @@
 
 ### Added
 * An instance of `PhysFact`, `phys_conv`, is now provided by the `physics` module as well.
+* New conversion method from atomic unit of period to wavenumbers provided as `PhysFact % au2cm1` in `physics`.
 
 
 ## 0.25.02

@@ -60,6 +60,24 @@ module lapack_drv
 
 ! ----------------------------------------------------------------------
 
+    interface xlasrt
+        !! Generic interface to LAPACK sorting routines xLASRT
+        subroutine slasrt(id, n, d, info)
+            character :: id
+            integer :: n
+            real, dimension(*) :: d
+            integer :: info
+        end subroutine slasrt
+        subroutine dlasrt(id, n, d, info)
+            character :: id
+            integer :: n
+            double precision, dimension(*) :: d
+            integer :: info
+        end subroutine dlasrt
+    end interface xlasrt
+
+! ----------------------------------------------------------------------
+
     interface xsyev
         !! Generic interface to LAPACK xSYEV for eigenvalue problems
         subroutine ssyev(jobz, uplo, n, A, lda, w, work, lwork, info)

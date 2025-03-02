@@ -6,6 +6,7 @@
 * An instance of `PhysFact`, `phys_conv`, is now provided by the `physics` module as well.
 * New conversion method from atomic unit of period to wavenumbers provided as `PhysFact % au2cm1` in `physics`.
 * `Eckart_orient` in `geometry` was rewritten to be more robust regarding the overwriting of geometry arrays.  The default functions are now supposed to avoid any side effects, with new and old geometries stored in separate structures, and new routines were added to consent overriding the old data set.
+* New interface to LAPACK sorting routines `xLASRT` for quick sorting of lists of real numbers.
 
 ## 0.25.02
 

@@ -6,6 +6,7 @@ module geometry
     use lapack_drv, only: xsyev
     use output, only: iu_out, write_err
     use datatypes, only: MoleculeDB
+    use exception, only: runstat
 
     implicit none
 
@@ -68,10 +69,10 @@ function center_of_mass_arr(at_crd, at_mass) result(com)
     if (size(at_crd, 2) /= size(at_mass)) then
         write(msg, '(i0," atoms from masses vs ",i0," from coordinates")') &
             size(at_mass), size(at_crd, 2)
-        call write_err('dev', &
-            'Inconsistency between atomic masses and coordinates', msg, &
-            'center_of_mass')
-        stop 1
+        call runstat%raise_error('Unable to find the center of mass', &
+            details='Inconsistency between atomic masses and coordinates', &
+            extra=trim(msg), source='center_of_mass', cat='dev')
+        return
     end if
 
     com = f0
@@ -203,10 +204,10 @@ subroutine Eckart_orient_arr(at_crd, at_mass, rot_mat, p_mom, new_crd, &
     if (size(at_crd, 2) /= size(at_mass)) then
         write(msg, '(i0," atoms from masses vs ",i0," from coordinates")') &
             size(at_mass), size(at_crd, 2)
-        call write_err('dev', &
-            'Inconsistency between atomic masses and coordinates', msg, &
-            'Eckart_orient')
-        stop 1
+        call runstat%raise_error('Unable to build Eckart orientation', &
+            details='Inconsistency between atomic masses and coordinates', &
+            extra=trim(msg), source='Eckart_orient', cat='dev')
+        return
     end if
 
     n_at = size(at_mass)
@@ -228,9 +229,10 @@ subroutine Eckart_orient_arr(at_crd, at_mass, rot_mat, p_mom, new_crd, &
         call xsyev('V', 'L', 3, tensor, 3, eval, scratch, 9, info)
         if (info /= 0) then
             write(msg, '("xSyEV failed in row: ",i0)') info
-            call write_err('std', &
-                'Failure to diagonalize the inertia tensor matrix', msg)
-            stop 1
+            call runstat%raise_error('Unable to build Eckart orientation', &
+                details='Failure to diagonalize the inertia tensor matrix', &
+                extra=trim(msg))
+            return
         end if
         evec = tensor
     end if
@@ -296,10 +298,10 @@ subroutine Eckart_orient_arr_upd(at_crd, at_mass, update, rot_mat, p_mom, &
     if (size(at_crd, 2) /= size(at_mass)) then
         write(msg, '(i0," atoms from masses vs ",i0," from coordinates")') &
             size(at_mass), size(at_crd, 2)
-        call write_err('dev', &
-            'Inconsistency between atomic masses and coordinates', msg, &
-            'Eckart_orient')
-        stop 1
+        call runstat%raise_error('Unable to build Eckart orientation', &
+            details='Inconsistency between atomic masses and coordinates', &
+            extra=trim(msg), source='Eckart_orient', cat='dev')
+        return
     end if
 
     n_at = size(at_mass)
@@ -321,9 +323,10 @@ subroutine Eckart_orient_arr_upd(at_crd, at_mass, update, rot_mat, p_mom, &
         call xsyev('V', 'L', 3, tensor, 3, eval, scratch, 9, info)
         if (info /= 0) then
             write(msg, '("xSyEV failed in row: ",i0)') info
-            call write_err('std', &
-                'Failure to diagonalize the inertia tensor matrix', msg)
-            stop 1
+            call runstat%raise_error('Unable to build Eckart orientation', &
+                details='Failure to diagonalize the inertia tensor matrix', &
+                extra=trim(msg))
+            return
         end if
         evec = tensor
     end if
@@ -406,9 +409,10 @@ subroutine Eckart_orient_dim(n_at, at_crd, at_mass, rot_mat, p_mom, new_crd, &
         call xsyev('V', 'L', 3, tensor, 3, eval, scratch, 9, info)
         if (info /= 0) then
             write(msg, '("xSyEV failed in row: ",i0)') info
-            call write_err('std', &
-                'Failure to diagonalize the inertia tensor matrix', msg)
-            stop 1
+            call runstat%raise_error('Unable to build Eckart orientation', &
+                details='Failure to diagonalize the inertia tensor matrix', &
+                extra=trim(msg))
+            return
         end if
         evec = tensor
     end if
@@ -490,9 +494,10 @@ subroutine Eckart_orient_dim_upd(n_at, at_crd, at_mass, update, rot_mat, &
         call xsyev('V', 'L', 3, tensor, 3, eval, scratch, 9, info)
         if (info /= 0) then
             write(msg, '("xSyEV failed in row: ",i0)') info
-            call write_err('std', &
-                'Failure to diagonalize the inertia tensor matrix', msg)
-            stop 1
+            call runstat%raise_error('Unable to build Eckart orientation', &
+                details='Failure to diagonalize the inertia tensor matrix', &
+                extra=trim(msg))
+            return
         end if
         evec = tensor
     end if
@@ -572,9 +577,10 @@ subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, new_mol, trans_vec)
         call xsyev('V', 'L', 3, tensor, 3, eval, scratch, 9, info)
         if (info /= 0) then
             write(msg, '("xSyEV failed in row: ",i0)') info
-            call write_err('std', &
-                'Failure to diagonalize the inertia tensor matrix', msg)
-            stop 1
+            call runstat%raise_error('Unable to build Eckart orientation', &
+                details='Failure to diagonalize the inertia tensor matrix', &
+                extra=trim(msg))
+            return
         end if
         evec = tensor
     end if
@@ -660,9 +666,10 @@ subroutine Eckart_orient_mol_upd(mol, update, rot_mat, p_mom, new_crd, &
         call xsyev('V', 'L', 3, tensor, 3, eval, scratch, 9, info)
         if (info /= 0) then
             write(msg, '("xSyEV failed in row: ",i0)') info
-            call write_err('std', &
-                'Failure to diagonalize the inertia tensor matrix', msg)
-            stop 1
+            call runstat%raise_error('Unable to build Eckart orientation', &
+                details='Failure to diagonalize the inertia tensor matrix', &
+                extra=trim(msg))
+            return
         end if
         evec = tensor
     end if
@@ -708,10 +715,10 @@ function inertia_moments_arr(at_crd, at_mass) result(tensor)
     if (size(at_crd, 2) /= size(at_mass)) then
         write(msg, '(i0," atoms from masses vs ",i0," from coordinates")') &
             size(at_mass), size(at_crd, 2)
-        call write_err('dev', &
-            'Inconsistency between atomic masses and coordinates', msg, &
-            'inertia_moments')
-        stop 1
+        call runstat%raise_error('Unable to build inertia tensor', &
+            details='Inconsistency between atomic masses and coordinates', &
+            extra=trim(msg), source='inertia_moments', cat='dev')
+        return
     end if
 
     ! Definition of the tensor of moments of inertia
@@ -874,10 +881,10 @@ subroutine superpose_arr(at_crd_new, at_crd_ref, weights, mask, rot_mat, &
     if (n_at /= size(at_crd_new, 2)) then
         write(msg, '(i0," atoms from reference vs ",i0,&
                    &" from new coordinates")') n_at, size(at_crd_new, 2)
-        call write_err('dev', &
-            'Inconsistency between atomic coordinates', msg, &
-            'superpose')
-        stop 1
+        call runstat%raise_error('Unable to superpose structures', &
+            details='Inconsistency between atomic coordinates', &
+                   extra=trim(msg), source='superpose', cat='dev')
+        return
     end if
 
     ! Check optional input arrays and set alternatives if needed
@@ -885,10 +892,10 @@ subroutine superpose_arr(at_crd_new, at_crd_ref, weights, mask, rot_mat, &
         if (size(weights) /= n_at) then
             write(msg, '("weights provided for ",i0," atoms while ",i0,&
                        &" expected")')  n_at, size(weights)
-            call write_err('dev', &
-                'Inconsistency between weights and coordinates', msg, &
-                'superpose')
-            stop 1
+            call runstat%raise_error('Unable to superpose structures', &
+                details='Inconsistency between weights and coordinates', &
+                extra=trim(msg), source='superpose', cat='dev')
+            return
         end if
         at_mass = weights
     else
@@ -900,10 +907,10 @@ subroutine superpose_arr(at_crd_new, at_crd_ref, weights, mask, rot_mat, &
         if (size(mask) /= n_at) then
             write(msg, '("Mask provided for ",i0," atoms while ",i0,&
                        &" expected")')  n_at, size(mask)
-            call write_err('dev', &
-                'Inconsistency between mask and coordinates', msg, &
-                'superpose')
-            stop 1
+            call runstat%raise_error('Unable to superpose structures', &
+                details='Inconsistency between mask and coordinates', &
+                extra=trim(msg), source='superpose', cat='dev')
+            return
         end if
         at_mask = mask
     else
@@ -954,9 +961,10 @@ subroutine superpose_arr(at_crd_new, at_crd_ref, weights, mask, rot_mat, &
     call xsyev('V', 'L', 4, qmat, 4, qeval, scratch, 16, info)
     if (info /= 0) then
         write(msg, '("xSyEV failed in row: ",i0)') info
-        call write_err('std', &
-            'Failure to diagonalize the quaternion matrix', msg)
-        stop 1
+        call runstat%raise_error('Unable to superpose structures', &
+            details='Failure to diagonalize the quaternion matrix', &
+            extra=trim(msg))
+        return
     end if
     qevec = qmat
     ! We take the eigenvector corresponding to smalles eigenvalue
@@ -1113,9 +1121,10 @@ subroutine superpose_dim(n_at, at_crd_new, at_crd_ref, weights, mask, &
     call xsyev('V', 'L', 4, qmat, 4, qeval, scratch, 16, info)
     if (info /= 0) then
         write(msg, '("xSyEV failed in row: ",i0)') info
-        call write_err('std', &
-            'Failure to diagonalize the quaternion matrix', msg)
-        stop 1
+        call runstat%raise_error('Unable to superpose structures', &
+            details='Failure to diagonalize the quaternion matrix', &
+            extra=trim(msg))
+        return
     end if
     qevec = qmat
     ! We take the eigenvector corresponding to smalles eigenvalue
@@ -1219,11 +1228,11 @@ subroutine superpose_mol(mol, at_crd_ref, use_mass, weights, mask, &
         if (present(use_mass)) then
             write(msg, '("Weight specifications given while requesting use &
                        &of internal atomic masses")')
-                call write_err('dev', &
-                    'Confusing request on weight specifications', msg, &
-                    'superpose')
-                stop 1
-            end if
+            call runstat%raise_error('Unable to superpose structures', &
+                details='Confusing request on weight specifications', &
+                extra=trim(msg), cat='dev', source='superpose')
+            return
+        end if
         at_mass = weights
     else if (present(use_mass)) then
         if (use_mass) then
@@ -1284,9 +1293,10 @@ subroutine superpose_mol(mol, at_crd_ref, use_mass, weights, mask, &
     call xsyev('V', 'L', 4, qmat, 4, qeval, scratch, 16, info)
     if (info /= 0) then
         write(msg, '("xSyEV failed in row: ",i0)') info
-        call write_err('std', &
-            'Failure to diagonalize the quaternion matrix', msg)
-        stop 1
+        call runstat%raise_error('Unable to superpose structures', &
+            details='Failure to diagonalize the quaternion matrix', &
+            extra=trim(msg))
+        return
     end if
     qevec = qmat
     ! We take the eigenvector corresponding to smalles eigenvalue

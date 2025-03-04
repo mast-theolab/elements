@@ -17,6 +17,7 @@
 
 ### Changed
 * `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.
+* Module `geometry` now uses the new `runstat` from `exception` to manage exceptions.
 
 
 ## 0.25.02

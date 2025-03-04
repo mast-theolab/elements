@@ -407,7 +407,7 @@ end subroutine sec_header
 
 ! ======================================================================
 
-subroutine write_err(nature, msg, extra, place)
+subroutine write_err(nature, cause, details, extra, source)
     !! Writes error message on default unit.
     !!
     !! Writes an error message.  The formatting depends on the nature
@@ -416,31 +416,41 @@ subroutine write_err(nature, msg, extra, place)
     !! * Basic/std: basic/standard error
     !! * Developer/dev: coding/development error
     character(len=*), intent(in) :: nature
-    !! Nature of the error
-    character(len=*), intent(in) :: msg
-    !! General error message.
+    !! Nature of the error.
+    character(len=*), intent(in) :: cause
+    !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+    !! Details on the error.
     character(len=*), intent(in), optional :: extra
-    !! Extra information on nature of the error, e.g., reason.
-    character(len=*), intent(in), optional :: place
-    !! Place (procedure, execution sequence...) where error occured.
+    !! Extra information.
+    character(len=*), intent(in), optional :: source
+    !! Source of the error: procedure, unit, method...
+    1000 format('Error encountered: ',a)
+    1001 format('Error encountered in [',a,']: ',a)
+    1002 format('Internal error encountered: ',a)
+    1003 format('Unrecognized error: ',a)
+    1010 format('-- Reason:',a)
+    1020 format('-- Note:',a)
 
     select case (locase(trim(nature)))
         case ('generic', 'gen')
-            write(iu_out, '(a)') trim(msg)
-            write(iu_out, '(a)') 'Stopping'
+            write(iu_out, 1000) trim(cause)
+            if (present(details)) write(iu_out, 1010) trim(details)
+            if (present(extra)) write(iu_out, 1020) trim(extra)
         case ('basic', 'std')
-            write(iu_out, '(a)') trim(msg)
-            write(iu_out, '("Reason:",/,4x,a)') trim(extra)
+            write(iu_out, 1000) trim(cause)
+            if (present(details)) write(iu_out, 1010) trim(details)
+            if (present(extra)) write(iu_out, 1020) trim(extra)
         case ('deverr', 'dev')
-            if (present(place)) then
-                write(iu_out, '("Error in [",a,"]: ",a)') &
-                    trim(place), trim(msg)
+            if (present(source)) then
+                write(iu_out, 1001) trim(source), trim(cause)
             else
-                write(iu_out, '("Internal Error: ",a)') trim(msg)
+                write(iu_out, 1002) trim(cause)
             end if
-            write(iu_out, '("Reason:",/,4x,a)') trim(extra)
+            if (present(details)) write(iu_out, 1010) trim(details)
+            if (present(extra)) write(iu_out, 1020) trim(extra)
         case default
-            write(iu_out, '("Uncategorized error:",4x,a)') trim(msg)
+            write(iu_out, 1003) trim(cause)
     end select
 end subroutine write_err
 

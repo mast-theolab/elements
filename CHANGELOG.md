@@ -12,6 +12,11 @@
 * Added extraction of potential energy from Gaussian formatted checkpoint file in `get_data` (`input`), as electronic transition moments or state-specific quantities, including derivatives.
 * Added operator `.x.` for cross product in `math`.
 * Cross product can now be applied to list(s) of vectors (`math`).
+* Derived type `ErrorHandler` (`exception`) provides a structure to manage runtime errors or warnings.  It can also manage automatic termination in case of error.
+* Module `exception` provides a variable, `runstat` to keep track of the run status between modules and program units.
+
+### Changed
+* `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.
 
 
 ## 0.25.02

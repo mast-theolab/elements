@@ -2,9 +2,11 @@ module exception
     !! Module for exception handling
     !!
     !! Module providing types for exception handling in other modules.
+    use output, only: write_err
+    use string, only: locase
 
     implicit none
-    
+
     private
     public :: InitError, RaiseError, RaiseAllocateError, RaiseArgError, &
         RaiseFileError, RaiseKeyError, RaiseQuantityError, RaiseTermination, &
@@ -23,11 +25,11 @@ module exception
     end type BaseException
 
     abstract interface
-         subroutine set_message(this, msg)
+        subroutine set_message(this, msg)
             import BaseException
             class(BaseException) :: this
             character(len=*), intent(in), optional :: msg
-         end subroutine set_message
+        end subroutine set_message
     end interface
 
     ! Derived types
@@ -83,6 +85,55 @@ module exception
     contains
         procedure, private :: set_msg => set_qtyerr_message
     end type QuantityError
+
+    !! Add nature of error: argument/value...
+    type, public :: ErrorHandler
+        !! A type to manage error raised by procedures
+        !!
+        !! The type can manage printing and exiting.
+        private
+        integer :: level
+        !! Internal classifier of the error level.
+        !! 0: no error
+        !! 1: warning
+        !! 2: error (non-blocking)
+        !! 3: error
+        integer :: label
+        !! Internal classifier of the error type.
+        !! -1: undefined
+        !!  0: generic
+        !!  1: runtime (standard execution)
+        !!  2: development (error in call to routine)
+        character(len=:), allocatable :: source
+        !! Source of the error, typically the calling procedure.
+        character(len=:), allocatable :: cause
+        !! Cause of the error.
+        character(len=:), allocatable :: details
+        !! Details on the origin of the error.
+        character(len=:), allocatable :: extra
+        !! Extra message.
+        logical :: has_been_set = .false.
+        !! The error parameters have been set.
+        logical :: error_set = .false.
+        !! An error status has been set.
+        logical :: exit_on_error = .true.
+        !! Exit if an error is found
+        integer :: print_min_level = 1
+        !! Minimum level for printing
+        contains
+            procedure :: setup => handler_setup
+            procedure, private :: reset => handler_reset
+            procedure, private :: set => handler_set_error
+            procedure :: raise_error => handler_raise_error
+            procedure :: raise_warning => handler_raise_warn
+            procedure :: has_error => handler_query_error
+            procedure :: has_warning => handler_query_warn
+            procedure :: is_ok => handler_query_ok
+            procedure :: info => handler_get_error
+            procedure :: print => handler_print_error
+    end type ErrorHandler
+
+    type(ErrorHandler), public :: runstat
 
 contains
 
@@ -630,6 +681,373 @@ subroutine set_qtyerr_message(this, msg)
 
     return
 end subroutine set_qtyerr_message
+
+! ======================================================================
+
+subroutine handler_setup(this, exit_on_error, no_printing, print_level, &
+                         force)
+    !! Initialize the ErrorHandler instance
+    !!
+    !! Initializes an ErrorHandler instance, setting basic parameters.
+    class(ErrorHandler), intent(inout) :: this
+    !! Instance of ErrorHandler.
+    logical, intent(in), optional :: exit_on_error
+    !! A raised error will cause the termination of the program.
+    logical, intent(in), optional :: no_printing
+    !! The error instance should not automatically print messages.
+    character, intent(in), optional :: print_level
+    !! Any error at or above chosen level will be printed.
+    logical, intent(in), optional :: force
+    !! Force reinitialization, even if set before.
+
+    logical :: force_setup
+
+    if (.not.present(exit_on_error) .and. .not.present(no_printing) &
+        .and. .not.present(print_level)) &
+        return
+
+    if (present(force)) then
+        force_setup = force
+    else
+        force_setup = .false.
+    end if
+
+    if (this%has_been_set .and. force_setup) then
+        call this%raise_error('Error instance already parametrized', &
+                              cat='dev')
+        return
+    end if
+
+    if (present(exit_on_error)) this%exit_on_error = exit_on_error
+    if (present(no_printing)) then
+        this%print_min_level = 100
+    else if (present(print_level)) then
+        select case(locase(trim(print_level)))
+        case ('warn', 'warning')
+            this%print_min_level = 1
+        case ('error')
+            this%print_min_level = 3
+        case ('any error', 'anyerror')
+            this%print_min_level = 2
+        case default
+            call this%raise_error( &
+                'Unrecognized error level', cat='dev')
+            return
+        end select
+    end if
+    this%has_been_set = .true.
+
+end subroutine handler_setup
+
+! ======================================================================
+
+subroutine handler_reset(this)
+    !! Reset the error status.
+    !!
+    !! Resets the attributes of the error instance.
+    class(ErrorHandler), intent(inout) :: this
+    !! Instance of ErrorHandler.
+
+    if (this%error_set) then
+        this%error_set = .false.
+        if (allocated(this%source)) deallocate(this%source)
+        if (allocated(this%cause)) deallocate(this%cause)
+        if (allocated(this%details)) deallocate(this%details)
+        if (allocated(this%extra)) deallocate(this%extra)
+        this%level = 0
+        this%label = 0
+    end if
+
+end subroutine handler_reset
+
+! ======================================================================
+
+subroutine handler_set_error(this, level, cause, details, extra, cat, source)
+    !! Set error parameters.
+    !!
+    !! General routine to set error parameters.
+    class(ErrorHandler), intent(inout) :: this
+    !! Instance of ErrorHandler.
+    integer, intent(in) :: level
+    !! Level of error.
+    character(len=*), intent(in) :: cause
+    !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+    !! Details on the error.
+    character(len=*), intent(in), optional :: extra
+    !! Extra information.
+    character(len=*), intent(in), optional :: cat
+    !! Category of the error.
+    character(len=*), intent(in), optional :: source
+    !! Source of the error: procedure, unit, method...
+
+    call this%reset()
+    this%level = level
+    this%cause = trim(cause)
+    if (present(details)) this%details = trim(details)
+    if (present(extra)) this%extra = trim(extra)
+    if (present(source)) this%source = trim(source)
+    if (present(cat)) then
+        select case (locase(cat(:3)))
+        case ('run', 'std')
+            this%label = 1
+        case ('dev')
+            this%label = 2
+        case ('n/a', 'und')
+            this%label = -1
+        case default
+            this%label = 0
+        end select
+    else
+        this%label = 1
+    end if
+    this%error_set = .true.
+
+end subroutine handler_set_error
+
+! ======================================================================
+
+subroutine handler_raise_error(this, cause, details, extra, cat, source, &
+                               low_risk, no_exit)
+    !! Raise error of level "error".
+    !!
+    !! Sets parameters, messages and behavior for an error of level
+    !! "ERROR".
+    !! If `low_risk` is true, the error is likely recoverable and the
+    !! job may still proceed.
+    class(ErrorHandler), intent(inout) :: this
+    !! Instance of ErrorHandler.
+    character(len=*), intent(in) :: cause
+    !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+    !! Details on the error.
+    character(len=*), intent(in), optional :: extra
+    !! Extra information.
+    character(len=*), intent(in), optional :: cat
+    !! Category of the error.
+    character(len=*), intent(in), optional :: source
+    !! Source of the error: procedure, unit, method...
+    logical, intent(in), optional :: low_risk
+    !! The risk posed by the error is low.
+    logical, intent(in), optional :: no_exit
+    !! Do not exit on error.
+
+    integer :: level
+    logical :: do_exit
+
+    if (present(low_risk)) then
+        if (low_risk) then
+            level = 2
+        else
+            level = 3
+        end if
+    else
+        level = 3
+    end if
+    call this%set(level, cause, details, extra, cat, source)
+
+    if (this%level >= this%print_min_level) call this%print()
+
+    do_exit = this%exit_on_error .and. this%level >= 3
+    if (present(no_exit)) do_exit = do_exit .and. .not.no_exit
+
+    if(do_exit) stop this%level
+
+end subroutine handler_raise_error
+
+! ======================================================================
+
+subroutine handler_raise_warn(this, cause, details, extra, cat, source)
+    !! Raise error of a level "warning".
+    !!
+    !! Sets parameters, messages and behavior for an error of level
+    !! "WARNING".
+    class(ErrorHandler), intent(inout) :: this
+    !! Instance of ErrorHandler.
+    character(len=*), intent(in) :: cause
+    !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+    !! Details on the error.
+    character(len=*), intent(in), optional :: extra
+    !! Extra information.
+    character(len=*), intent(in), optional :: cat
+    !! Category of the error.
+    character(len=*), intent(in), optional :: source
+    !! Source of the error: procedure, unit, method...
+
+    call this%set(1, cause, details, extra, cat, source)
+
+    if (this%level >= this%print_min_level) call this%print()
+
+end subroutine handler_raise_warn
+
+! ======================================================================
+
+function handler_query_ok(this) result(query)
+    !! Check if no error has been set.
+    class(ErrorHandler), intent(in) :: this
+    !! Instance of ErrorHandler.
+    logical :: query
+    !! Result of the query
+    query = .not.this%error_set .or. this%level == 0
+end function handler_query_ok
+
+! ======================================================================
+
+function handler_query_error(this) result(query)
+    !! Check if the error level is: error
+    class(ErrorHandler), intent(in) :: this
+    !! Instance of ErrorHandler.
+    logical :: query
+    !! Result of the query
+    query = this%level >= 2
+end function handler_query_error
+
+! ======================================================================
+
+function handler_query_warn(this) result(query)
+    !! Check if the error level is: warning
+    class(ErrorHandler), intent(in) :: this
+    !! Instance of ErrorHandler.
+    logical :: query
+    !! Result of the query
+    query = this%level == 1
+end function handler_query_warn
+
+! ======================================================================
+
+subroutine handler_get_error(this, cause, details, extra, source, &
+                             msg_as_format, msg_multiline)
+    !! Return error information.
+    !!
+    !! Returns information on error.
+    !! `msg_as_format`, if present, contains the full message as Fortran
+    !! format
+    !! `msg_multiline` contains the message with C new line.
+    class(ErrorHandler), intent(in) :: this
+    !! Instance of ErrorHandler.
+    character(len=:), allocatable, intent(out), optional :: cause
+    !! Cause of the error.
+    character(len=:), allocatable, intent(out), optional :: details
+    !! Details on the error.
+    character(len=:), allocatable, intent(out), optional :: extra
+    !! Extra information on the error.
+    character(len=:), allocatable, intent(out), optional :: source
+    !! Source of the error.
+    character(len=:), allocatable, intent(out), optional :: msg_as_format
+    !! Full message as a Fortran compatible fortran.
+    character(len=:), allocatable, intent(out), optional :: msg_multiline
+    !! Full message as a string, using C-like newline characters.
+
+    integer :: lstr
+    character(len=10000) :: line
+
+    if (present(cause)) cause = this%cause
+    if (present(details) .and. allocated(this%details)) &
+        details = this%details
+    if (present(extra) .and. allocated(this%extra)) &
+        extra = this%extra
+    if (present(source) .and. allocated(this%source)) &
+        source = this%source
+    if (present(msg_as_format)) then
+        if (allocated(this%source)) then
+            line = '("Error encountered from ' // this%source // ': ' &
+                // this%cause // '"'
+            lstr = 25 + len(this%source) + 2 + len(this%cause) + 1
+        else
+            line = '("Error encountered: ' // this%cause // '"'
+            lstr = 21 + len(this%cause) + 1
+        end if
+        if (allocated(this%details)) then
+            line(lstr+1:) = ',/,"Reason: ' // this%details // '"'
+            lstr = lstr + 12 + len(this%details) + 1
+        end if
+        if (allocated(this%extra)) then
+            line(lstr+1:) = ',/,"Other information: ' // this%extra // '"'
+            lstr = lstr + 23 + len(this%extra) + 1
+        end if
+        line(lstr+1:) = ')'
+        lstr = lstr + 1
+        allocate(character(len=lstr) :: msg_as_format)
+        msg_as_format = line(:lstr)
+    end if
+    if (present(msg_multiline)) then
+        if (allocated(this%source)) then
+            line = 'Error encountered from ' // this%source // ': ' &
+                // this%cause
+            lstr = 23 + len(this%source) + 2 + len(this%cause)
+        else
+            line = 'Error encountered: ' // this%cause
+            lstr = 19 + len(this%cause)
+        end if
+        if (allocated(this%details)) then
+            line(lstr+1:) = new_line(line) // 'Reason: ' // this%details
+            lstr = lstr + 9 + len(this%details)
+        end if
+        if (allocated(this%extra)) then
+            line(lstr+1:) = new_line(line) // 'Other information: ' &
+                // this%extra
+            lstr = lstr + 20 + len(this%extra)
+        end if
+        allocate(character(len=lstr) :: msg_multiline)
+        msg_multiline = line(:lstr)
+    end if
+
+end subroutine handler_get_error
+
+! ======================================================================
+
+subroutine handler_print_error(this)
+    !! Print error message.
+    !!
+    !! Print an error message based on the stored parameters
+    !!
+    !! @note
+    !! This function bypasses the test on the minimum level for printing
+    !! and will always print.
+    !! @endnote
+    class(ErrorHandler), intent(in) :: this
+    !! Instance of ErrorHandler.
+
+    character(len=3) :: label
+    logical :: has_details, has_extra, has_source
+
+    select case(this%label)
+    case (0)
+        label = 'gen'
+    case (1)
+        label = 'std'
+    case (2)
+        label = 'dev'
+    case default
+        label = 'n/a'
+    end select
+
+    has_details = allocated(this%details)
+    has_extra = allocated(this%extra)
+    has_source = allocated(this%source)
+    if (has_details .and. has_extra .and. has_source) then
+        call write_err(label, this%cause, this%details, this%extra, &
+                       this%source)
+    else if (has_details .and. has_extra) then
+        call write_err(label, this%cause, details=this%details, &
+                       extra=this%extra)
+    else if (has_details .and. has_source) then
+        call write_err(label, this%cause, details=this%details, &
+                       source=this%source)
+    else if (has_extra .and. has_source) then
+        call write_err(label, this%cause, extra=this%extra, source=this%source)
+    else if (has_details) then
+        call write_err(label, this%cause, details=this%details)
+    else if (has_extra) then
+        call write_err(label, this%cause, extra=this%extra)
+    else if (has_source) then
+        call write_err(label, this%cause, source=this%source)
+    else
+        call write_err(label, this%cause)
+    end if
+
+end subroutine handler_print_error
 
 ! ======================================================================
 

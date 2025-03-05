@@ -15,6 +15,8 @@
 * Derived type `ErrorHandler` (`exception`) provides a structure to manage runtime errors or warnings.  It can also manage automatic termination in case of error.
 * Module `exception` provides a variable, `runstat` to keep track of the run status between modules and program units.
 * Added conversion procedure bound to `PhysFact` (`physics`) to convert derivatives of energies with respect to mass-weighted nuclear coordinates in atomic units to wavenumbers scale, `dE_au2cm`.  The derivation order can be chosen.
+* New `vibrational` module for operations related to vibrational modes and spectroscopy.
+* New interface `build_modes` (`vibrational`) can construct the vibrational energies and normal coordinates from the force constants matrix.
 
 ### Changed
 * `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.

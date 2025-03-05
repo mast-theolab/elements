@@ -153,7 +153,9 @@ target("speclib")
     -- Spectroscopy-related resources
     set_kind("static")
     add_deps("corelib")
+    add_deps("molelib")
     add_deps("mathlib")
+    add_files("src/spectro/vibrational.f90")
     add_files("src/spectro/vibronic*.f90")
 
 

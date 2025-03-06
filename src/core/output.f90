@@ -102,8 +102,7 @@ subroutine prt_coord_r32(n_at, at_lab, at_crd, at_mass, iunit)
         write(iu, 1100)
         write(iu, 1101)
         do ia = 1, n_at
-            write(iu, 1110) at_lab(ia), at_mass(ia), &
-                phys%bohr2Ang(at_crd(:,ia))
+            write(iu, 1110) at_lab(ia), phys%bohr2Ang(at_crd(:,ia))
         end do
         write(iu, 1101)
     end if
@@ -160,8 +159,7 @@ subroutine prt_coord_r64(n_at, at_lab, at_crd, at_mass, iunit)
         write(iu, 1100)
         write(iu, 1102)
         do ia = 1, n_at
-            write(iu, 1110) at_lab(ia), at_mass(ia), &
-                phys%bohr2Ang(at_crd(:,ia))
+            write(iu, 1110) at_lab(ia), phys%bohr2Ang(at_crd(:,ia))
         end do
         write(iu, 1101)
     end if

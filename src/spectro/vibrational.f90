@@ -1,7 +1,7 @@
 module vibrational
     !! A module storing procedures related to vibrations.
 
-    use numeric, only: f0, f1, realwp
+    use numeric, only: f0, f1, realwp, small
     use lapack_drv, only: xsyev
     use physics, only: phys_conv
     use geometry, only: Eckart_orient
@@ -14,7 +14,7 @@ module vibrational
     implicit none
 
     private
-    public :: build_modes !, convert_Lmat
+    public :: build_modes, set_orientation
 
     interface build_modes
         !! Build the normal modes from the Cartesian force constant matrix.
@@ -24,6 +24,12 @@ module vibrational
             build_modes_mol_lt, build_modes_mol_sq, &
             build_modes_vib_lt, build_modes_vib_sq
     end interface build_modes
+
+    interface set_orientation
+        !! Set orientation of normal modes so the largest component is positive
+        module procedure &
+            set_orientation_arr, set_orientation_dim, set_orientation_vib
+    end interface set_orientation
 
 contains
 
@@ -345,7 +351,7 @@ subroutine build_modes_dim_sq(n_at, F_cart, at_crd, at_mass, is_weighted, &
 
     call build_modes_algo(n_at, F_mweigh, at_crd, at_mass, remove_rottrans, &
                           n_vib, L_mat, freq, L_mweigh, red_mass)
-    deallocate(F_mweigh)  
+    deallocate(F_mweigh)
 
 end subroutine build_modes_dim_sq
 
@@ -995,7 +1001,7 @@ subroutine build_modes_algo(n_at, F_mweigh, at_crd, at_mass, remove_rottrans, &
     do i = 1, n_trro
         evec_new(:,i) = evec_new(:,i)/trro_norm(i)
     end do
-    
+
     ! Identification of rotation/translations in original eigenvectors
     ! ----------------------------------------------------------------
     do ia = 1, n_at3
@@ -1125,6 +1131,129 @@ subroutine build_modes_algo(n_at, F_mweigh, at_crd, at_mass, remove_rottrans, &
     deallocate(eval, evec, mask, work)
 
 end subroutine build_modes_algo
+
+! ======================================================================
+
+subroutine set_orientation_arr(L_mat)
+    !! Set the orientation of an array of modes.
+    !!
+    !! Set the orientation of an array of modes so the largest component
+    !! is positive.
+    !! If there is more than one component with the largest value, the
+    !! first component is used to set the orientation.
+    !!
+    !! @note "version"
+    !! This version takes a single array, finding the dimensions from
+    !! its shape.
+    !! @endnote
+    real(realwp), dimension(:,:), intent(inout) :: L_mat
+    !! List of normal modes.
+
+    integer :: i, ia
+    real(realwp) :: x
+    logical :: is_neg
+
+    do i = 1, size(L_mat, 2)
+        x = f0
+        is_neg = .false.
+        do ia = 1, size(L_mat, 1)
+            if (abs(L_mat(ia,i)) > x) then
+                is_neg = L_mat(ia,i) < f0
+                x = abs(L_mat(ia,i)) + small
+            end if
+        end do
+        if (is_neg) L_mat(:,i) = -L_mat(:,i)
+    end do
+
+end subroutine set_orientation_arr
+
+! ======================================================================
+
+subroutine set_orientation_dim(n_at3, n_vib, L_mat)
+    !! Set the orientation of an array of modes.
+    !!
+    !! Set the orientation of an array of modes so the largest component
+    !! is positive.
+    !! If there is more than one component with the largest value, the
+    !! first component is used to set the orientation.
+    !!
+    !! @note "version"
+    !! This version takes the explicit dimension of the array.
+    !! @endnote
+    integer, intent(in) :: n_at3
+    !! Number of atomic coordinates.
+    integer, intent(in) :: n_vib
+    !! Number of normal modes.
+    real(realwp), dimension(n_at3,n_vib), intent(inout) :: L_mat
+    !! List of normal modes.
+
+    integer :: i, ia
+    real(realwp) :: x
+    logical :: is_neg
+
+    do i = 1, n_vib
+        x = f0
+        is_neg = .false.
+        do ia = 1, n_at3
+            if (abs(L_mat(ia,i)) > x) then
+                is_neg = L_mat(ia,i) < f0
+                x = abs(L_mat(ia,i)) + small
+            end if
+        end do
+        if (is_neg) L_mat(:,i) = -L_mat(:,i)
+    end do
+
+end subroutine set_orientation_dim
+! ======================================================================
+
+subroutine set_orientation_vib(vib)
+    !! Set the orientation of an array of modes.
+    !!
+    !! Set the orientation of an array of modes so the largest component
+    !! is positive.
+    !! If there is more than one component with the largest value, the
+    !! first component is used to set the orientation.
+    !!
+    !! @note "version"
+    !! This version sets the normal modes arrays populated in a
+    !! vibrationalDB object.
+    !! @endnote
+    class(VibrationsDB), intent(inout) :: vib
+    !! VibrationsDB instance.
+
+    integer :: i, ia
+    real(realwp) :: x
+    logical :: is_neg
+
+    if (allocated(vib%L_mat)) then
+        do i = 1, vib%n_vib
+            x = f0
+            is_neg = .false.
+            do ia = 1, size(vib%L_mat, 1)
+                if (abs(vib%L_mat(ia,i)) > x) then
+                    is_neg = vib%L_mat(ia,i) < f0
+                    x = abs(vib%L_mat(ia,i)) + small
+                end if
+            end do
+            if (is_neg) vib%L_mat(:,i) = -vib%L_mat(:,i)
+        end do
+    end if
+
+    if (allocated(vib%L_mwg)) then
+        do i = 1, vib%n_vib
+            x = f0
+            is_neg = .false.
+            do ia = 1, size(vib%L_mwg, 1)
+                if (abs(vib%L_mwg(ia,i)) > x) then
+                    is_neg = vib%L_mwg(ia,i) < f0
+                    x = abs(vib%L_mwg(ia,i)) + small
+                end if
+            end do
+            if (is_neg) vib%L_mwg(:,i) = -vib%L_mwg(:,i)
+        end do
+    end if
+
+end subroutine set_orientation_vib
 
 ! ======================================================================
 

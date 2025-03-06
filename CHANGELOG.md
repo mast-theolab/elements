@@ -20,6 +20,7 @@
 * Most conversion functions in `PhysFact` (`physics`) support the reverse operation, with the optional keyword `reverse`.
 * New conversion function from atomic unit of mass to unified atomic mass in `PhysFact` (`physics`).
 * New procedure `set_orientation` (`vibrational`) to fix the orientation of normal modes, setting the largest component to positive.
+* New procedure `prt_vec` (`output`) to print vectors.
 
 ### Fixed
 * `prt_coord` (`output`) failed if masses were not provided.

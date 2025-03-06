@@ -18,6 +18,10 @@ module output
         module procedure :: prt_mat_r32, prt_mat_r64
     end interface prt_mat
 
+    interface prt_vec
+        module procedure :: prt_vec_r32, prt_vec_r64
+    end interface prt_vec
+
     interface prt_coord
         module procedure :: prt_coord_r32, prt_coord_r64
     end interface prt_coord
@@ -171,7 +175,7 @@ end subroutine prt_coord_r64
 subroutine prt_mat_r32(mat, n_row, n_col, iunit, ncol_by_blk, prec, thresh)
     !! Print a real32 matrix
     !!
-    !! Prints a real matrix with precision real32.
+    !! Prints the elements of a real matrix with precision real32.
     real(real32), dimension(:,:), intent(in) :: mat
     !! Matrix to display
     integer, intent(in) :: n_row
@@ -255,7 +259,7 @@ end subroutine prt_mat_r32
 subroutine prt_mat_r64(mat, n_row, n_col, iunit, ncol_by_blk, prec, thresh)
     !! Print a real64 matrix
     !!
-    !! Prints a real matrix with precision real64.
+    !! Prints the elements of a real matrix with precision real64.
     real(real64), dimension(:,:), intent(in) :: mat
     !! Matrix to display
     integer, intent(in) :: n_row
@@ -330,6 +334,130 @@ subroutine prt_mat_r64(mat, n_row, n_col, iunit, ncol_by_blk, prec, thresh)
     end do
 
 end subroutine prt_mat_r64
+
+! ======================================================================
+
+subroutine prt_vec_r32(vec, n, iunit, prec, thresh)
+    !! Print a real32 vector.
+    !!
+    !! Prints the elements of a real vector with precision real32.
+    real(real32), dimension(:), intent(in) :: vec
+    !! Vector to display.
+    integer, intent(in) :: n
+    !! Number of elements to print.
+   integer, intent(in), optional :: iunit
+    !! Output unit
+    integer, intent(in), optional :: prec
+    !! Number of digits for precision (<0 for fixed-point notation)
+    real(real32), intent(in), optional :: thresh
+    !! If set, elements below thresh are not printed.
+
+    integer :: i, iu, len_num
+    real(real32) :: x
+    integer, parameter :: len_id = 8
+    character(len=10) :: num_fmt, id_fmt
+    character(len=80) :: dfmt
+
+    ! Set output
+    if (present(iunit)) then
+        iu = iunit
+    else
+        iu = iu_out
+    end if
+
+    ! Build formats
+    write(id_fmt, '("i",i0)') len_id
+    if (.not.present(prec)) then
+        num_fmt = 'es14.6'
+    else
+        if (prec > 0) then
+            len_num = prec + 8
+            write(num_fmt, '("es",i0,".",i0)') len_num, prec
+        else
+            len_num = -prec + 10
+            write(num_fmt, '("f",i0,".",i0)') len_num, -prec
+        end if
+    end if
+
+    write(dfmt, '("(",a,",1x,",a,")")') id_fmt, num_fmt
+
+    ! Now print the vector
+    do i = 1, n
+        if (present(thresh)) then
+            if (abs(vec(i)) > thresh) then
+                x = vec(i)
+            else
+                x = 0.0_real32
+            end if
+        else
+            x = vec(i)
+        end if
+        write(iu, dfmt) i, x
+    end do
+
+end subroutine prt_vec_r32
+
+! ======================================================================
+
+subroutine prt_vec_r64(vec, n, iunit, prec, thresh)
+    !! Print a real64 vector.
+    !!
+    !! Prints the elements of a real vector with precision real64.
+    real(real64), dimension(:), intent(in) :: vec
+    !! Vector to display.
+    integer, intent(in) :: n
+    !! Number of elements to print.
+   integer, intent(in), optional :: iunit
+    !! Output unit
+    integer, intent(in), optional :: prec
+    !! Number of digits for precision (<0 for fixed-point notation)
+    real(real64), intent(in), optional :: thresh
+    !! If set, elements below thresh are not printed.
+
+    integer :: i, iu, len_num
+    real(real64) :: x
+    integer, parameter :: len_id = 8
+    character(len=10) :: num_fmt, id_fmt
+    character(len=80) :: dfmt
+
+    ! Set output
+    if (present(iunit)) then
+        iu = iunit
+    else
+        iu = iu_out
+    end if
+
+    ! Build formats
+    write(id_fmt, '("i",i0)') len_id
+    if (.not.present(prec)) then
+        num_fmt = 'es14.6'
+    else
+        if (prec > 0) then
+            len_num = prec + 8
+            write(num_fmt, '("es",i0,".",i0)') len_num, prec
+        else
+            len_num = -prec + 10
+            write(num_fmt, '("f",i0,".",i0)') len_num, -prec
+        end if
+    end if
+
+    write(dfmt, '("(",a,",1x,",a,")")') id_fmt, num_fmt
+
+    ! Now print the vector
+    do i = 1, n
+        if (present(thresh)) then
+            if (abs(vec(i)) > thresh) then
+                x = vec(i)
+            else
+                x = 0.0_real64
+            end if
+        else
+            x = vec(i)
+        end if
+        write(iu, dfmt) i, x
+    end do
+
+end subroutine prt_vec_r64
 
 ! ======================================================================
 

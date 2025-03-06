@@ -17,10 +17,14 @@
 * Added conversion procedure bound to `PhysFact` (`physics`) to convert derivatives of energies with respect to mass-weighted nuclear coordinates in atomic units to wavenumbers scale, `dE_au2cm`.  The derivation order can be chosen.
 * New `vibrational` module for operations related to vibrational modes and spectroscopy.
 * New interface `build_modes` (`vibrational`) can construct the vibrational energies and normal coordinates from the force constants matrix.
+* Most conversion functions in `PhysFact` (`physics`) support the reverse operation, with the optional keyword `reverse`.
 
 ### Changed
 * `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.
 * Module `geometry` now uses the new `runstat` from `exception` to manage exceptions.
+
+### Removed
+* The conversion method from angstroms to Bohr in `PhysFact` (`physics`) is superseded by `bohr2Ang(reverse=.true.)` and has been removed.
 
 
 ## 0.25.02

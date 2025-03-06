@@ -3,8 +3,12 @@ module physics
     !!
     !! Provides common phyical constants and subroutines.
     !! Content:
+    !!
     !! - PhysFact : derived-type with physical conversion factors
     !! - phys_conv: Instance of PhysFact
+    !!
+    !! Most functions in phys_conv can operate in reverse to convert
+    !! backward.
     use iso_fortran_env, only: real32, real64
 
     implicit none
@@ -30,7 +34,7 @@ module physics
         !! Proton rest mass (kg)
         g_factor = 2.0023193043622_real64, &
         !! Free electron g-factor (no unit)
-        bohr_radius = 0.52917720859_real64, &!
+        bohr_radius = 0.52917720859_real64, &
         ! bohr radius in Ang
         u_at_mass = 1.660538782e-27_real64, &
         !! u in kg
@@ -38,8 +42,10 @@ module physics
         !! electron charge in coulomb
         calorie = 4.184_real64, &
         !! 1 calorie in joule
-        E_hartree = 4.35974394e-18_real64
+        E_hartree = 4.35974394e-18_real64, &
         !! 1 hartree in joule
+        e_mass = E_hartree*1.0e4_real64/(slight*fine_struct)**2
+        !! electron mass (atomic units of mass)
 
     real(real64), parameter, private :: &
         pi = 4.0_real64*atan(1.0_real64), &
@@ -54,7 +60,6 @@ module physics
         contains
             procedure, nopass, private :: &
                 s_conv_bohr_to_Ang, d_conv_bohr_to_Ang, &
-                s_conv_Ang_to_bohr, d_conv_Ang_to_bohr, &
                 s_conv_amu_to_kg, d_conv_amu_to_kg, &
                 s_conv_e_to_C, d_conv_e_to_C, &
                 s_conv_cal_to_J, d_conv_cal_to_J, &
@@ -62,7 +67,6 @@ module physics
                 s_conv_au_freq_to_cm1, d_conv_au_freq_to_cm1, &
                 s_conv_dE_au_to_cgs, d_conv_dE_au_to_cgs
             generic, public :: bohr2Ang => s_conv_bohr_to_Ang, d_conv_bohr_to_Ang
-            generic, public :: Ang2bohr => s_conv_Ang_to_bohr, d_conv_Ang_to_bohr
             generic, public :: amu2kg => s_conv_amu_to_kg, d_conv_amu_to_kg
             generic, public :: e2C => s_conv_e_to_C, d_conv_e_to_C
             generic, public :: cal2J => s_conv_cal_to_J, d_conv_cal_to_J
@@ -79,102 +83,220 @@ contains
 
 ! ======================================================================
 
-elemental real(real32) function s_conv_bohr_to_Ang(x)
+elemental real(real32) function s_conv_bohr_to_Ang(x, reverse)
     real(real32), intent(in) :: x
-    s_conv_bohr_to_Ang = x * real(bohr_radius, kind=real32)
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        s_conv_bohr_to_Ang = x / real(bohr_radius, kind=real32)
+    else
+        s_conv_bohr_to_Ang = x * real(bohr_radius, kind=real32)
+    end if
 end function s_conv_bohr_to_Ang
 
 ! ======================================================================
 
-elemental real(real64) function d_conv_bohr_to_Ang(x)
+elemental real(real64) function d_conv_bohr_to_Ang(x, reverse)
     real(real64), intent(in) :: x
-    d_conv_bohr_to_Ang = x * bohr_radius
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        d_conv_bohr_to_Ang = x / bohr_radius
+    else
+        d_conv_bohr_to_Ang = x * bohr_radius
+    end if
 end function d_conv_bohr_to_Ang
 
 ! ======================================================================
 
-elemental real(real32) function s_conv_Ang_to_bohr(x)
+elemental real(real32) function s_conv_amu_to_kg(x, reverse)
     real(real32), intent(in) :: x
-    s_conv_Ang_to_bohr = x / real(bohr_radius, kind=real32)
-end function s_conv_Ang_to_bohr
-
-! ======================================================================
-
-elemental real(real64) function d_conv_Ang_to_bohr(x)
-    real(real64), intent(in) :: x
-    d_conv_Ang_to_bohr = x / bohr_radius
-end function d_conv_Ang_to_bohr
-
-! ======================================================================
-
-elemental real(real32) function s_conv_amu_to_kg(x)
-    real(real32), intent(in) :: x
-    s_conv_amu_to_kg = x * real(u_at_mass, kind=real32)
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        s_conv_amu_to_kg = x / real(u_at_mass, kind=real32)
+    else
+        s_conv_amu_to_kg = x * real(u_at_mass, kind=real32)
+    end if
 end function s_conv_amu_to_kg
 
 ! ======================================================================
 
-elemental real(real64) function d_conv_amu_to_kg(x)
+elemental real(real64) function d_conv_amu_to_kg(x, reverse)
     real(real64), intent(in) :: x
-    d_conv_amu_to_kg = x * u_at_mass
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        d_conv_amu_to_kg = x / u_at_mass
+    else
+        d_conv_amu_to_kg = x * u_at_mass
+    end if
 end function d_conv_amu_to_kg
 
 ! ======================================================================
 
-elemental real(real32) function s_conv_e_to_C(x)
+elemental real(real32) function s_conv_e_to_C(x, reverse)
     real(real32), intent(in) :: x
-    s_conv_e_to_C = x * real(e_charge, kind=real32)
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        s_conv_e_to_C = x / real(e_charge, kind=real32)
+    else
+        s_conv_e_to_C = x * real(e_charge, kind=real32)
+    end if
 end function s_conv_e_to_C
 
 ! ======================================================================
 
-elemental real(real64) function d_conv_e_to_C(x)
+elemental real(real64) function d_conv_e_to_C(x, reverse)
     real(real64), intent(in) :: x
-    d_conv_e_to_C = x * e_charge
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        d_conv_e_to_C = x / e_charge
+    else
+        d_conv_e_to_C = x * e_charge
+    end if
 end function d_conv_e_to_C
 
 ! ======================================================================
 
-elemental real(real32) function s_conv_cal_to_J(x)
+elemental real(real32) function s_conv_cal_to_J(x, reverse)
     real(real32), intent(in) :: x
-    s_conv_cal_to_J = x * real(calorie, kind=real32)
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        s_conv_cal_to_J = x / real(calorie, kind=real32)
+    else
+        s_conv_cal_to_J = x * real(calorie, kind=real32)
+    end if
 end function s_conv_cal_to_J
 
 ! ======================================================================
 
-elemental real(real64) function d_conv_cal_to_J(x)
+elemental real(real64) function d_conv_cal_to_J(x, reverse)
     real(real64), intent(in) :: x
-    d_conv_cal_to_J = x * calorie
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        d_conv_cal_to_J = x / calorie
+    else
+        d_conv_cal_to_J = x * calorie
+    end if
 end function d_conv_cal_to_J
 
 ! ======================================================================
 
-elemental real(real32) function s_conv_au_freq_to_cm1(x)
+elemental real(real32) function s_conv_au_freq_to_cm1(x, reverse)
     !! Convert frequency in atomic unit to energy in cm-1.
     real(real32), intent(in) :: x
-    s_conv_au_freq_to_cm1 = x * real(E_hartree/(planck*slight), kind=real32)
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        s_conv_au_freq_to_cm1 = x/real(E_hartree/(planck*slight), kind=real32)
+    else
+        s_conv_au_freq_to_cm1 = x*real(E_hartree/(planck*slight), kind=real32)
+    end if
 end function s_conv_au_freq_to_cm1
 
 ! ======================================================================
 
-elemental real(real64) function d_conv_au_freq_to_cm1(x)
+elemental real(real64) function d_conv_au_freq_to_cm1(x, reverse)
     !! Convert frequency in atomic unit to energy in cm-1.
     real(real64), intent(in) :: x
-    d_conv_au_freq_to_cm1 = x * E_hartree / (planck * slight)
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        d_conv_au_freq_to_cm1 = x / (E_hartree / (planck * slight))
+    else
+        d_conv_au_freq_to_cm1 = x * E_hartree / (planck * slight)
+    end if
 end function d_conv_au_freq_to_cm1
 
 ! ======================================================================
 
-elemental real(real32) function s_conv_hartree_to_J(x)
+elemental real(real32) function s_conv_hartree_to_J(x, reverse)
     real(real32), intent(in) :: x
-    s_conv_hartree_to_J = x * real(E_hartree, kind=real32)
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        s_conv_hartree_to_J = x / real(E_hartree, kind=real32)
+    else
+        s_conv_hartree_to_J = x * real(E_hartree, kind=real32)
+    end if
 end function s_conv_hartree_to_J
 
 ! ======================================================================
 
-elemental real(real64) function d_conv_hartree_to_J(x)
+elemental real(real64) function d_conv_hartree_to_J(x, reverse)
     real(real64), intent(in) :: x
-    d_conv_hartree_to_J = x * E_hartree
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        d_conv_hartree_to_J = x / E_hartree
+    else
+        d_conv_hartree_to_J = x * E_hartree
+    end if
 end function d_conv_hartree_to_J
 
 ! ======================================================================

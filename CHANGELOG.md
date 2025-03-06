@@ -18,6 +18,7 @@
 * New `vibrational` module for operations related to vibrational modes and spectroscopy.
 * New interface `build_modes` (`vibrational`) can construct the vibrational energies and normal coordinates from the force constants matrix.
 * Most conversion functions in `PhysFact` (`physics`) support the reverse operation, with the optional keyword `reverse`.
+* New conversion function from atomic unit of mass to unified atomic mass in `PhysFact` (`physics`).
 
 ### Changed
 * `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.

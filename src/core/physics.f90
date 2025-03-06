@@ -65,7 +65,8 @@ module physics
                 s_conv_cal_to_J, d_conv_cal_to_J, &
                 s_conv_hartree_to_J, d_conv_hartree_to_J, &
                 s_conv_au_freq_to_cm1, d_conv_au_freq_to_cm1, &
-                s_conv_dE_au_to_cgs, d_conv_dE_au_to_cgs
+                s_conv_dE_au_to_cgs, d_conv_dE_au_to_cgs, &
+                s_conv_au_to_u_mass, d_conv_au_to_u_mass
             generic, public :: bohr2Ang => s_conv_bohr_to_Ang, d_conv_bohr_to_Ang
             generic, public :: amu2kg => s_conv_amu_to_kg, d_conv_amu_to_kg
             generic, public :: e2C => s_conv_e_to_C, d_conv_e_to_C
@@ -74,7 +75,9 @@ module physics
             generic, public :: au2cm1 => s_conv_au_freq_to_cm1, &
                 d_conv_au_freq_to_cm1
             generic, public :: dE_au2cm => s_conv_dE_au_to_cgs, &
-            d_conv_dE_au_to_cgs
+                d_conv_dE_au_to_cgs
+            generic, public :: au2amu => s_conv_au_to_u_mass, &
+                d_conv_au_to_u_mass
     end type PhysFact
 
     type(PhysFact), public :: phys_conv
@@ -116,6 +119,42 @@ elemental real(real64) function d_conv_bohr_to_Ang(x, reverse)
         d_conv_bohr_to_Ang = x * bohr_radius
     end if
 end function d_conv_bohr_to_Ang
+
+! ======================================================================
+
+elemental real(real32) function s_conv_au_to_u_mass(x, reverse)
+    real(real32), intent(in) :: x
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        s_conv_au_to_u_mass = x / real(e_mass/u_at_mass, kind=real32)
+    else
+        s_conv_au_to_u_mass = x * real(e_mass/u_at_mass, kind=real32)
+    end if
+end function s_conv_au_to_u_mass
+
+! ======================================================================
+
+elemental real(real64) function d_conv_au_to_u_mass(x, reverse)
+    real(real64), intent(in) :: x
+    logical, intent(in), optional :: reverse
+    logical :: do_reverse
+    if (present(reverse)) then
+        do_reverse = reverse
+    else
+        do_reverse = .false.
+    end if
+    if (do_reverse) then
+        d_conv_au_to_u_mass = x / (e_mass/u_at_mass)
+    else
+        d_conv_au_to_u_mass = x * e_mass/u_at_mass
+    end if
+end function d_conv_au_to_u_mass
 
 ! ======================================================================
 

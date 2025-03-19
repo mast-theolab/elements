@@ -21,6 +21,7 @@
 * New conversion function from atomic unit of mass to unified atomic mass in `PhysFact` (`physics`).
 * New procedure `set_orientation` (`vibrational`) to fix the orientation of normal modes, setting the largest component to positive.
 * New procedure `prt_vec` (`output`) to print vectors.
+* New component `red_freq` in `VibrationsDB` to store reduced harmonic frequencies in atomic units.
 
 ### Fixed
 * `prt_coord` (`output`) failed if masses were not provided.

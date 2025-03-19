@@ -178,8 +178,9 @@ module datatypes
         integer :: &
             n_vib = 0  ! number of normal modes
         real(realwp), dimension(:), allocatable :: &
-            freq, &   ! Harmonic wavenumbers (cm-1)
-            red_mass  ! Reduced masses of the vibrations
+            freq, &     ! Harmonic wavenumbers (cm-1)
+            red_freq, & ! Reduced frequencies (in au)
+            red_mass    ! Reduced masses of the vibrations
         real(realwp), dimension(:,:), allocatable :: &
             L_mwg, &   ! Eigenvectors of the mass-weighted force constants
             L_mat      ! Eigenvectors of the Hessian matrix, dimensionless

@@ -2,6 +2,7 @@ submodule (input:input_data) input_data_fchk
     !! Submodule containing the definition of procedures related to the
     !! data extraction.
     use numeric, only: realwp, f2
+    use physics, only: phys_conv
     use arrays, only: symm_tri_array
     use parsefchk, only: fchkdata, fchkparser
     use basisset, only: build_bset_DB
@@ -492,6 +493,7 @@ module procedure build_vib_data_fchk
     ! Extract frequencies and reduced mass
     ! They are stored in Vib-E2, starting with freq, then red. mass...
     vib%freq = dbase(3)%rdata(1:vib%n_vib)
+    vib%red_freq = phys_conv%au2cm1(vib%freq, .true.)
     vib%red_mass = dbase(3)%rdata(vib%n_vib+1:2*vib%n_vib)
 
     ! Now extract eigenvectors and do necessary operations/conversions

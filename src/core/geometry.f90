@@ -723,7 +723,7 @@ function inertia_moments_arr(at_crd, at_mass) result(tensor)
 
     ! Definition of the tensor of moments of inertia
     tensor = f0
-    !$omp parallel do default(shared) reduction(+:tensor)
+    !$omp parallel do default(shared) private(atm) reduction(+:tensor)
     do ia = 1, size(at_mass)
         atm = at_mass(ia)
         tensor(1,1) = tensor(1,1) + atm*(at_crd(2,ia)**2 + at_crd(3,ia)**2)
@@ -766,7 +766,7 @@ function inertia_moments_dim(n_at, at_crd, at_mass) result(tensor)
 
     ! Definition of the tensor of moments of inertia
     tensor = f0
-    !$omp parallel do default(shared) reduction(+:tensor)
+    !$omp parallel do default(shared) private(atm) reduction(+:tensor)
     do ia = 1, n_at
         atm = at_mass(ia)
         tensor(1,1) = tensor(1,1) + atm*(at_crd(2,ia)**2 + at_crd(3,ia)**2)
@@ -803,7 +803,7 @@ function inertia_moments_mol(mol) result(tensor)
 
     ! Definition of the tensor of moments of inertia
     tensor = f0
-    !$omp parallel do default(shared) reduction(+:tensor)
+    !$omp parallel do default(shared) private(atm) reduction(+:tensor)
     do ia = 1, mol%n_at
         associate (xyz => mol%at_crd)
         atm = mol%at_mas(ia)

@@ -26,6 +26,7 @@
 ### Fixed
 * `prt_coord` (`output`) failed if masses were not provided.
 * `xgemm` properly loaded in `basisset_purecart`.
+* Fixed race condition when using `inertia_tensor` (`geometry`) in parallel, giving garbage tensors.
 
 ### Changed
 * `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.

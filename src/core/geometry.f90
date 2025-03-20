@@ -537,7 +537,7 @@ subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, new_mol, trans_vec)
     !! @note "Flavor"
     !! This version takes a moleculeDB object as argument.
     !! @endnote
-    class(MoleculeDB), intent(in), target :: mol
+    class(MoleculeDB), intent(in) :: mol
     !! Molecule database.
     real(realwp), dimension(3,3), intent(out), optional :: rot_mat
     !! Rotation matrix to Eckart orientation.
@@ -545,7 +545,7 @@ subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, new_mol, trans_vec)
     !! Principal moments of inertia.
     real(realwp), dimension(:,:), intent(out), optional :: new_crd
     !! Coordinates after orientation.
-    class(MoleculeDB), intent(out), target, optional :: new_mol
+    class(MoleculeDB), intent(out), optional :: new_mol
     !! Molecule database.
     real(realwp), dimension(3), intent(out), optional :: trans_vec
     !! Translation vector to Eckart orientation (center of mass).
@@ -556,7 +556,6 @@ subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, new_mol, trans_vec)
     real(realwp), dimension(9) :: scratch
     real(realwp), dimension(3,3) :: evec, tensor
     real(realwp), dimension(3,mol%n_at) :: crd
-    class(MoleculeDB), pointer :: pt_mol => null()
     character(len=256) :: msg
 
     com = center_of_mass_mol(mol)
@@ -595,10 +594,8 @@ subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, new_mol, trans_vec)
     if (present(p_mom)) p_mom = eval
     if (present(new_crd)) new_crd = matmul(transpose(evec), crd)
     if (present(new_mol)) then
-        ! We use a pointer to check if new_mol and mol shares same mem address
-        pt_mol => new_mol
-        if (.not.associated(pt_mol, mol)) call mol%copy_to(new_mol)
-        nullify(pt_mol)
+        new_mol = mol
+        ! call mol%copy_to(new_mol)
         new_mol%at_crd = matmul(transpose(evec), crd)
     end if
     if (present(trans_vec)) trans_vec = -com

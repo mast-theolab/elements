@@ -198,19 +198,43 @@ subroutine copy_molDB_to(this, mol)
     !! into a new object `mol`, overwriting any existing value.
     class(MoleculeDB), intent(in) :: this
     !! Original object.
-    class(MoleculeDB), intent(inout) :: mol
+    class(MoleculeDB), intent(out) :: mol
     !! Destination object for the copy.
     mol%charge = this%charge
     mol%multip = this%multip
     mol%n_at = this%n_at
     mol%n_el = this%n_el
-    mol%at_num = this%at_num
     mol%energy = this%energy
-    mol%at_chg = this%at_chg
-    mol%at_mas = this%at_mas
-    mol%at_crd = this%at_crd
-    mol%el_dens = this%el_dens
-    mol%at_lab = this%at_lab
+    if (allocated(this%at_num)) then
+        mol%at_num = this%at_num
+    else if (allocated(mol%at_num)) then
+        deallocate(mol%at_num)
+    end if
+    if (allocated(this%at_chg)) then
+        mol%at_chg = this%at_chg
+    else if (allocated(mol%at_chg)) then
+        deallocate(mol%at_chg)
+    end if
+    if (allocated(this%at_mas)) then
+        mol%at_mas = this%at_mas
+    else if (allocated(mol%at_mas)) then
+        deallocate(mol%at_mas)
+    end if
+    if (allocated(this%at_crd)) then
+        mol%at_crd = this%at_crd
+    else if (allocated(mol%at_crd)) then
+        deallocate(mol%at_crd)
+    end if
+    if (allocated(this%el_dens)) then
+        mol%el_dens = this%el_dens
+    else if (allocated(mol%el_dens)) then
+        deallocate(mol%el_dens)
+    end if
+    if (allocated(this%at_lab)) then
+        mol%at_lab = this%at_lab
+    else if (allocated(mol%at_lab)) then
+        deallocate(mol%at_lab)
+    end if
     mol%loaded = this%loaded
     mol%dens_loaded = this%dens_loaded
 end subroutine copy_molDB_to
@@ -230,13 +254,37 @@ subroutine copy_molDB_from(this, mol)
     this%multip = mol%multip
     this%n_at = mol%n_at
     this%n_el = mol%n_el
-    this%at_num = mol%at_num
     this%energy = mol%energy
-    this%at_chg = mol%at_chg
-    this%at_mas = mol%at_mas
-    this%at_crd = mol%at_crd
-    this%el_dens = mol%el_dens
-    this%at_lab = mol%at_lab
+    if (allocated(mol%at_num)) then
+        this%at_num = mol%at_num
+    else if (allocated(this%at_num)) then
+        deallocate(this%at_num)
+    end if
+    if (allocated(mol%at_chg)) then
+        this%at_chg = mol%at_chg
+    else if (allocated(this%at_chg)) then
+        deallocate(this%at_chg)
+    end if
+    if (allocated(mol%at_mas)) then
+        this%at_mas = mol%at_mas
+    else if (allocated(this%at_mas)) then
+        deallocate(this%at_mas)
+    end if
+    if (allocated(mol%at_crd)) then
+        this%at_crd = mol%at_crd
+    else if (allocated(this%at_crd)) then
+        deallocate(this%at_crd)
+    end if
+    if (allocated(mol%el_dens)) then
+        this%el_dens = mol%el_dens
+    else if (allocated(this%el_dens)) then
+        deallocate(this%el_dens)
+    end if
+    if (allocated(mol%at_lab)) then
+        this%at_lab = mol%at_lab
+    else if (allocated(this%at_lab)) then
+        deallocate(this%at_lab)
+    end if
     this%loaded = mol%loaded
     this%dens_loaded = mol%dens_loaded
 end subroutine copy_molDB_from

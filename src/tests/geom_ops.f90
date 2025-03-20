@@ -351,14 +351,23 @@ program test_geom_ops
         stop 1
     end if
 
-    call Eckart_orient(mol_H2CO(1), new_mol=mol_H2CO(1))
+    call Eckart_orient(mol_H2CO(1), update=.true.)
     if (all(is_close_to(mol_H2CO(1)%at_crd, crd_ref, small, small))) then
+        print 1011, '_mol', 'upd_mol', 'PASSED'
+    else
+        print 1011, '_mol', 'upd_mol', 'FAILED'
+        stop 1
+    end if
+    
+    mol_H2CO(1)%at_crd = crd_H2CO(:,:,1)
+    call Eckart_orient(mol_H2CO(1), new_mol=mol_H2CO(2))
+    if (all(is_close_to(mol_H2CO(2)%at_crd, crd_ref, small, small))) then
         print 1011, '_mol', 'new_mol', 'PASSED'
     else
         print 1011, '_mol', 'new_mol', 'FAILED'
         stop 1
     end if
-    mol_H2CO(1)%at_crd = crd_H2CO(:,:,1)
+    mol_H2CO(2)%at_crd = crd_H2CO(:,:,2)
 
     ! -------------------------------------
 
@@ -402,7 +411,7 @@ program test_geom_ops
         stop 1
     end if
 
-    call Eckart_orient(mol_H2CO(2), new_mol=mol_H2CO(2))
+    call Eckart_orient(mol_H2CO(2), update=.true.)
     if (all(is_close_to(mol_H2CO(2)%at_crd, crd_ref, small, small))) then
         print 1011, '_mol', 'new_mol', 'PASSED'
     else
@@ -468,7 +477,7 @@ program test_geom_ops
         stop 1
     end if
 
-    call Eckart_orient(mol_meox, new_mol=mol_meox)
+    call Eckart_orient(mol_meox, update=.true.)
     if (all(is_close_to(mol_meox%at_crd, crd_ref, small, small))) then
         print 1011, '_mol', 'new_mol', 'PASSED'
     else
@@ -550,7 +559,7 @@ program test_geom_ops
         stop 1
     end if
 
-    call Eckart_orient(mol_naph, new_mol=mol_naph)
+    call Eckart_orient(mol_naph, update=.true.)
     if (all(is_close_to(mol_naph%at_crd, crd_ref, small, small))) then
         print 1011, '_mol', 'new_mol', 'PASSED'
     else

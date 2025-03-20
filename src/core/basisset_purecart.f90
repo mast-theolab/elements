@@ -1,6 +1,7 @@
 submodule (basisset) basisset_purecart
     !! Submodule containing the definition of procedures related to the
     !! conversion between Cartesian and pure basis sets.
+    use blas_drv, only: xgemm
 
 contains
 

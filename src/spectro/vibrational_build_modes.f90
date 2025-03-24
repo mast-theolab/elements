@@ -443,6 +443,7 @@ module procedure build_modes_vib_lt
         if(do_Lwgt) vib%L_mwg = vib%L_mwg(:n_at3,:nvib)
         if(do_rmas) vib%red_mass = vib%red_mass(:nvib)
         if(do_nvib) vib%n_vib = nvib
+        vib%loaded = .true.
     end if
 
 end procedure build_modes_vib_lt
@@ -521,7 +522,10 @@ module procedure build_modes_vib_sq
 
     ! now do allocation
     if(do_Lmat) allocate(vib%L_mat(n_at3,n_at3))
-    if(do_freq) allocate(vib%freq(n_at3))
+    if(do_freq) then
+        allocate(vib%freq(n_at3))
+        allocate(vib%red_freq(n_at3))
+    end if
     if(do_Lwgt) allocate(vib%L_mwg(n_at3,n_at3))
     if(do_rmas) allocate(vib%red_mass(n_at3))
     nvib = 0
@@ -582,10 +586,14 @@ module procedure build_modes_vib_sq
     deallocate(F_mweigh)
     if (runstat%is_ok()) then
         if(do_Lmat) vib%L_mat = vib%L_mat(:n_at3,:nvib)
-        if(do_freq) vib%freq = vib%freq(:nvib)
+        if(do_freq) then
+            vib%freq = vib%freq(:nvib)
+            vib%red_freq = phys_conv%au2cm1(vib%freq(:nvib), .true.)
+        end if
         if(do_Lwgt) vib%L_mwg = vib%L_mwg(:n_at3,:nvib)
         if(do_rmas) vib%red_mass = vib%red_mass(:nvib)
         if(do_nvib) vib%n_vib = nvib
+        vib%loaded = .true.
     end if
 
 end procedure build_modes_vib_sq

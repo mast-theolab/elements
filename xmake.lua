@@ -156,7 +156,9 @@ target("speclib")
     add_deps("molelib")
     add_deps("mathlib")
     add_files("src/spectro/vibrational.f90")
-    add_files("src/spectro/vibronic*.f90")
+    add_files("src/spectro/vibrational_*.f90")
+    -- add_files("src/spectro/vibronic.f90")
+    add_files("src/spectro/vibronic_*.f90")
 
 
 target("elements")

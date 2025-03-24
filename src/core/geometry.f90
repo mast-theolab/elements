@@ -594,8 +594,7 @@ subroutine Eckart_orient_mol(mol, rot_mat, p_mom, new_crd, new_mol, trans_vec)
     if (present(p_mom)) p_mom = eval
     if (present(new_crd)) new_crd = matmul(transpose(evec), crd)
     if (present(new_mol)) then
-        new_mol = mol
-        ! call mol%copy_to(new_mol)
+        call mol%copy_to(new_mol)
         new_mol%at_crd = matmul(transpose(evec), crd)
     end if
     if (present(trans_vec)) trans_vec = -com

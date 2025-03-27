@@ -4,7 +4,7 @@ submodule (input) input_file
     use string, only: locase
     use parsefchk, only: fchkdata, fchkparser
     use exception, only: BaseException, Error, InitError, RaiseArgError, &
-        RaiseFileError, RaiseKeyError
+        RaiseFileError, RaiseKeyError, runstat
 
     implicit none
 
@@ -132,8 +132,10 @@ module procedure get_program_version
     !! It is assumed that the validity of the file has been checked, the
     !! function directly opens the file to parse it.
 
-    integer :: iu, pos
+    integer :: pos
+    logical :: ok
     character(len=:), allocatable :: ft, key
+    character(len=100) :: msg
     type(fchkparser) :: fchk
     type(fchkdata) :: fchk_db
 
@@ -145,17 +147,31 @@ module procedure get_program_version
             call RaiseArgError(err, 'ftype', 'Unrecognized value.')
             return
         else
-            print *, 'Unsupported ftype, stopping.'
-            stop 1
+                call runstat%raise_error('Unrecognized file type', &
+                details='Could not determine the type of file given in &
+                    &input', &
+                source='get_program_version', cat='dev')
+            return
         end if
     end if
     ! Note
-    open(file=fname, newunit=iu, action='read', status='old')
     select case(ft)
         case ('GFChk')
             prog%name = 'Gaussian'
             fchk = fchkparser(fname)
             fchk_db = fchk%read('Gaussian Version')
+            ok = fchk%close()
+            if (.not. ok) then
+                if (present(err)) then
+                    call RaiseFileError(err, fname, 'closing')
+                else
+                    msg = ' '
+                    write(msg, '("Failed to close file: ",a)') trim(fname)
+                    call runstat%raise_error('Unable to close file', &
+                        details=trim(msg), source='ProgramInfo')
+                    return
+                end if
+            end if
             if (fchk_db%dtype == '0') then
                 if (present(err)) then
                     call RaiseKeyError(err, 'Gaussian version', &
@@ -163,9 +179,11 @@ module procedure get_program_version
                         'Could not determine Gaussian version, missing key.')
                     return
                 else
-                    print *, &
-                        'Could not find the Gaussian version key. Stopping.'
-                    stop 1
+                    call runstat%raise_error( &
+                        'Unable to determine Gaussian version', &
+                        details='The version of Gaussian is not available', &
+                        source='ProgramInfo')
+                    return
                 end if
             end if
             pos = index(fchk_db%cdata, '-')
@@ -175,8 +193,12 @@ module procedure get_program_version
                                        'Unknown structure.')
                     return
                 else
-                    print *, 'Failed to parse the Gaussian version'
-                    stop 1
+                    call runstat%raise_error( &
+                        'Unable to determine Gaussian version', &
+                        details='Unable to parse the string with the &
+                            &version', &
+                        source='ProgramInfo')
+                    return
                 end if
             else
                 key = trim(fchk_db%cdata(pos+1:))
@@ -187,8 +209,12 @@ module procedure get_program_version
                             'parsing', 'Unknown structure.')
                         return
                     else
-                        print *, 'Failed to parse the Gaussian version'
-                        stop 1
+                        call runstat%raise_error( &
+                            'Unable to determine Gaussian version', &
+                            details='Unable to parse the string with the &
+                                &version', &
+                            source='ProgramInfo')
+                        return
                     end if
                 else
                     prog%major = key(:pos-1)
@@ -200,11 +226,14 @@ module procedure get_program_version
                 end if
             end if
         case default
-            print '("Support of file type """,a,""" not yet implemented")', &
-            ft
-            stop 1
+            write(msg, &
+                 '("Support of file type """,a,""" not yet implemented")') &
+                 ft
+            call runstat%raise_error( &
+                'Unsupported file type', &
+                details=trim(msg), source='ProgramInfo', cat='dev')
+            return
     end select
-    close(iu)
 
 end procedure get_program_version
 

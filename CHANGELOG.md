@@ -1,4 +1,4 @@
-# Changelog
+v# Changelog
 
 ## 0.25.03
 
@@ -29,6 +29,7 @@
 * Fixed race condition when using `inertia_tensor` (`geometry`) in parallel, giving garbage tensors.
 * Copy methods of `MoleculeDB` objects (`datatypes`) now properly check that an array is allocated before trying to copy them in another object.
 * Datafiles were opened twice at the same time because of a missing closure.
+* The number of Cartesian AOs was incorrectly computed in `num_cart_AOs_bsetBF` (`basisset`).
 
 ### Changed
 * `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.

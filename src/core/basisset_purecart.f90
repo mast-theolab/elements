@@ -757,7 +757,6 @@ module procedure num_cart_AOs_bsetBF
             endif
         enddo
     enddo
-    num_cart_AOs = n_ao + n_d + n_f * 3
 
 end procedure num_cart_AOs_bsetBF
 

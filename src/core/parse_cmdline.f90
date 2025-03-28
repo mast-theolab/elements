@@ -4,7 +4,6 @@ module parse_cmdline
     use exception, only: ArgumentError, BaseException, Error, InitError, &
         RaiseAllocateError, RaiseArgError, RaiseError, RaiseTermination, &
         RaiseValueError, ValueError
-    use numeric, only: is_number, to_int64, to_real64
     use string, only: findstr, locase, upcase
 
     implicit none

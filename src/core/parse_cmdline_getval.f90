@@ -13,6 +13,7 @@ module procedure argval_set_by_user
 
     integer :: iarg
 
+    res = .false.
     this%error = InitError()
 
     iarg = this%get_argname_id(argname)

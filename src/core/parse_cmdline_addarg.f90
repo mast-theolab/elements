@@ -1,5 +1,7 @@
 submodule (parse_cmdline) parse_cmdline_addarg
 
+    use numeric, only: is_number, to_int, to_int64, to_real64
+
     implicit none
 
 contains
@@ -170,7 +172,8 @@ module procedure add_argument_int
     !! - 'list': list of integers
     !! - 'range': special list, which expect 1 to 3 elements
 
-    integer(int64) :: ival
+    integer :: ival
+    integer(int64) :: ival64
     logical :: is_scalar
     character(len=1024) :: errmsg
     character(len=MAX_ARGLEN) :: argname
@@ -193,7 +196,7 @@ module procedure add_argument_int
             arg_val%max_num = 0
             if (present(const_value)) then
                 if (is_number(const_value)) then
-                    arg_val%const = to_int64(const_value)
+                    arg_val%const = to_int(const_value)
                 else
                     call RaiseArgError(this%error, 'const_value', &
                                        'Not a number')
@@ -275,7 +278,7 @@ module procedure add_argument_int
     if (is_scalar) then
         if (present(def_value)) then
             if (is_number(def_value)) then
-                arg_val%value = to_int64(def_value)
+                arg_val%value = to_int(def_value)
                 arg_val%is_set = 1
             else
                 call RaiseArgError(this%error, 'def_value', 'Not a number')
@@ -284,7 +287,7 @@ module procedure add_argument_int
         end if
         if (present(min_value)) then
             if (is_number(min_value)) then
-                arg_val%min_ok = to_int64(min_value)
+                arg_val%min_ok = to_int(min_value)
             else
                 call RaiseArgError(this%error, 'min_value', 'Not a number')
                 return
@@ -292,7 +295,7 @@ module procedure add_argument_int
         end if
         if (present(max_value)) then
             if (is_number(max_value)) then
-                arg_val%max_ok = to_int64(max_value)
+                arg_val%max_ok = to_int(max_value)
             else
                 call RaiseArgError(this%error, 'max_value', 'Not a number')
                 return
@@ -303,15 +306,15 @@ module procedure add_argument_int
                 call RaiseArgError(this%error, 'const_value', 'Not a number')
                 return
             end if
-            ival = to_int64(const_value)
-            if (ival < arg_val%min_ok &
-                .or. ival > arg_val%max_ok) then
+            ival64 = to_int64(const_value)
+            if (ival64 < arg_val%min_ok &
+                .or. ival64 > arg_val%max_ok) then
                 errmsg = 'Constant value inconsistent with values permitted &
                     &for argument'
                 call RaiseArgError(this%error, 'const_value', errmsg)
                 return
             end if
-            arg_val%const = ival
+            arg_val%const = ival64
             arg_val%min_num = 0
             arg_val%max_num = 0
         end if
@@ -321,7 +324,7 @@ module procedure add_argument_int
     else
         if (present(min_value)) then
             if (is_number(min_value)) then
-                arg_arr%min_ok = to_int64(min_value)
+                arg_arr%min_ok = to_int(min_value)
             else
                 call RaiseArgError(this%error, 'min_value', 'Not a number')
                 return
@@ -329,7 +332,7 @@ module procedure add_argument_int
         end if
         if (present(max_value)) then
             if (is_number(max_value)) then
-                arg_arr%max_ok = to_int64(max_value)
+                arg_arr%max_ok = to_int(max_value)
             else
                 call RaiseArgError(this%error, 'max_value', 'Not a number')
                 return
@@ -340,7 +343,7 @@ module procedure add_argument_int
                 call RaiseArgError(this%error, 'min_nvals', 'Not a number')
                 return
             end if
-            ival = to_int64(min_nvals)
+            ival = to_int(min_nvals)
             if (ival <= 0) then
                 errmsg = 'Minimum number of values cannot be negative.'
                 call RaiseArgError(this%error, 'min_nvals', errmsg)
@@ -350,7 +353,7 @@ module procedure add_argument_int
         end if
         if (present(max_nvals)) then
             if (is_number(max_nvals)) then
-                arg_arr%max_num = to_int64(max_nvals)
+                arg_arr%max_num = to_int(max_nvals)
             else
                 call RaiseArgError(this%error, 'max_nvals', 'Not a number')
                 return
@@ -596,7 +599,7 @@ module procedure add_argument_real
                 call RaiseArgError(this%error, 'min_nvals', 'Not a number')
                 return
             end if
-            ival = to_int64(min_nvals)
+            ival = to_int(min_nvals)
             if (ival <= 0) then
                 errmsg = 'Minimum number of values cannot be negative.'
                 call RaiseArgError(this%error, 'min_nvals', errmsg)
@@ -606,7 +609,7 @@ module procedure add_argument_real
         end if
         if (present(max_nvals)) then
             if (is_number(max_nvals)) then
-                arg_arr%max_num = to_int64(max_nvals)
+                arg_arr%max_num = to_int(max_nvals)
             else
                 call RaiseArgError(this%error, 'max_nvals', 'Not a number')
                 return
@@ -881,7 +884,7 @@ module procedure add_argument_char
                 call RaiseArgError(this%error, 'min_nvals', 'Not a number')
                 return
             end if
-            ival = to_int64(min_nvals)
+            ival = to_int(min_nvals)
             if (ival <= 0) then
                 errmsg = 'Minimum number of values cannot be negative.'
                 call RaiseArgError(this%error, 'min_nvals', errmsg)
@@ -891,7 +894,7 @@ module procedure add_argument_char
         end if
         if (present(max_nvals)) then
             if (is_number(max_nvals)) then
-                arg_arr%max_num = to_int64(max_nvals)
+                arg_arr%max_num = to_int(max_nvals)
             else
                 call RaiseArgError(this%error, 'max_nvals', 'Not a number')
                 return

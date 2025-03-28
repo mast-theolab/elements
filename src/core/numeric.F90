@@ -272,7 +272,35 @@ end function is_real
 
 ! ======================================================================
 
-function to_int64(arg) result(res)
+elemental function to_int(arg) result(res)
+    !! Convert to integer.
+    !!
+    !! Converts argument `arg` to integer.
+    class(*), intent(in) :: arg
+    !! Argument to check.
+    integer :: res
+    !! Converted number.
+
+    select type (arg)
+        type is (integer(int16))
+            res = int(arg, kind=kind(res))
+        type is (integer(int32))
+            res = int(arg, kind=kind(res))
+        type is (integer(int64))
+            res = int(arg, kind=kind(res))
+        type is (real(real32))
+            res = int(arg, kind=kind(res))
+        type is (real(real64))
+            res = int(arg, kind=kind(res))
+        class default
+            error stop 'Cannot convert to integer'
+    end select
+
+end function to_int
+
+! ======================================================================
+
+elemental function to_int64(arg) result(res)
     !! Convert to integer.
     !!
     !! Converts argument `arg` to integer.
@@ -283,15 +311,15 @@ function to_int64(arg) result(res)
 
     select type (arg)
         type is (integer(int16))
-            res = int(arg, kind=real32)
+            res = int(arg, kind=int64)
         type is (integer(int32))
-            res = int(arg, kind=real32)
+            res = int(arg, kind=int64)
         type is (integer(int64))
-            res = int(arg, kind=real32)
+            res = int(arg, kind=int64)
         type is (real(real32))
-            res = int(arg)
+            res = int(arg, kind=int64)
         type is (real(real64))
-            res = int(arg)
+            res = int(arg, kind=int64)
         class default
             error stop 'Cannot convert to integer'
     end select
@@ -300,7 +328,35 @@ end function to_int64
 
 ! ======================================================================
 
-function to_real64(arg) result(res)
+elemental function to_real(arg) result(res)
+    !! Convert to real.
+    !!
+    !! Converts argument `arg` to real.
+    class(*), intent(in) :: arg
+    !! Argument to check.
+    real(realwp) :: res
+    !! Converted number.
+
+    select type (arg)
+        type is (integer(int16))
+            res = real(arg, kind=realwp)
+        type is (integer(int32))
+            res = real(arg, kind=realwp)
+        type is (integer(int64))
+            res = real(arg, kind=realwp)
+        type is (real(real32))
+            res = real(arg, kind=realwp)
+        type is (real(real64))
+            res = real(arg, kind=realwp)
+        class default
+            error stop 'Cannot convert to real'
+    end select
+
+end function to_real
+
+! ======================================================================
+
+elemental function to_real64(arg) result(res)
     !! Convert to real.
     !!
     !! Converts argument `arg` to real.
@@ -317,9 +373,9 @@ function to_real64(arg) result(res)
         type is (integer(int64))
             res = real(arg, kind=real64)
         type is (real(real32))
-            res = real(arg)
+            res = real(arg, kind=real64)
         type is (real(real64))
-            res = real(arg)
+            res = real(arg, kind=real64)
         class default
             error stop 'Cannot convert to real'
     end select

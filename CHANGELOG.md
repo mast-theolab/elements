@@ -22,6 +22,7 @@ v# Changelog
 * New procedure `set_orientation` (`vibrational`) to fix the orientation of normal modes, setting the largest component to positive.
 * New procedure `prt_vec` (`output`) to print vectors.
 * New component `red_freq` in `VibrationsDB` to store reduced harmonic frequencies in atomic units.
+* Added conversion function `to_int` and `to_real` (`numeric`) to convert an arbitrary object to the internal default kind (as defined in `numeric`).
 
 ### Fixed
 * `prt_coord` (`output`) failed if masses were not provided.
@@ -30,6 +31,7 @@ v# Changelog
 * Copy methods of `MoleculeDB` objects (`datatypes`) now properly check that an array is allocated before trying to copy them in another object.
 * Datafiles were opened twice at the same time because of a missing closure.
 * The number of Cartesian AOs was incorrectly computed in `num_cart_AOs_bsetBF` (`basisset`).
+* Fixed errors in the definition of the kind in `to_int64` and `to_real64` (`numeric`).
 
 ### Changed
 * `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.

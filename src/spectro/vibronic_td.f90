@@ -1,6 +1,6 @@
 module vibronic_td
 
-    use numeric, only: realwp, f0, f1, f2, fhalf, fquart, f8th, f16th
+    use numeric, only: realwp, f0, f1, f2, fhalf, fquart, f8th, f16th, operator(.iscloseto.)
 
     implicit none
 
@@ -24,16 +24,16 @@ function get_a_final(n_vib, time, temperature, omega_f) result(a_f)
     !! Number of vibrational modes.
     real(realwp), intent(in) :: time
     !! Time variable (in atomic units).
-    real(realwp), intent(in) :: omega_f(:)
-    !! Vector of final-state vibrational frequencies (in atomic units).
     real(realwp), intent(in) :: temperature
     !! Temperature in Kelvin
+    real(realwp), intent(in) :: omega_f(:)
+    !! Vector of final-state vibrational frequencies (in atomic units).
 
     ! Local
     complex(realwp), dimension(n_vib) :: a_f
     !! Diagonal elements of the a matrix for the final state.
 
-    if (temperature /= f0) stop 'Temperature is not zero'
+    if (.not.(temperature.iscloseto.f0)) stop 'Temperature is not zero'
 
     a_f = omega_f / sinh(omega_f * cmplx(f0, time, realwp))
 
@@ -67,7 +67,7 @@ function get_a_initial(n_vib, time, temperature, omega_i) result(a_i)
     complex(realwp), dimension(n_vib) :: a_i
     !! Diagonal elements of the **a** matrix for the initial state.
 
-    if (temperature /= f0) stop 'Temperature is not zero'
+    if (.not.(temperature.iscloseto.f0)) stop 'Temperature is not zero'
 
     a_i = f2 * omega_i
 
@@ -500,7 +500,7 @@ function get_C_inv(n_vib, time, temperature, omega_i, omega_f, J_mat) &
     complex(realwp) :: tmp
     complex(realwp), dimension(n_vib, n_vib) :: C
 
-    if (temperature /= f0) stop 'Temperature is not zero'
+    if (.not.(temperature.iscloseto.f0)) stop 'Temperature is not zero'
 
     C = (f0, f0)
     do i = 1, n_vib
@@ -554,7 +554,7 @@ function get_D_inv(n_vib, time, temperature, omega_i, omega_f, J_mat) result(D_i
     complex(realwp) :: tmp
     complex(realwp), dimension(n_vib, n_vib) :: D
 
-    if (temperature /= f0) stop 'Temperature is not zero'
+    if (.not.(temperature.iscloseto.f0)) stop 'Temperature is not zero'
 
     D = (f0, f0)
     do i = 1, n_vib

@@ -1,7 +1,7 @@
 submodule (input:input_data) input_data_fchk
     !! Submodule containing the definition of procedures related to the
     !! data extraction.
-    use numeric, only: realwp, f2
+    use numeric, only: realwp, f2, to_int
     use physics, only: phys_conv
     use arrays, only: symm_tri_array
     use parsefchk, only: fchkdata, fchkparser
@@ -60,15 +60,15 @@ module procedure build_mol_data_fchk
 
     ! Basic molecular information
     ! Start with standard dimensions that may be used for different applications
-    mol%n_at = dbase(1)%idata(1)
-    mol%n_el = dbase(2)%idata(1)
+    mol%n_at = to_int(dbase(1)%idata(1))
+    mol%n_el = to_int(dbase(2)%idata(1))
 
     ! Basic molecular specifications
-    mol%charge = dbase(3)%idata(1)
-    mol%multip = dbase(4)%idata(1)
+    mol%charge = to_int(dbase(3)%idata(1))
+    mol%multip = to_int(dbase(4)%idata(1))
     allocate(mol%at_chg(mol%n_at), mol%at_lab(mol%n_at), mol%at_num(mol%n_at))
     do ia = 1, mol%n_at
-        mol%at_num(ia) = dbase(6)%idata(ia)
+        mol%at_num(ia) = to_int(dbase(6)%idata(ia))
         mol%at_chg(ia) = dbase(7)%rdata(ia)
         mol%at_lab(ia) = atdata(mol%at_num(ia))%symbol
     end do
@@ -89,7 +89,7 @@ module procedure build_mol_data_fchk
             else
                 n_ab = 2
             end if
-            n_basis = dbase(10)%idata(1)
+            n_basis = to_int(dbase(10)%idata(1))
             ! Check that the dimensions make sense. This should never fail.
             if (n_basis*(n_basis+1)/2 /= size(dbase(11)%rdata)) &
                 stop 'Inconsistency in SCF density size'
@@ -163,17 +163,17 @@ module procedure build_bset_data_fchk
     end if
 
     ! Dimensions
-    n_at = dbase(1)%idata(1)
-    bset%n_basis = dbase(2)%idata(1)
-    bset%n_basok = dbase(3)%idata(1)
-    bset%n_shells = dbase(4)%idata(1)
+    n_at = to_int(dbase(1)%idata(1))
+    bset%n_basis = to_int(dbase(2)%idata(1))
+    bset%n_basok = to_int(dbase(3)%idata(1))
+    bset%n_shells = to_int(dbase(4)%idata(1))
 
     ! Basis function and shells
     bset%pureD = dbase(11)%idata(1) == 0
     bset%pureF = dbase(12)%idata(1) == 0
-    shell_types = dbase(5)%idata
-    prim_per_sh = dbase(6)%idata
-    shell_to_at = dbase(7)%idata
+    shell_types = to_int(dbase(5)%idata)
+    prim_per_sh = to_int(dbase(6)%idata)
+    shell_to_at = to_int(dbase(7)%idata)
     deallocate(dbase(5)%idata, dbase(6)%idata, dbase(7)%idata)
     prim_exp = dbase(8)%rdata
     deallocate(dbase(8)%rdata)
@@ -245,16 +245,16 @@ module procedure build_orb_data_fchk
 
     ! Dimensions
     ! -- Number of electrons
-    orb%n_els(1) = dbase(1)%idata(1)
-    orb%n_els(2) = dbase(2)%idata(1)
+    orb%n_els(1) = to_int(dbase(1)%idata(1))
+    orb%n_els(2) = to_int(dbase(2)%idata(1))
     ! -- Number of atomic orbitals
-    orb%n_ao = dbase(3)%idata(1)
+    orb%n_ao = to_int(dbase(3)%idata(1))
 
-    orb%n_mos(1) = dbase(6)%len
+    orb%n_mos(1) = to_int(dbase(6)%len)
     if (dbase(7)%dtype /= '0') then
         orb%n_ab = 2
         orb%openshell = .true.
-        orb%n_mos(2) = dbase(7)%len
+        orb%n_mos(2) = to_int(dbase(7)%len)
     else
         orb%n_ab = 1
         orb%openshell = .false.
@@ -349,7 +349,7 @@ module procedure build_exc_data_fchk
 
     ! -- Basic information
     ! Number of basis functions
-    n_basis = dbase(1)%idata(1)
+    n_basis = to_int(dbase(1)%idata(1))
     if (dbase(2)%dtype /= '0') then
         n_ab = 2
     else
@@ -357,7 +357,7 @@ module procedure build_exc_data_fchk
     end if
 
     ! First check that NLR == 1. We do not support the other case for now
-    NLR = dbase(8)%idata(1)
+    NLR = to_int(dbase(8)%idata(1))
     if (NLR > 1) then
         call RaiseError(dfile%error, 'NLR /= 1 not yet supported.  Sorry.')
         return
@@ -365,12 +365,12 @@ module procedure build_exc_data_fchk
 
     ! Now let us process the information of interest in the file.
     ! The "scalars" array provides information to parse "ETran state values"
-    exc%n_states = dbase(4)%idata(1)
-    exc%id_state = dbase(4)%idata(5)
-    lblock_ETran = dbase(4)%idata(2)
+    exc%n_states = to_int(dbase(4)%idata(1))
+    exc%id_state = to_int(dbase(4)%idata(5))
+    lblock_ETran = to_int(dbase(4)%idata(2))
 
     ! Extract excited-states data
-    exc%ispin_exc = dbase(5)%idata
+    exc%ispin_exc = to_int(dbase(5)%idata)
 
     ! Extract transition data values
     allocate(exc%g2e_energy(exc%n_states), exc%exc_energy(exc%n_states), &
@@ -486,7 +486,7 @@ module procedure build_vib_data_fchk
     end if
 
     ! Get number of normal modes, necessary for the rest of the parsing
-    vib%n_vib = dbase(1)%idata(1)
+    vib%n_vib = to_int(dbase(1)%idata(1))
     ! Get number of Cartesian coordinates
     n_at3 = 3*size(dbase(2)%rdata)
 
@@ -597,8 +597,8 @@ module procedure get_data_from_id_fchk
                 if (prop%order == 0) then
                     block
                     integer :: n_states, lblock
-                    n_states = dbase(2)%idata(1)
-                    lblock = dbase(2)%idata(2)
+                    n_states = to_int(dbase(2)%idata(1))
+                    lblock = to_int(dbase(2)%idata(2))
                     if (n_states < prop%states(2)) then
                         prop%istat = 2
                         return
@@ -623,11 +623,11 @@ module procedure get_data_from_id_fchk
                 else if (prop%order == 1) then
                     block
                     integer :: exc_state, lblock, n_at3, n_LR, n_states
-                    n_states = dbase(2)%idata(1)
-                    exc_state = dbase(2)%idata(5)
-                    lblock = dbase(2)%idata(2)
-                    n_LR = dbase(2)%idata(3)
-                    n_at3 = 3*dbase(3)%idata(1)
+                    n_states = to_int(dbase(2)%idata(1))
+                    exc_state = to_int(dbase(2)%idata(5))
+                    lblock = to_int(dbase(2)%idata(2))
+                    n_LR = to_int(dbase(2)%idata(3))
+                    n_at3 = 3*to_int(dbase(3)%idata(1))
                     if (exc_state /= prop%states(2) .and. &
                             prop%states(2) /= -1) then
                         prop%istat = 2
@@ -676,7 +676,7 @@ module procedure get_data_from_id_fchk
                 end if
                 block
                 integer :: n_at3
-                n_at3 = 3*dbase(2)%idata(1)
+                n_at3 = 3*to_int(dbase(2)%idata(1))
                 allocate(prop%data(LP*n_at3))
                 prop%data = dbase(1)%rdata
                 prop%loaded = .true.
@@ -695,7 +695,7 @@ module procedure get_data_from_id_fchk
                 end if
                 block
                 integer :: n_at3, n_at3tt
-                n_at3 = 3*dbase(2)%idata(1)
+                n_at3 = 3*to_int(dbase(2)%idata(1))
                 n_at3tt = n_at3*(n_at3+1)/2
                 allocate(prop%data(LP*n_at3tt))
                 prop%data = dbase(1)%rdata
@@ -725,11 +725,11 @@ module procedure get_data_from_id_fchk
             if (prop%order == 0) then
                 block
                 integer :: exc_state, lblock, n_at3, n_LR, n_states
-                n_states = dbase(2)%idata(1)
-                exc_state = dbase(2)%idata(5)
-                lblock = dbase(2)%idata(2)
-                n_LR = dbase(2)%idata(3)
-                n_at3 = 3 * dbase(3)%idata(1)
+                n_states = to_int(dbase(2)%idata(1))
+                exc_state = to_int(dbase(2)%idata(5))
+                lblock = to_int(dbase(2)%idata(2))
+                n_LR = to_int(dbase(2)%idata(3))
+                n_at3 = 3 * to_int(dbase(3)%idata(1))
                 if (exc_state /= prop%states(2) .and. &
                         prop%states(2) /= -1) then
                     prop%istat = 2
@@ -766,8 +766,8 @@ module procedure get_data_from_id_fchk
                 if (prop%order == 0) then
                     block
                     integer :: n_states, lblock
-                    n_states = dbase(2)%idata(1)
-                    lblock = dbase(2)%idata(2)
+                    n_states = to_int(dbase(2)%idata(1))
+                    lblock = to_int(dbase(2)%idata(2))
                     if (n_states < prop%states(2)) then
                         prop%istat = 2
                         return
@@ -794,11 +794,11 @@ module procedure get_data_from_id_fchk
                 else if (prop%order == 1) then
                     block
                     integer :: exc_state, lblock, n_at3, n_LR, n_states
-                    n_states = dbase(2)%idata(1)
-                    exc_state = dbase(2)%idata(5)
-                    lblock = dbase(2)%idata(2)
-                    n_LR = dbase(2)%idata(3)
-                    n_at3 = 3*dbase(3)%idata(1)
+                    n_states = to_int(dbase(2)%idata(1))
+                    exc_state = to_int(dbase(2)%idata(5))
+                    lblock = to_int(dbase(2)%idata(2))
+                    n_LR = to_int(dbase(2)%idata(3))
+                    n_at3 = 3 * to_int(dbase(3)%idata(1))
                     if (exc_state /= prop%states(2) .and. &
                             prop%states(2) /= -1) then
                         prop%istat = 2
@@ -843,8 +843,8 @@ module procedure get_data_from_id_fchk
                 if (prop%order == 0) then
                     block
                     integer :: n_states, lblock
-                    n_states = dbase(2)%idata(1)
-                    lblock = dbase(2)%idata(2)
+                    n_states = to_int(dbase(2)%idata(1))
+                    lblock = to_int(dbase(2)%idata(2))
                     if (n_states < prop%states(2)) then
                         prop%istat = 2
                         return
@@ -871,11 +871,11 @@ module procedure get_data_from_id_fchk
                 else if (prop%order == 1) then
                     block
                     integer :: exc_state, lblock, n_at3, n_LR, n_states
-                    n_states = dbase(2)%idata(1)
-                    exc_state = dbase(2)%idata(5)
-                    lblock = dbase(2)%idata(2)
-                    n_LR = dbase(2)%idata(3)
-                    n_at3 = 3 * dbase(3)%idata(1)
+                    n_states = to_int(dbase(2)%idata(1))
+                    exc_state = to_int(dbase(2)%idata(5))
+                    lblock = to_int(dbase(2)%idata(2))
+                    n_LR = to_int(dbase(2)%idata(3))
+                    n_at3 = 3 * to_int(dbase(3)%idata(1))
                     if (exc_state /= prop%states(2) .and. &
                             prop%states(2) /= -1) then
                         prop%istat = 2
@@ -920,8 +920,8 @@ module procedure get_data_from_id_fchk
                 if (prop%order == 0) then
                     block
                     integer :: n_states, lblock
-                    n_states = dbase(2)%idata(1)
-                    lblock = dbase(2)%idata(2)
+                    n_states = to_int(dbase(2)%idata(1))
+                    lblock = to_int(dbase(2)%idata(2))
                     if (n_states < prop%states(2)) then
                         prop%istat = 2
                         return
@@ -948,11 +948,11 @@ module procedure get_data_from_id_fchk
                 else if (prop%order == 1) then
                     block
                     integer :: exc_state, lblock, n_at3, n_LR, n_states
-                    n_states = dbase(2)%idata(1)
-                    exc_state = dbase(2)%idata(5)
-                    lblock = dbase(2)%idata(2)
-                    n_LR = dbase(2)%idata(3)
-                    n_at3 = 3 * dbase(3)%idata(1)
+                    n_states = to_int(dbase(2)%idata(1))
+                    exc_state = to_int(dbase(2)%idata(5))
+                    lblock = to_int(dbase(2)%idata(2))
+                    n_LR = to_int(dbase(2)%idata(3))
+                    n_at3 = 3 * to_int(dbase(3)%idata(1))
                     if (exc_state /= prop%states(2) .and. &
                             prop%states(2) /= -1) then
                         prop%istat = 2
@@ -998,8 +998,8 @@ module procedure get_data_from_id_fchk
                     block
                     integer :: n_states, lblock
                     allocate(tmpvec(LP))
-                    n_states = dbase(2)%idata(1)
-                    lblock = dbase(2)%idata(2)
+                    n_states = to_int(dbase(2)%idata(1))
+                    lblock = to_int(dbase(2)%idata(2))
                     if (n_states < prop%states(2)) then
                         prop%istat = 2
                         return
@@ -1028,11 +1028,11 @@ module procedure get_data_from_id_fchk
                 else if (prop%order == 1) then
                     block
                     integer :: exc_state, lblock, n_at3, n_LR, n_states
-                    n_states = dbase(2)%idata(1)
-                    exc_state = dbase(2)%idata(5)
-                    lblock = dbase(2)%idata(2)
-                    n_LR = dbase(2)%idata(3)
-                    n_at3 = 3 * dbase(3)%idata(1)
+                    n_states = to_int(dbase(2)%idata(1))
+                    exc_state = to_int(dbase(2)%idata(5))
+                    lblock = to_int(dbase(2)%idata(2))
+                    n_LR = to_int(dbase(2)%idata(3))
+                    n_at3 = 3 * to_int(dbase(3)%idata(1))
                     if (exc_state /= prop%states(2) .and. &
                             prop%states(2) /= -1) then
                         prop%istat = 2
@@ -1078,12 +1078,12 @@ module procedure get_data_from_tag_fchk
     !! Extracts data for a specific quantity from the Gaussian fchk file.
     !! The procedure also takes care of doing necessary adjustments if
     !! needed.
-    integer :: der_ord, i, ioff, LP
-    real(realwp), dimension(:), allocatable :: tmpvec
+    integer :: der_ord
+    ! real(realwp), dimension(:), allocatable :: tmpvec
     logical :: ok
-    character(len=42), dimension(:), allocatable :: fchk_keys
+    ! character(len=42), dimension(:), allocatable :: fchk_keys
     type(fchkparser) :: dfchk
-    type(fchkdata), dimension(:), allocatable :: dbase
+    ! type(fchkdata), dimension(:), allocatable :: dbase
 
     ! Check if reference/starting state makes sense and set it in DB
     if (present(start_state)) then

@@ -92,7 +92,7 @@ program mcd_tensor
         debug)
     dfile = DataFile(infile)
     if (dfile%has_error()) then
-        call write_err('std', 'Error found while initializing data file', &
+        call write_err('std', 'Failed to initialize data file', &
                        dfile%get_error())
         stop 1
     end if
@@ -107,7 +107,7 @@ program mcd_tensor
     moldb = dfile%get_mol_data()
     if (dfile%has_error()) then
         call write_err('std', &
-            'Error found while parsing molecular specifications in file', &
+            'Parsing molecular specifications in file failed', &
             dfile%get_error())
         stop 1
     end if
@@ -118,7 +118,7 @@ program mcd_tensor
     bsetdb = dfile%get_bset_data()
     if (dfile%has_error()) then
         call write_err('std', &
-            'Error found while parsing basis set data in file', &
+            'Parsing basis set data in file failed', &
             dfile%get_error())
         stop 1
     end if
@@ -129,7 +129,7 @@ program mcd_tensor
     orbdb = dfile%get_orb_data()
     if (dfile%has_error()) then
         call write_err('std', &
-            'Error found while parsing molecular orbitals data in file', &
+            'Parsing molecular orbitals data in file failed', &
             dfile%get_error())
         stop 1
     end if
@@ -140,7 +140,7 @@ program mcd_tensor
     excdb = dfile%get_exc_data(get_dens=.true.)
     if (dfile%has_error()) then
         call write_err('std', &
-            'Error found while parsing electronic excitations data in file', &
+            'Parsing electronic excitations data in file failed', &
             dfile%get_error())
         stop 1
     end if
@@ -168,7 +168,7 @@ program mcd_tensor
             select type(err)
                 class is (Error)
                     call write_err('std', &
-                        'Error while printing ROAAI-like control output', &
+                        'Failed to print ROAAI-like control output', &
                         err%msg() &
                         )
                     stop
@@ -189,7 +189,7 @@ program mcd_tensor
         select type(err)
             class is (Error)
                 call write_err('std', &
-                    'Error while normalizing the coefficients for the AOs', &
+                    'Failure to normalize the coefficients for the AOs', &
                     err%msg() &
                     )
                 stop
@@ -213,7 +213,7 @@ program mcd_tensor
         select type(err)
             class is (Error)
                 call write_err('std', &
-                    'Error while computing the AO 1-electron integrals', &
+                    'Failure to compute the AO 1-electron integrals', &
                     err%msg() &
                 )
                 stop
@@ -263,7 +263,7 @@ program mcd_tensor
     excdb = dfile%get_exc_data(get_dens=.true.)
     if (dfile%has_error()) then
         call write_err('std', &
-            'Error found while parsing excited-states data in file', &
+            'Parsing of excited-states data in file failed', &
             dfile%get_error())
             stop 1
     end if

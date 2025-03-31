@@ -32,6 +32,7 @@ v# Changelog
 * Datafiles were opened twice at the same time because of a missing closure.
 * The number of Cartesian AOs was incorrectly computed in `num_cart_AOs_bsetBF` (`basisset`).
 * Fixed errors in the definition of the kind in `to_int64` and `to_real64` (`numeric`).
+* Fixed value of 0! in `factorial` (`math`).
 
 ### Changed
 * `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.

@@ -317,7 +317,7 @@ recursive function factorial(n) result(n1)
     if (n < 0) then
         n1 = -1
     else if (n <= 1) then
-        n1 = n
+        n1 = 1
     else
         n1 = n*factorial(n-1)
     end if

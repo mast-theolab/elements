@@ -621,11 +621,8 @@ pure function int_xn_e2ax2(n, a) result(res)
         return
     end if
     b = 1.0_real64
-    i = 1
-    do
+    do i = 1, n, 2
         b = b*real(i, kind=real64)
-        i = i + 2
-        if (i > n-1) exit
     end do
     as = sqrt(a)
     res = b*sqrt(2.0_real64*pi_r64)/(as*2.0_real64)**(n+1)

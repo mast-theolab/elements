@@ -38,6 +38,9 @@ v# Changelog
 * `write_err` (`output`) has been improved to be more consistent in the output between the different kind of errors.  The names of the arguments have been changed to be (hopefully) clearer.
 * Module `geometry` now uses the new `runstat` from `exception` to manage exceptions.
 
+### Improved
+* Better efficiency of `int_xn_e2ax2` (`math`).
+
 ### Removed
 * The conversion method from angstroms to Bohr in `PhysFact` (`physics`) is superseded by `bohr2Ang(reverse=.true.)` and has been removed.
 

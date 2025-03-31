@@ -40,6 +40,7 @@ v# Changelog
 
 ### Improved
 * Better efficiency of `int_xn_e2ax2` (`math`).
+* Better performance in the building of basis set coefficients, especially beyond f (`basisset`).
 
 ### Removed
 * The conversion method from angstroms to Bohr in `PhysFact` (`physics`) is superseded by `bohr2Ang(reverse=.true.)` and has been removed.

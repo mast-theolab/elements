@@ -3,7 +3,7 @@ module basisset
     !!
     !! Procedure related to basis sets and their definition
     use numeric, only: realwp, f0, f1, f2, f3, f4, f5, f10, fhalf, pi
-    use math, only: build_PascalTriangle, fac => factorial, int_xn_e2ax2, &
+    use math, only: build_PascalTriangle, factorial, int_xn_e2ax2, &
         itri_pa, phii_xn_phij
     use exception, only: BaseException, ArgumentError, InitError, RaiseError, &
         RaiseArgError
@@ -18,6 +18,9 @@ module basisset
     public :: convert_pure2cart, fix_norm_AOs, len_shells_on_atom, &
         num_cart_AOs, num_shells_on_atom
     integer, parameter, public :: max_nxyz = 28
+    integer, parameter :: L_max = 6
+    integer :: i
+    real(realwp), dimension(0:2*L_max) :: fn = [(gamma(real(i, kind=realwp)), i=1, 2*L_max+1)]
 
 ! ----------------------------------------------------------------------
 
@@ -564,8 +567,8 @@ function coef_C2P(L, M, Lx, Ly) result(coef)
     !! Ly component of the Cartesian function
 
     ! Local
-    integer :: i, j, k, Lx2k, Lz, Ma
-    real(realwp) :: a, b, c, d, e, g
+    integer :: i, j, LMa, LMa2, LMaLz, LMaLz2, Lx2j, Lz, Ma, MaLx2j
+    real(realwp) :: a, b, c, c1, c2, c3
 
     Lz = L - Lx - Ly
     Ma = Abs(M)
@@ -573,40 +576,47 @@ function coef_C2P(L, M, Lx, Ly) result(coef)
         coef = f0
         return
     end if
-    a = sqrt(real(fac(2*Lx)*fac(2*Ly)*fac(2*Lz)*fac(L), kind=realwp) &
-             / (fac(2*L)*fac(Lx)*fac(Ly)*fac(Lz)))
-    b = sqrt(real(fac(L-Ma), kind=realwp)/fac(L+Ma))/((2**L)*fac(L))
-    j = (L-Ma-Lz)/2
-    g = f0
-    if (2*j == L-Ma-Lz) then
-        do i = 0, (L-Ma)/2
-            c = f0
-            if (j >= 0 .and. j <= i) then
-                c = (real(fac(L), kind=realwp)/(fac(i)*fac(L-i))) &
-                    *(real(fac(2*L-2*i)*((-1)**i), kind=realwp)/fac(L-Ma-2*i)) &
-                    *(real(fac(i), kind=realwp)/(fac(j)*fac(i-j)))
-                do k = 0, j
-                    d = f0
-                    Lx2k = Lx-2*k
-                    if (Lx2k >= 0 .and. Lx2k <= Ma) then
-                        d = (real(fac(j), kind=realwp)/(fac(k)*fac(j-k))) &
-                            *(real(fac(Ma), kind=realwp) &
-                                /(fac(Lx2k)*fac(Ma-Lx2k)))
-                        e = f0
-                        if (M==0 .and. mod(Lx,2) == 0) e = (-1)**(-Lx2k/2)
-                        if (M > 0 .and. mod(abs(Ma-Lx),2) == 0) &
-                            e = Sqrt(f2)*(-1)**((Ma-Lx2k)/2)
-                        if (M < 0 .and. mod(abs(Ma-Lx),2) == 1) &
-                            e = Sqrt(f2)*(-1)**((Ma-Lx2k)/2)
-                        g = g + c*d*e
+    LMa = L - Ma
+    LMaLz = LMa - Lz
+    LMa2 = LMa / 2
+    LMaLz2 = LMaLz / 2
+    a = sqrt(fn(2*Lx)*fn(2*Ly)*fn(2*Lz)*fn(L) / (fn(2*L)*fn(Lx)*fn(Ly)*fn(Lz)))
+    b = sqrt(fn(LMa)/fn(L+Ma)) / ((2**L)*fn(L))
+    c = f0
+    if (Mod(LMaLz, 2) == 0) then
+        do i = 0, LMa2
+            c1 = f0
+            if (LMaLz2 >= 0 .and. LMaLz2 <= i) then
+                c1 = (fn(L) / (fn(i)*fn(L-i))) &
+                    * (fn(2*L-2*i)*((-1)**i) / fn(LMa-2*i)) &
+                    * (fn(i) / (fn(LMaLz2)*fn(i-LMaLz2)))
+                do j = 0, LMaLz2
+                    c2 = f0
+                    Lx2j = Lx - 2*j
+                    MaLx2j = Ma - Lx2j
+                    if (Lx2j >= 0 .and. MaLx2j >= 0) then
+                        c2 = (fn(LMaLz2) / (fn(j)*fn(LMaLz2-j))) &
+                            * (fn(Ma) / (fn(Lx2j)*fn(MaLx2j)))
+                        c3 = f0
+                        select case(M)
+                        case(0)
+                            if (mod(Lx, 2) == 0) &
+                                c3 = (-1)**(j - Lx/2)
+                        case(1:)
+                            if (mod(abs(Ma-Lx), 2) == 0) &
+                                c3 = sqrt(f2)*(-1)**(MaLx2j/2)
+                        case(:-1)
+                            if (mod(abs(Ma-Lx), 2) == 1) &
+                                c3 = sqrt(f2)*(-1)**(MaLx2j/2)
+                        end select
+                        c = c + c1*c2*c3
                     end if
                 end do
             end if
         end do
     end if
-    coef = a*b*g
+    coef = a*b*c
 
-    return
 end function coef_C2P
 
 ! ======================================================================
@@ -635,7 +645,7 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
 
     ! Local
     real(realwp), parameter :: sq2pi = sqrt(f2*pi)
-    integer :: i, ix, iy, iz, L
+    integer :: i, L, Lx, Ly, Lz
     real(realwp) :: cnorm, f2sqal
 
     err = InitError()
@@ -676,7 +686,7 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
         case ('D')
             allocate(new_coefs(0:2))
             allocate(indexes(3,2))
-            ! L = 2, 2 coordinates -> 2 cases: ix=2 / ix=1,iy=1
+            ! L = 2, 2 coordinates -> 2 cases: Lx=2 / Lx=1,Ly=1
             ! 2 cases:
             ! - sqrt(int_xn_e2ax2(2*2, alpha)*int_xn_e2ax2(0, alpha)**2)
             ! - sqrt(int_xn_e2ax2(2*1, alpha)**2*int_xn_e2ax2(0, alpha))
@@ -689,7 +699,7 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
         case ('F')
             allocate(new_coefs(0:3))
             allocate(indexes(3,3))
-            ! L = 3, 3 coordinates -> 3 cases: ix=3/ix=2,iy=1/ix=1,iy=1,iz=1
+            ! L = 3, 3 coordinates -> 3 cases: Lx=3/Lx=2,Ly=1/Lx=1,Ly=1,Lz=1
             ! 3 cases:
             ! - sqrt(int_xn_e2ax2(2*3, alpha)*int_xn_e2ax2(0, alpha)**2)
             ! - sqrt(int_xn_e2ax2(2*2, alpha)*int_xn_e2ax2(1*2, alpha)
@@ -709,19 +719,16 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
             new_coefs(0) = coef
             L = 4
             i = 0
-            do ix = 0, L
-                do iy = 0, L-ix
-                    do iz = 0, L-ix-iy
-                        if (ix+iy+iz == L) then
-                            i = i + 1
-                            new_coefs(i) = coef/sqrt(&
-                                int_xn_e2ax2(2*ix, alpha) &
-                                *int_xn_e2ax2(2*iy, alpha) &
-                                *int_xn_e2ax2(2*iz, alpha) &
-                                )
-                            indexes(:, i) = [ix, iy, iz]
-                        end if
-                    end do
+            do Lx = 0, L
+                do Ly = 0, L - Lx
+                    Lz = L - Lx - Ly
+                    i = i + 1
+                    new_coefs(i) = coef/sqrt(&
+                        int_xn_e2ax2(2*Lx, alpha) &
+                        *int_xn_e2ax2(2*Ly, alpha) &
+                        *int_xn_e2ax2(2*Lz, alpha) &
+                        )
+                    indexes(:, i) = [Lx, Ly, Lz]
                 end do
             end do
         case ('H')
@@ -730,19 +737,16 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
             new_coefs(0) = coef
             L = 5
             i = 0
-            do ix = 0, L
-                do iy = 0, L-ix
-                    do iz = 0, L-ix-iy
-                        if (ix+iy+iz == L) then
-                            i = i + 1
-                            new_coefs(i) = coef/sqrt(&
-                                int_xn_e2ax2(2*ix, alpha) &
-                                *int_xn_e2ax2(2*iy, alpha) &
-                                *int_xn_e2ax2(2*iz, alpha) &
-                                )
-                            indexes(:, i) = [ix, iy, iz]
-                        end if
-                    end do
+            do Lx = 0, L
+                do Ly = 0, L-Lx
+                    Lz = L - Lx - Ly
+                    i = i + 1
+                    new_coefs(i) = coef/sqrt(&
+                        int_xn_e2ax2(2*Lx, alpha) &
+                        *int_xn_e2ax2(2*Ly, alpha) &
+                        *int_xn_e2ax2(2*Lz, alpha) &
+                        )
+                    indexes(:, i) = [Lx, Ly, Lz]
                 end do
             end do
         case ('I')
@@ -751,19 +755,16 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
             new_coefs(0) = coef
             L = 6
             i = 0
-            do ix = 0, L
-                do iy = 0, L-ix
-                    do iz = 0, L-ix-iy
-                        if (ix+iy+iz == L) then
-                            i = i + 1
-                            new_coefs(i) = coef/sqrt(&
-                                int_xn_e2ax2(2*ix, alpha) &
-                                *int_xn_e2ax2(2*iy, alpha) &
-                                *int_xn_e2ax2(2*iz, alpha) &
-                                )
-                            indexes(:, i) = [ix, iy, iz]
-                        end if
-                    end do
+            do Lx = 0, L
+                do Ly = 0, L-Lx
+                    Lz = L - Lx - Ly
+                    i = i + 1
+                    new_coefs(i) = coef/sqrt(&
+                        int_xn_e2ax2(2*Lx, alpha) &
+                        *int_xn_e2ax2(2*Ly, alpha) &
+                        *int_xn_e2ax2(2*Lz, alpha) &
+                        )
+                    indexes(:, i) = [Lx, Ly, Lz]
                 end do
             end do
         case default
@@ -801,12 +802,12 @@ subroutine coef_transfo_P2C(L_ang, Ncart, Npure, coef2P, coef2C)
     ! Form coef2P
     Lxyz = 0
     do Lx = 0, L_ang
-        do Ly = 0, (L_ang-Lx)
+        do Ly = 0, L_ang-Lx
             Lxyz = Lxyz + 1
             coef2P(Lxyz,1) = coef_C2P(L_ang, 0, Lx, Ly)
             do M = 1, L_ang
-                coef2p(Lxyz,2*M) = coef_C2P(L_ang, M, Lx, Ly)
-                coef2P(Lxyz,2*M+1) = coef_C2P(L_ang, -M ,Lx, Ly)
+                coef2P(Lxyz,2*M) = coef_C2P(L_ang, M, Lx, Ly)
+                coef2P(Lxyz,2*M+1) = coef_C2P(L_ang, -M, Lx, Ly)
             end do
         end do
     end do
@@ -818,22 +819,21 @@ subroutine coef_transfo_P2C(L_ang, Ncart, Npure, coef2P, coef2C)
         do Ly1 = 0, (L_ang-Lx1)
             i1 = i1 + 1
             Lz1 = L_ang - Lx1 - Ly1
-            a1 = sqrt(real(fac(Lx1)*fac(Ly1)*fac(Lz1), kind=realwp) &
-                      /(fac(2*Lx1)*fac(2*Ly1)*fac(2*Lz1)))
+            a1 = sqrt(fn(Lx1)*fn(Ly1)*fn(Lz1)/(fn(2*Lx1)*fn(2*Ly1)*fn(2*Lz1)))
             i2 = 0
             do Lx2 = 0, L_ang
                 do Ly2 = 0, (L_ang-Lx2)
                     i2 = i2 + 1
                     Lz2 = L_ang - Lx2 - Ly2
-                    a2 = sqrt(real(fac(Lx2)*fac(Ly2)*fac(Lz2), kind=realwp) &
-                              /(fac(2*Lx2)*fac(2*Ly2)*fac(2*Lz2)))
+                    a2 = sqrt(fn(Lx2)*fn(Ly2)*fn(Lz2) &
+                              / (fn(2*Lx2)*fn(2*Ly2)*fn(2*Lz2)))
                     Lx = Lx1 + Lx2
                     Ly = Ly1 + Ly2
                     Lz = Lz1 + Lz2
                     if(mod(Lx,2) == 0 .and. mod(Ly,2) == 0 &
                        .and. mod(Lz,2) == 0) then
-                        s = a1*a2*fac(Lx)*fac(Ly)*fac(Lz) &
-                            / (fac(Lx/2)*fac(Ly/2)*fac(Lz/2))
+                        s = a1*a2*fn(Lx)*fn(Ly)*fn(Lz) &
+                            / (fn(Lx/2)*fn(Ly/2)*fn(Lz/2))
                         do k = 1, Npure
                             coef2C(i1,k) = coef2C(i1,k) + s*coef2P(i2,k)
                         end do
@@ -842,6 +842,7 @@ subroutine coef_transfo_P2C(L_ang, Ncart, Npure, coef2P, coef2C)
             end do
         end do
     end do
+
 end subroutine coef_transfo_P2C
 
 ! ======================================================================
@@ -903,16 +904,6 @@ subroutine set_primC_comp(bfunc, ndimC, lxyz, coefs, err)
         case ('F')
             ndimC = 10
             allocate(lxyz(3,ndimC), coefs(ndimC))
-            ! lxyz(:, 1) = [3, 0, 0]
-            ! lxyz(:, 2) = [0, 3, 0]
-            ! lxyz(:, 3) = [0, 0, 3]
-            ! lxyz(:, 4) = [1, 2, 0]
-            ! lxyz(:, 5) = [2, 1, 0]
-            ! lxyz(:, 6) = [2, 0, 1]
-            ! lxyz(:, 7) = [1, 0, 2]
-            ! lxyz(:, 8) = [0, 1, 2]
-            ! lxyz(:, 9) = [0, 2, 1]
-            ! lxyz(:,10) = [1, 1, 1]
             lxyz(:, 1) = [3, 0, 0]
             lxyz(:, 2) = [0, 3, 0]
             lxyz(:, 3) = [0, 0, 3]

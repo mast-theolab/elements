@@ -21,6 +21,16 @@ module numeric
         f8th = 0.125_realwp, f16th = 0.0625_realwp
 
     real(realwp), parameter :: &
+        f10m1 = 1.0e-1_realwp, f10m2 = 1.0e-2_realwp, f10m3 = 1.0e-3_realwp, &
+        f10m4 = 1.0e-4_realwp, f10m5 = 1.0e-5_realwp, f10m6 = 1.0e-6_realwp, &
+        f10m7 = 1.0e-7_realwp, f10m8 = 1.0e-8_realwp, f10m9 = 1.0e-9_realwp, &
+        f10m10 = 1.0e-10_realwp, &
+        f10p1 = 1.0e+1_realwp, f10p2 = 1.0e+2_realwp, f10p3 = 1.0e+3_realwp, &
+        f10p4 = 1.0e+4_realwp, f10p5 = 1.0e+5_realwp, f10p6 = 1.0e+6_realwp, &
+        f10p7 = 1.0e+7_realwp, f10p8 = 1.0e+8_realwp, f10p9 = 1.0e+9_realwp, &
+        f10p10 = 1.0e+10_realwp
+
+    real(realwp), parameter :: &
         small = 1.0e-6_realwp, &
         !! Values can be considered with respect to typical precision.
         near0 = epsilon(0.0_realwp)*f10

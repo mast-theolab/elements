@@ -1,4 +1,17 @@
-v# Changelog
+# Changelog
+
+## 0.25.04
+
+### Note
+* Change in format: now the program or module name on which the change applies is listed first: `name: change`.  Special names are:
+    * `build`: for the general build tool chain
+    * `lib`: the ELEMENTS library in general
+    * `misc`: unclassified change
+* Modifications are sorted by category, not anymore purely historically (last change last).
+
+### Added
+* ***numeric***: added keywords for work-precision powers of 10, as `f10xy` with `x`= p(lus) or m(inus), and `y` an integer. Ex.: `f10p2` = `1.0e2_realwp`.
+
 
 ## 0.25.03
 

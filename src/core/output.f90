@@ -551,12 +551,12 @@ subroutine write_err(nature, cause, details, extra, source)
     !! Extra information.
     character(len=*), intent(in), optional :: source
     !! Source of the error: procedure, unit, method...
-    1000 format('Error encountered: ',a)
-    1001 format('Error encountered in [',a,']: ',a)
-    1002 format('Internal error encountered: ',a)
-    1003 format('Unrecognized error: ',a)
-    1010 format('-- Reason:',a)
-    1020 format('-- Note:',a)
+    1000 format(/,'Error encountered: ',a)
+    1001 format(/,'Error encountered in [',a,']: ',a)
+    1002 format(/,'Internal error encountered: ',a)
+    1003 format(/,'Unrecognized error: ',a)
+    1010 format('-- Reason: ',a)
+    1020 format('-- Note: ',a)
 
     select case (locase(trim(nature)))
         case ('generic', 'gen')

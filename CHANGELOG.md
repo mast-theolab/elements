@@ -10,9 +10,11 @@
 * Modifications are sorted by category, not anymore purely historically (last change last).
 
 ### Added
+* ***build_boltz_pop***: new program to build the list of populated states above a given threshold based on the input temperature.
 * ***numeric***: added keywords for work-precision powers of 10, as `f10xy` with `x`= p(lus) or m(inus), and `y` an integer. Ex.: `f10p2` = `1.0e2_realwp`.
 * ***output***: it is possible to set the number of leading blank characters before a header with optional keyword `lead_spaces` in `sec_header`.
 * ***string***: `num_chars_int` calculates the number of characters needed to store an integer.
+* ***vibrational**: new subroutine `boltz_pop_max_quanta` to compute the populated vibrational states based on a given temperature and minimum population with respect to the ground state.  The procedure can run in several modes, only reporting the maximum number of quanta for each mode considering at least one quanta per mode, or explicitly listing all possible states and their respective populations as well.
 
 ### Changed
 * ***output***: error messages are now preceded by a blank line, so they are more visible in the output.

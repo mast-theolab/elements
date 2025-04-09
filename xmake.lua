@@ -276,6 +276,23 @@ target("mcd_tensor")
                           "--final=2",
                           "--no-timestamp"}})
 
+target("build_boltz_pop")
+    set_default(false)
+    add_packages("openmp")
+    set_rundir("$(projectdir)/tests")
+    add_deps("elements")
+    add_files("src/progs/build_boltz_pop.f90")
+    add_tests("h2co",
+              {runargs = {"H2CO_S0_frq.fchk",
+                          "-t", "1000",
+                          "-p", "0.001",
+                          "-o", "bzpop_h2co_T1000_P001.txt"}})
+    add_tests("meox",
+              {runargs = {"meox.S0.vac.B3PW91.junTZ.frq-ROA.fchk",
+                          "-t", "400",
+                          "-p", "0.005",
+                          "-o", "bzpop_meox_T400_P005.txt"}})
+
 target("test_symm_array")
     set_default(false)
     set_rundir("$(projectdir)/tests")

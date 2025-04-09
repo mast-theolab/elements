@@ -11,9 +11,11 @@
 
 ### Added
 * ***numeric***: added keywords for work-precision powers of 10, as `f10xy` with `x`= p(lus) or m(inus), and `y` an integer. Ex.: `f10p2` = `1.0e2_realwp`.
+* ***output***: it is possible to set the number of leading blank characters before a header with optional keyword `lead_spaces` in `sec_header`.
 
 ### Changed
 * ***output***: error messages are now preceded by a blank line, so they are more visible in the output.
+* ***output***: headers do not have a leading blank character anymore by default.
 
 
 ## 0.25.03

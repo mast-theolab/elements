@@ -1,15 +1,15 @@
- /----------------------------------------------------------------------------\
- |                                                                            |
- |                           MCD Tensor Calculator                            |
- |                                                                            |
- \----------------------------------------------------------------------------/
+/----------------------------------------------------------------------------\
+|                                                                            |
+|                           MCD Tensor Calculator                            |
+|                                                                            |
+\----------------------------------------------------------------------------/
 
 
- Simulation Parameters
- =====================
+Simulation Parameters
+=====================
 
- Standard parameters
- -------------------
+Standard parameters
+-------------------
  - GIAO correction ------------------------> enabled
  - Compatibility mode with GUVCDE ---------> disabled
  - Correction term against degeneracies ---> enabled
@@ -20,8 +20,8 @@
  - Model for SOS excitations --------------> Hybrid model
 
 
- Data on Molecular System
- ========================
+Data on Molecular System
+========================
 
  > Number of atoms           : 3
  > Charge                    : 0
@@ -33,8 +33,8 @@
  > Type of F functions       : pure
  > Number of atomic orbitals : 20
 
- Atomic coordinates
- ------------------
+Atomic coordinates
+------------------
  ===== ============ ========================================
  Atom      Mass             X            Y            Z
  ----- ------------ ----------------------------------------
@@ -43,44 +43,44 @@
   F       18.9984        0.055603    -0.751315    -0.000000
  ===== ============ ========================================
 
- Computation of one-electron integrals
- -------------------------------------
+Computation of one-electron integrals
+-------------------------------------
  Entering overlap_ao_1e
 
- Definition of Molecular Orbitals
- --------------------------------
+Definition of Molecular Orbitals
+--------------------------------
 
 
- Transition Data
- ===============
+Transition Data
+===============
 
  > Number of excited states : 4
  > Reference excited state  : 1
 
- User overrides
- --------------
+User overrides
+--------------
  > New final state, num. 2.
 
- Definition of Transition Amplitudes
- -----------------------------------
+Definition of Transition Amplitudes
+-----------------------------------
  Now doing state num. 1 out of 4.
  Now doing state num. 2 out of 4.
  Now doing state num. 3 out of 4.
  Now doing state num. 4 out of 4.
 
 
- Computation of Properties
- =========================
+Computation of Properties
+=========================
 
- Ground-state properties
- -----------------------
+Ground-state properties
+-----------------------
 
- Transition Energies Factors
- ---------------------------
+Transition Energies Factors
+---------------------------
 
 
- MCD Tensor
- ==========
+MCD Tensor
+==========
 
  Computing tensor G_if:
            --      <f|u|k><k|m|i>    --       <f|m|k><k|u|i>
@@ -94,8 +94,8 @@
     m:   magnetic dipole
     E_i: energy of state i
 
- Final Value
- -----------
+Final Value
+-----------
           X              Y              Z
  X  -8.953718E-03  -2.207912E-02  -1.594082E-15
  Y  -1.201711E-01  -3.097647E-01  -4.873506E-14

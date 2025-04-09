@@ -461,7 +461,7 @@ end subroutine prt_vec_r64
 
 ! ======================================================================
 
-subroutine sec_header(level, title)
+subroutine sec_header(level, title, lead_spaces)
     !! Formats and writes a section header in default unit.
     !!
     !! Formats and prints a header with title `title`.
@@ -474,22 +474,30 @@ subroutine sec_header(level, title)
     !!  3. Subsubsection / Header3
     !!  4. Paragraph / Header4
     integer, intent(in) :: level
-    !! Header level
+    !! Header level.
     character(len=*), intent(in) :: title
-    !! Header title
+    !! Header title.
+    integer, intent(in), optional :: lead_spaces
+    !! Number of leading spaces.
 
-    integer :: lblc, lshft, ltitle
+    integer :: lblc, lshft, ltitle, llead
     character(len=256) :: fmt
 
-    1000 format('(1x,"/",',i0,'("-"),"\",/,1x,"|",',i0,'x,"|",/,1x,"|",',i0, &
-        'x,a,',i0,'x,"|",/,1x,"|",',i0,'x,"|",/,1x,"\",',i0,'("-"),"/")')
-    1010 format('(//,1x,',i0,'("*"),//,1x,',i0,'x,a,//,1x,',i0,'("*"))')
-    1020 Format('(//,1x,a,/,1x,',i0,'("="))')
-    1030 Format('(/,1x,a,/,1x,',i0,'("-"))')
-    1040 Format('(/,1x,a,/,1x,',i0,'("^"))')
-    1050 Format(/,1x,'### ',a,' ###')
+    1000 format('(t',i0,',"/",',i0,'("-"),"\",/,t',i0,',"|",',i0,'x,"|",/,t',i0,',"|",',i0, &
+        'x,a,',i0,'x,"|",/,t',i0,',"|",',i0,'x,"|",/,t',i0,',"\",',i0,'("-"),"/")')
+    1010 format('(//,t',i0,',',i0,'("*"),//,t',i0,',',i0,'x,a,//,t',i0,',',i0,'("*"))')
+    1020 Format('(//,t',i0,',a,/,t',i0,',',i0,'("="))')
+    1030 Format('(/,t',i0,',a,/,t',i0,',',i0,'("-"))')
+    1040 Format('(/,t',i0,',a,/,t',i0,',',i0,'("^"))')
+    1050 Format('(/,t',i0,',"### ",a," ###")')
 
     ltitle = len_trim(title)
+
+    if (present(lead_spaces)) then
+        llead = abs(lead_spaces) + 1
+    else
+        llead = 1
+    end if
 
     select case(level)
     case(-1)
@@ -500,7 +508,8 @@ subroutine sec_header(level, title)
             lblc = 76
             lshft = (lblc-ltitle)/2
         endif
-        write(fmt, 1000) lblc, lblc, lshft, lblc - ltitle - lshft, lblc, lblc
+        write(fmt, 1000) llead, lblc, llead, lblc, llead, lshft, &
+            lblc - ltitle - lshft, llead, lblc, llead, lblc
         write(iu_out, fmt) trim(title)
     case(0)
         if (ltitle > 78) then
@@ -510,19 +519,20 @@ subroutine sec_header(level, title)
             lblc = 78
             lshft = (lblc-ltitle)/2
         endif
-        write(fmt, 1010) lblc, lshft, lblc
+        write(fmt, 1010) llead, lblc, llead, lshft, llead, lblc
         write(iu_out, fmt) trim(title)
     case(1)
-        write(fmt, 1020) ltitle
+        write(fmt, 1020) llead, llead, ltitle
         write(iu_out, fmt) trim(title)
     case(2)
-        write(fmt, 1030) ltitle
+        write(fmt, 1030) llead, llead, ltitle
         write(iu_out, fmt) trim(title)
     case(3)
-        write(fmt, 1040) ltitle
+        write(fmt, 1040) llead, llead, ltitle
         write(iu_out, fmt) trim(title)
     case(4:)
-        write(iu_out, 1050) trim(title)
+        write(fmt, 1050) llead
+        write(iu_out, fmt) trim(title)
     case default
         print *, 'Unknown header level.  Stopping.'
         stop

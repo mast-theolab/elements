@@ -851,7 +851,7 @@ subroutine handler_raise_error(this, cause, details, extra, cat, source, &
     do_exit = this%exit_on_error .and. this%level >= 3
     if (present(no_exit)) do_exit = do_exit .and. .not.no_exit
 
-    if(do_exit) stop this%level
+    if (do_exit) stop this%level
 
 end subroutine handler_raise_error
 

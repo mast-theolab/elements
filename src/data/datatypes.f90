@@ -426,5 +426,5 @@ function get_atom_rvdw(this, db, err) result(rvdw)
 end function get_atom_rvdw
 
 ! ======================================================================
-    
+
 end module datatypes

@@ -108,7 +108,7 @@ subroutine fill_A(opmode, N, A)
     integer, intent(in) :: N
     real, dimension(:), intent(out) :: A
 
-    integer :: i, ij, j
+    integer :: i
 
     A = 0.0
     select case(opmode)
@@ -121,4 +121,5 @@ subroutine fill_A(opmode, N, A)
         stop
     end select
 end subroutine fill_A
+
 end program test_symm_array

@@ -5,11 +5,22 @@ module string
     !! - Conversion to lower case
     !! - Conversion to upper case
     !! - find string in array
+    use iso_fortran_env, only: int32, int64
+
     implicit none
 
-    character(len=1), dimension(3), parameter :: labXYZ_1D = ['X', 'Y', 'Z']
-    character(len=2), dimension(6), parameter :: &
+    private
+    public :: findstr, locase, num_chars_int, str_equal, timestamp, upcase
+
+    character(len=1), dimension(3), parameter, public :: &
+        labXYZ_1D = ['X', 'Y', 'Z']
+    character(len=2), dimension(6), parameter, public :: &
         labXYZ_LT = ['XX', 'XY', 'YY', 'XZ', 'YZ', 'ZZ']
+    
+    interface num_chars_int
+        !! Compute the number of characters needed to store an integer
+        module procedure num_chars_int32, num_chars_int64
+    end interface num_chars_int
 contains
 
 ! ======================================================================
@@ -69,6 +80,50 @@ function locase(string)
     end do
     return
 end function locase
+
+! ======================================================================
+
+function num_chars_int32(num32) result(nchars)
+    !! Compute the number of integer to store a 32-bit integer number.
+    !! The number can be negative, in this case, one character is added
+    !! for the sign.
+    integer(int32), intent(in) :: num32
+    !! Number to store in characters
+    integer :: nchars
+    !! Number of characters needed to store the number.
+
+    select case(num32)
+        case(0)
+            nchars = 1
+        case(1:)
+            nchars = int(log10(real(num32))) + 1
+        case(:-1)
+            nchars = int(log10(real(-num32))) + 2
+    end select
+
+end function num_chars_int32
+
+! ======================================================================
+
+function num_chars_int64(num64) result(nchars)
+    !! Compute the number of integer to store a 64-bit integer number.
+    !! The number can be negative, in this case, one character is added
+    !! for the sign.
+    integer(int64), intent(in) :: num64
+    !! Number to store in characters
+    integer :: nchars
+    !! Number of characters needed to store the number.
+
+    select case(num64)
+        case(0)
+            nchars = 1
+        case(1:)
+            nchars = int(log10(real(num64))) + 1
+        case(:-1)
+            nchars = int(log10(real(-num64))) + 2
+    end select
+
+end function num_chars_int64
 
 ! ======================================================================
 
@@ -162,11 +217,14 @@ function timestamp(date, time, add_ms, shorten, US_date_order) &
 
     if (present(shorten)) then
         if(shorten) then
+            allocate(character(len=len(short_months(1))) :: months(12))
             months = short_months
         else
+            allocate(character(len=len(long_months(1))) :: months(12))
             months = long_months
         end if
     else
+        allocate(character(len=len(long_months(1))) :: months(12))
         months = long_months
     end if
 

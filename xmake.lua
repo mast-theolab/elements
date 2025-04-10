@@ -151,13 +151,15 @@ target("eleclib")
 
 target("speclib")
     -- Spectroscopy-related resources
+    set_default(false)
     set_kind("static")
     add_deps("corelib")
     add_deps("molelib")
     add_deps("mathlib")
+    add_packages("openmp")
     add_files("src/spectro/vibrational.f90")
     add_files("src/spectro/vibrational_*.f90")
-    -- add_files("src/spectro/vibronic.f90")
+    add_files("src/spectro/vibronic.f90")
     add_files("src/spectro/vibronic_*.f90")
 
 
@@ -362,4 +364,11 @@ target("test_geom_ops")
     set_rundir("$(projectdir)/tests")
     add_deps("molelib")
     add_files("src/tests/geom_ops.f90")
+    add_tests("default")
+
+target("test_vibronic")
+    set_default(false)
+    set_rundir("$(projectdir)/tests")
+    add_deps("speclib")
+    add_files("src/tests/test_vibronic.f90")
     add_tests("default")

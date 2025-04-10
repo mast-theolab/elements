@@ -16,6 +16,9 @@
 * ***string***: `num_chars_int` calculates the number of characters needed to store an integer.
 * ***vibrational***: new subroutine `boltz_pop_max_quanta` to compute the populated vibrational states based on a given temperature and minimum population with respect to the ground state.  The procedure can run in several modes, only reporting the maximum number of quanta for each mode considering at least one quanta per mode, or explicitly listing all possible states and their respective populations as well.
 * ***build_boltz_pop***: new program to build the list of populated states above a given threshold based on the input temperature.
+* ***vibronic***: new module for operations related to vibrationally-resolved electronic spectroscopy.
+* ***vibronic***: new function `Duschinsky_matrix` to compute the Duschinsky matrix.
+* ***vibronic***: new function `Duschinsky_shift` to compute the shift vector in the Duschinsky transformation
 
 ### Changed
 * ***output***: error messages are now preceded by a blank line, so they are more visible in the output.

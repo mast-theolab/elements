@@ -101,6 +101,315 @@ end procedure build_modes_arr_sq
 
 ! ======================================================================
 
+module procedure build_modes_db_lt
+
+    integer :: ia, ioff, ja, n_at3, n_at3tt, nvib
+    real(realwp) :: sqmas_i, sqmas_j
+    real(realwp), dimension(:,:), allocatable :: F_mweigh
+    logical :: do_freq, do_Lmat, do_Lwgt, do_nvib, do_rmas, do_weigh
+
+    n_at3 = 3*molDB%n_at
+    n_at3tt = n_at3*(n_at3+1)/2
+    if (size(F_cart) /= n_at3tt) then
+        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
+                                 source='build_modes')
+        return
+    end if
+
+    if (present(is_weighted)) then
+        do_weigh = is_weighted
+    else
+        do_weigh = .true.
+    end if
+    allocate(F_mweigh(n_at3,n_at3))
+    if (do_weigh) then
+        do ia = 1, n_at3
+            sqmas_i = f1/sqrt(molDB%at_mas((ia+2)/3))
+            ioff = ia*(ia-1)/2
+            do ja = 1, ia-1
+                sqmas_j = f1/sqrt(molDB%at_mas((ja+2)/3))
+                F_mweigh(ja,ia) = F_cart(ioff+ja)*sqmas_i*sqmas_j
+                F_mweigh(ia,ja) = F_mweigh(ja,ia)
+            end do
+            F_mweigh(ia,ia) = F_cart(ioff+ia)*sqmas_i**2
+        end do
+    else
+        do ia = 1, n_at3
+            ioff = ia*(ia-1)/2
+            do ja = 1, ia-1
+                F_mweigh(ja,ia) = F_cart(ioff+ja)
+                F_mweigh(ia,ja) = F_mweigh(ja,ia)
+            end do
+            F_mweigh(ia,ia) = F_cart(ioff+ia)
+        end do
+    end if
+
+    ! Deallocate the content of `vib` if already loaded
+    vibDB%n_vib = 0
+    if (vibDB%loaded) then
+        if (allocated(vibDB%freq)) deallocate(vibDB%freq)
+        if (allocated(vibDB%L_mwg)) deallocate(vibDB%L_mwg)
+        if (allocated(vibDB%L_mat)) deallocate(vibDB%L_mat)
+        if (allocated(vibDB%red_mass)) deallocate(vibDB%red_mass)
+    end if
+
+    ! Check which information to provide
+    if (present(set_nvib)) then
+        do_nvib = set_nvib
+    else
+        do_nvib = .true.
+    end if
+    if (present(set_Lmat)) then
+        do_Lmat = set_Lmat
+    else
+        do_Lmat = .true.
+    end if
+    if (present(set_freq)) then
+        do_freq = set_freq
+    else
+        do_freq = .true.
+    end if
+    if (present(set_Lmweigh)) then
+        do_Lwgt = set_Lmweigh
+    else
+        do_Lwgt = .true.
+    end if
+    if (present(set_redmas)) then
+        do_rmas = set_redmas
+    else
+        do_rmas = .true.
+    end if
+
+    ! now do allocation
+    if(do_Lmat) allocate(vibDB%L_mat(n_at3,n_at3))
+    if(do_freq) then
+        allocate(vibDB%freq(n_at3))
+        allocate(vibDB%red_freq(n_at3))
+    end if
+    if(do_Lwgt) allocate(vibDB%L_mwg(n_at3,n_at3))
+    if(do_rmas) allocate(vibDB%red_mass(n_at3))
+    nvib = 0
+
+    if (do_Lmat.and.do_freq.and.do_Lwgt.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, freq=vibDB%freq, &
+            L_mweigh=vibDB%L_mwg, red_mass=vibDB%red_mass)
+    else if (do_Lmat.and.do_freq.and.do_Lwgt) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, freq=vibDB%freq, &
+            L_mweigh=vibDB%L_mwg)
+    else if (do_Lmat.and.do_freq.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, freq=vibDB%freq, &
+            red_mass=vibDB%red_mass)
+    else if (do_Lmat.and.do_Lwgt.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, L_mweigh=vibDB%L_mwg, &
+            red_mass=vibDB%red_mass)
+    else if (do_freq.and.do_Lwgt.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, freq=vibDB%freq, L_mweigh=vibDB%L_mwg, &
+            red_mass=vibDB%red_mass)
+    else if (do_Lmat.and.do_freq) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, freq=vibDB%freq)
+    else if (do_Lmat.and.do_Lwgt) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, L_mweigh=vibDB%L_mwg)
+    else if (do_Lmat.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, &
+            red_mass=vibDB%red_mass)
+    else if (do_freq.and.do_Lwgt) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, freq=vibDB%freq, L_mweigh=vibDB%L_mwg)
+    else if (do_freq.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, freq=vibDB%freq, red_mass=vibDB%red_mass)
+    else if (do_Lwgt.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mweigh=vibDB%L_mwg, &
+            red_mass=vibDB%red_mass)
+    else if (do_Lmat) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat)
+    else if (do_freq) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, freq=vibDB%freq)
+    else if (do_Lwgt) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mweigh=vibDB%L_mwg)
+    else if (do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, red_mass=vibDB%red_mass)
+    end if
+    deallocate(F_mweigh)
+    if (runstat%is_ok()) then
+        if(do_Lmat) vibDB%L_mat = vibDB%L_mat(:n_at3,:nvib)
+        if(do_freq) then
+            vibDB%freq = vibDB%freq(:nvib)
+            vibDB%red_freq = phys_conv%au2cm1(vibDB%freq(:nvib), .true.)
+        end if
+        if(do_Lwgt) vibDB%L_mwg = vibDB%L_mwg(:n_at3,:nvib)
+        if(do_rmas) vibDB%red_mass = vibDB%red_mass(:nvib)
+        if(do_nvib) vibDB%n_vib = nvib
+        vibDB%loaded = .true.
+    end if
+
+end procedure build_modes_db_lt
+
+! ======================================================================
+
+module procedure build_modes_db_sq
+
+    integer :: ia, ja, n_at3, nvib
+    real(realwp) :: sqmas_i, sqmas_j
+    real(realwp), dimension(:,:), allocatable :: F_mweigh
+    logical :: do_freq, do_Lmat, do_Lwgt, do_nvib, do_rmas, do_weigh
+
+    n_at3 = 3*molDB%n_at
+    if (size(F_cart, 1) /= n_at3) then
+        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
+                                 source='build_modes')
+        return
+    end if
+
+    if (present(is_weighted)) then
+        do_weigh = is_weighted
+    else
+        do_weigh = .true.
+    end if
+    allocate(F_mweigh(n_at3,n_at3))
+    if (do_weigh) then
+        do ia = 1, n_at3
+            sqmas_i = f1/sqrt(molDB%at_mas((ia+2)/3))
+            do ja = 1, ia-1
+                sqmas_j = f1/sqrt(molDB%at_mas((ja+2)/3))
+                F_mweigh(ja,ia) = F_cart(ja,ia)*sqmas_i*sqmas_j
+                F_mweigh(ia,ja) = F_mweigh(ja,ia)
+            end do
+            F_mweigh(ia,ia) = F_cart(ia,ia)*sqmas_i**2
+        end do
+    else
+        F_mweigh = F_cart
+    end if
+
+    ! Deallocate the content of `vib` if already loaded
+    vibDB%n_vib = 0
+    if (vibDB%loaded) then
+        if (allocated(vibDB%freq)) deallocate(vibDB%freq)
+        if (allocated(vibDB%L_mwg)) deallocate(vibDB%L_mwg)
+        if (allocated(vibDB%L_mat)) deallocate(vibDB%L_mat)
+        if (allocated(vibDB%red_mass)) deallocate(vibDB%red_mass)
+    end if
+
+    ! Check which information to provide
+    if (present(set_nvib)) then
+        do_nvib = set_nvib
+    else
+        do_nvib = .true.
+    end if
+    if (present(set_Lmat)) then
+        do_Lmat = set_Lmat
+    else
+        do_Lmat = .true.
+    end if
+    if (present(set_freq)) then
+        do_freq = set_freq
+    else
+        do_freq = .true.
+    end if
+    if (present(set_Lmweigh)) then
+        do_Lwgt = set_Lmweigh
+    else
+        do_Lwgt = .true.
+    end if
+    if (present(set_redmas)) then
+        do_rmas = set_redmas
+    else
+        do_rmas = .true.
+    end if
+
+    ! now do allocation
+    if(do_Lmat) allocate(vibDB%L_mat(n_at3,n_at3))
+    if(do_freq) then
+        allocate(vibDB%freq(n_at3))
+        allocate(vibDB%red_freq(n_at3))
+    end if
+    if(do_Lwgt) allocate(vibDB%L_mwg(n_at3,n_at3))
+    if(do_rmas) allocate(vibDB%red_mass(n_at3))
+    nvib = 0
+
+    if (do_Lmat.and.do_freq.and.do_Lwgt.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, freq=vibDB%freq, &
+            L_mweigh=vibDB%L_mwg, red_mass=vibDB%red_mass)
+    else if (do_Lmat.and.do_freq.and.do_Lwgt) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, freq=vibDB%freq, &
+            L_mweigh=vibDB%L_mwg)
+    else if (do_Lmat.and.do_freq.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, freq=vibDB%freq, &
+            red_mass=vibDB%red_mass)
+    else if (do_Lmat.and.do_Lwgt.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, L_mweigh=vibDB%L_mwg, &
+            red_mass=vibDB%red_mass)
+    else if (do_freq.and.do_Lwgt.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, freq=vibDB%freq, L_mweigh=vibDB%L_mwg, &
+            red_mass=vibDB%red_mass)
+    else if (do_Lmat.and.do_freq) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, freq=vibDB%freq)
+    else if (do_Lmat.and.do_Lwgt) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, L_mweigh=vibDB%L_mwg)
+    else if (do_Lmat.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat, &
+            red_mass=vibDB%red_mass)
+    else if (do_freq.and.do_Lwgt) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, freq=vibDB%freq, L_mweigh=vibDB%L_mwg)
+    else if (do_freq.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, freq=vibDB%freq, red_mass=vibDB%red_mass)
+    else if (do_Lwgt.and.do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mweigh=vibDB%L_mwg, &
+            red_mass=vibDB%red_mass)
+    else if (do_Lmat) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mat=vibDB%L_mat)
+    else if (do_freq) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, freq=vibDB%freq)
+    else if (do_Lwgt) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, L_mweigh=vibDB%L_mwg)
+    else if (do_rmas) then
+        call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
+            remove_rottrans, n_vib=nvib, red_mass=vibDB%red_mass)
+    end if
+    deallocate(F_mweigh)
+    if (runstat%is_ok()) then
+        if(do_Lmat) vibDB%L_mat = vibDB%L_mat(:n_at3,:nvib)
+        if(do_freq) then
+            vibDB%freq = vibDB%freq(:nvib)
+            vibDB%red_freq = phys_conv%au2cm1(vibDB%freq(:nvib), .true.)
+        end if
+        if(do_Lwgt) vibDB%L_mwg = vibDB%L_mwg(:n_at3,:nvib)
+        if(do_rmas) vibDB%red_mass = vibDB%red_mass(:nvib)
+        if(do_nvib) vibDB%n_vib = nvib
+        vibDB%loaded = .true.
+    end if
+
+end procedure build_modes_db_sq
+
+! ======================================================================
+
 module procedure build_modes_dim_lt
 
     integer :: ia, ioff, ja, n_at3, n_at3tt
@@ -196,14 +505,14 @@ end procedure build_modes_dim_sq
 
 ! ======================================================================
 
-module procedure build_modes_mol_lt
+module procedure build_modes_moldb_lt
 
     integer :: ia, ioff, ja, n_at3, n_at3tt
     real(realwp) :: sqmas_i, sqmas_j
     real(realwp), dimension(:,:), allocatable :: F_mweigh
     logical :: do_weigh
 
-    n_at3 = 3*mol%n_at
+    n_at3 = 3*molDB%n_at
     n_at3tt = n_at3*(n_at3+1)/2
     if (size(F_cart) /= n_at3tt) then
         call runstat%raise_error('inconsistency in input arrays', cat='dev', &
@@ -219,10 +528,10 @@ module procedure build_modes_mol_lt
     allocate(F_mweigh(n_at3,n_at3))
     if (do_weigh) then
         do ia = 1, n_at3
-            sqmas_i = f1/sqrt(mol%at_mas((ia+2)/3))
+            sqmas_i = f1/sqrt(molDB%at_mas((ia+2)/3))
             ioff = ia*(ia-1)/2
             do ja = 1, ia-1
-                sqmas_j = f1/sqrt(mol%at_mas((ja+2)/3))
+                sqmas_j = f1/sqrt(molDB%at_mas((ja+2)/3))
                 F_mweigh(ja,ia) = F_cart(ioff+ja)*sqmas_i*sqmas_j
                 F_mweigh(ia,ja) = F_mweigh(ja,ia)
             end do
@@ -239,23 +548,23 @@ module procedure build_modes_mol_lt
         end do
     end if
 
-    call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
+    call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
                           remove_rottrans, n_vib, L_mat, freq, L_mweigh, &
                           red_mass)
     deallocate(F_mweigh)
 
-end procedure build_modes_mol_lt
+end procedure build_modes_moldb_lt
 
 ! ======================================================================
 
-module procedure build_modes_mol_sq
+module procedure build_modes_moldb_sq
 
     integer :: ia, ja, n_at3
     real(realwp) :: sqmas_i, sqmas_j
     real(realwp), dimension(:,:), allocatable :: F_mweigh
     logical :: do_weigh
 
-    n_at3 = 3*mol%n_at
+    n_at3 = 3*molDB%n_at
     if (size(F_cart, 1) /= n_at3) then
         call runstat%raise_error('inconsistency in input arrays', cat='dev', &
                                  source='build_modes')
@@ -270,9 +579,9 @@ module procedure build_modes_mol_sq
     allocate(F_mweigh(n_at3,n_at3))
     if (do_weigh) then
         do ia = 1, n_at3
-            sqmas_i = f1/sqrt(mol%at_mas((ia+2)/3))
+            sqmas_i = f1/sqrt(molDB%at_mas((ia+2)/3))
             do ja = 1, ia-1
-                sqmas_j = f1/sqrt(mol%at_mas((ja+2)/3))
+                sqmas_j = f1/sqrt(molDB%at_mas((ja+2)/3))
                 F_mweigh(ja,ia) = F_cart(ja,ia)*sqmas_i*sqmas_j
                 F_mweigh(ia,ja) = F_mweigh(ja,ia)
             end do
@@ -282,321 +591,12 @@ module procedure build_modes_mol_sq
         F_mweigh = F_cart
     end if
 
-    call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
+    call build_modes_algo(molDB%n_at, F_mweigh, molDB%at_crd, molDB%at_mas, &
                           remove_rottrans, n_vib, L_mat, freq, L_mweigh, &
                           red_mass)
     deallocate(F_mweigh)
 
-end procedure build_modes_mol_sq
-
-! ======================================================================
-
-module procedure build_modes_vib_lt
-
-    integer :: ia, ioff, ja, n_at3, n_at3tt, nvib
-    real(realwp) :: sqmas_i, sqmas_j
-    real(realwp), dimension(:,:), allocatable :: F_mweigh
-    logical :: do_freq, do_Lmat, do_Lwgt, do_nvib, do_rmas, do_weigh
-
-    n_at3 = 3*mol%n_at
-    n_at3tt = n_at3*(n_at3+1)/2
-    if (size(F_cart) /= n_at3tt) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
-        return
-    end if
-
-    if (present(is_weighted)) then
-        do_weigh = is_weighted
-    else
-        do_weigh = .true.
-    end if
-    allocate(F_mweigh(n_at3,n_at3))
-    if (do_weigh) then
-        do ia = 1, n_at3
-            sqmas_i = f1/sqrt(mol%at_mas((ia+2)/3))
-            ioff = ia*(ia-1)/2
-            do ja = 1, ia-1
-                sqmas_j = f1/sqrt(mol%at_mas((ja+2)/3))
-                F_mweigh(ja,ia) = F_cart(ioff+ja)*sqmas_i*sqmas_j
-                F_mweigh(ia,ja) = F_mweigh(ja,ia)
-            end do
-            F_mweigh(ia,ia) = F_cart(ioff+ia)*sqmas_i**2
-        end do
-    else
-        do ia = 1, n_at3
-            ioff = ia*(ia-1)/2
-            do ja = 1, ia-1
-                F_mweigh(ja,ia) = F_cart(ioff+ja)
-                F_mweigh(ia,ja) = F_mweigh(ja,ia)
-            end do
-            F_mweigh(ia,ia) = F_cart(ioff+ia)
-        end do
-    end if
-
-    ! Deallocate the content of `vib` if already loaded
-    vib%n_vib = 0
-    if (vib%loaded) then
-        if (allocated(vib%freq)) deallocate(vib%freq)
-        if (allocated(vib%L_mwg)) deallocate(vib%L_mwg)
-        if (allocated(vib%L_mat)) deallocate(vib%L_mat)
-        if (allocated(vib%red_mass)) deallocate(vib%red_mass)
-    end if
-
-    ! Check which information to provide
-    if (present(set_nvib)) then
-        do_nvib = set_nvib
-    else
-        do_nvib = .true.
-    end if
-    if (present(set_Lmat)) then
-        do_Lmat = set_Lmat
-    else
-        do_Lmat = .true.
-    end if
-    if (present(set_freq)) then
-        do_freq = set_freq
-    else
-        do_freq = .true.
-    end if
-    if (present(set_Lmweigh)) then
-        do_Lwgt = set_Lmweigh
-    else
-        do_Lwgt = .true.
-    end if
-    if (present(set_redmas)) then
-        do_rmas = set_redmas
-    else
-        do_rmas = .true.
-    end if
-
-    ! now do allocation
-    if(do_Lmat) allocate(vib%L_mat(n_at3,n_at3))
-    if(do_freq) then
-        allocate(vib%freq(n_at3))
-        allocate(vib%red_freq(n_at3))
-    end if
-    if(do_Lwgt) allocate(vib%L_mwg(n_at3,n_at3))
-    if(do_rmas) allocate(vib%red_mass(n_at3))
-    nvib = 0
-
-    if (do_Lmat.and.do_freq.and.do_Lwgt.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, freq=vib%freq, &
-            L_mweigh=vib%L_mwg, red_mass=vib%red_mass)
-    else if (do_Lmat.and.do_freq.and.do_Lwgt) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, freq=vib%freq, &
-            L_mweigh=vib%L_mwg)
-    else if (do_Lmat.and.do_freq.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, freq=vib%freq, &
-            red_mass=vib%red_mass)
-    else if (do_Lmat.and.do_Lwgt.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, L_mweigh=vib%L_mwg, &
-            red_mass=vib%red_mass)
-    else if (do_freq.and.do_Lwgt.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, freq=vib%freq, L_mweigh=vib%L_mwg, &
-            red_mass=vib%red_mass)
-    else if (do_Lmat.and.do_freq) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, freq=vib%freq)
-    else if (do_Lmat.and.do_Lwgt) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, L_mweigh=vib%L_mwg)
-    else if (do_Lmat.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, &
-            red_mass=vib%red_mass)
-    else if (do_freq.and.do_Lwgt) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, freq=vib%freq, L_mweigh=vib%L_mwg)
-    else if (do_freq.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, freq=vib%freq, red_mass=vib%red_mass)
-    else if (do_Lwgt.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mweigh=vib%L_mwg, &
-            red_mass=vib%red_mass)
-    else if (do_Lmat) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat)
-    else if (do_freq) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, freq=vib%freq)
-    else if (do_Lwgt) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mweigh=vib%L_mwg)
-    else if (do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, red_mass=vib%red_mass)
-    end if
-    deallocate(F_mweigh)
-    if (runstat%is_ok()) then
-        if(do_Lmat) vib%L_mat = vib%L_mat(:n_at3,:nvib)
-        if(do_freq) then
-            vib%freq = vib%freq(:nvib)
-            vib%red_freq = phys_conv%au2cm1(vib%freq(:nvib), .true.)
-        end if
-        if(do_Lwgt) vib%L_mwg = vib%L_mwg(:n_at3,:nvib)
-        if(do_rmas) vib%red_mass = vib%red_mass(:nvib)
-        if(do_nvib) vib%n_vib = nvib
-        vib%loaded = .true.
-    end if
-
-end procedure build_modes_vib_lt
-
-! ======================================================================
-
-module procedure build_modes_vib_sq
-
-    integer :: ia, ja, n_at3, nvib
-    real(realwp) :: sqmas_i, sqmas_j
-    real(realwp), dimension(:,:), allocatable :: F_mweigh
-    logical :: do_freq, do_Lmat, do_Lwgt, do_nvib, do_rmas, do_weigh
-
-    n_at3 = 3*mol%n_at
-    if (size(F_cart, 1) /= n_at3) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
-        return
-    end if
-
-    if (present(is_weighted)) then
-        do_weigh = is_weighted
-    else
-        do_weigh = .true.
-    end if
-    allocate(F_mweigh(n_at3,n_at3))
-    if (do_weigh) then
-        do ia = 1, n_at3
-            sqmas_i = f1/sqrt(mol%at_mas((ia+2)/3))
-            do ja = 1, ia-1
-                sqmas_j = f1/sqrt(mol%at_mas((ja+2)/3))
-                F_mweigh(ja,ia) = F_cart(ja,ia)*sqmas_i*sqmas_j
-                F_mweigh(ia,ja) = F_mweigh(ja,ia)
-            end do
-            F_mweigh(ia,ia) = F_cart(ia,ia)*sqmas_i**2
-        end do
-    else
-        F_mweigh = F_cart
-    end if
-
-    ! Deallocate the content of `vib` if already loaded
-    vib%n_vib = 0
-    if (vib%loaded) then
-        if (allocated(vib%freq)) deallocate(vib%freq)
-        if (allocated(vib%L_mwg)) deallocate(vib%L_mwg)
-        if (allocated(vib%L_mat)) deallocate(vib%L_mat)
-        if (allocated(vib%red_mass)) deallocate(vib%red_mass)
-    end if
-
-    ! Check which information to provide
-    if (present(set_nvib)) then
-        do_nvib = set_nvib
-    else
-        do_nvib = .true.
-    end if
-    if (present(set_Lmat)) then
-        do_Lmat = set_Lmat
-    else
-        do_Lmat = .true.
-    end if
-    if (present(set_freq)) then
-        do_freq = set_freq
-    else
-        do_freq = .true.
-    end if
-    if (present(set_Lmweigh)) then
-        do_Lwgt = set_Lmweigh
-    else
-        do_Lwgt = .true.
-    end if
-    if (present(set_redmas)) then
-        do_rmas = set_redmas
-    else
-        do_rmas = .true.
-    end if
-
-    ! now do allocation
-    if(do_Lmat) allocate(vib%L_mat(n_at3,n_at3))
-    if(do_freq) then
-        allocate(vib%freq(n_at3))
-        allocate(vib%red_freq(n_at3))
-    end if
-    if(do_Lwgt) allocate(vib%L_mwg(n_at3,n_at3))
-    if(do_rmas) allocate(vib%red_mass(n_at3))
-    nvib = 0
-
-    if (do_Lmat.and.do_freq.and.do_Lwgt.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, freq=vib%freq, &
-            L_mweigh=vib%L_mwg, red_mass=vib%red_mass)
-    else if (do_Lmat.and.do_freq.and.do_Lwgt) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, freq=vib%freq, &
-            L_mweigh=vib%L_mwg)
-    else if (do_Lmat.and.do_freq.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, freq=vib%freq, &
-            red_mass=vib%red_mass)
-    else if (do_Lmat.and.do_Lwgt.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, L_mweigh=vib%L_mwg, &
-            red_mass=vib%red_mass)
-    else if (do_freq.and.do_Lwgt.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, freq=vib%freq, L_mweigh=vib%L_mwg, &
-            red_mass=vib%red_mass)
-    else if (do_Lmat.and.do_freq) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, freq=vib%freq)
-    else if (do_Lmat.and.do_Lwgt) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, L_mweigh=vib%L_mwg)
-    else if (do_Lmat.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat, &
-            red_mass=vib%red_mass)
-    else if (do_freq.and.do_Lwgt) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, freq=vib%freq, L_mweigh=vib%L_mwg)
-    else if (do_freq.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, freq=vib%freq, red_mass=vib%red_mass)
-    else if (do_Lwgt.and.do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mweigh=vib%L_mwg, &
-            red_mass=vib%red_mass)
-    else if (do_Lmat) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mat=vib%L_mat)
-    else if (do_freq) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, freq=vib%freq)
-    else if (do_Lwgt) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, L_mweigh=vib%L_mwg)
-    else if (do_rmas) then
-        call build_modes_algo(mol%n_at, F_mweigh, mol%at_crd, mol%at_mas, &
-            remove_rottrans, n_vib=nvib, red_mass=vib%red_mass)
-    end if
-    deallocate(F_mweigh)
-    if (runstat%is_ok()) then
-        if(do_Lmat) vib%L_mat = vib%L_mat(:n_at3,:nvib)
-        if(do_freq) then
-            vib%freq = vib%freq(:nvib)
-            vib%red_freq = phys_conv%au2cm1(vib%freq(:nvib), .true.)
-        end if
-        if(do_Lwgt) vib%L_mwg = vib%L_mwg(:n_at3,:nvib)
-        if(do_rmas) vib%red_mass = vib%red_mass(:nvib)
-        if(do_nvib) vib%n_vib = nvib
-        vib%loaded = .true.
-    end if
-
-end procedure build_modes_vib_sq
+end procedure build_modes_moldb_sq
 
 ! ======================================================================
 

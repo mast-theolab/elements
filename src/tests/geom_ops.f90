@@ -360,7 +360,7 @@ program test_geom_ops
     end if
     
     mol_H2CO(1)%at_crd = crd_H2CO(:,:,1)
-    call Eckart_orient(mol_H2CO(1), new_mol=mol_H2CO(2))
+    call Eckart_orient(mol_H2CO(1), new_molDB=mol_H2CO(2))
     if (all(is_close_to(mol_H2CO(2)%at_crd, crd_ref, small, small))) then
         print 1011, '_mol', 'new_mol', 'PASSED'
     else

@@ -6,6 +6,7 @@
 * ***vibrational***: New function interface `full_boltz_pop` to compute the analytic total Boltzmann population for a given set of frequencies at any temperature.
 
 ### Fixed
+* ***build_boltz_pop***: The program now computes the analytical total Boltzmann population and compares it to the computed value, giving some measure of the convergence.
 * ***input***: Fixed parsing of Gaussian version in fchk files generated from checkpoint files obtained with the `c86dv` (form: CDVRev-X.XX).
 * ***vibrational***: Fixed missing initialization of `nqi` in `boltz_pop_max_quanta` when checking duplicate modes, which could lead to the false assertion that the list of mode indexes contained duplicates.
 

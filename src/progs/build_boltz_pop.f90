@@ -1,17 +1,17 @@
 program build_boltz_pop
-    use numeric, only: f0, f1, realwp
+    use numeric, only: f0, f1, f10p2, realwp
     use input, only: DataFile
     use string, only: num_chars_int
     use parse_cmdline, only: CmdArgDB
     use output, only: iu_out, sec_header, write_err
     use exception, only: BaseException, runstat
     use datatypes, only: VibrationsDB
-    use vibrational, only: boltz_pop_max_quanta
+    use vibrational, only: boltz_pop_max_quanta, full_boltz_pop
 
     integer :: i, iq, j, len_mode, max_modes, n, n_states
     integer, dimension(:), allocatable :: nq_modes, nq_max
     integer, dimension(:,:), allocatable :: nq_list
-    real(realwp) :: rho_min, rho_tot, T_ref
+    real(realwp) :: rho_min, rho_sum, rho_tot, T_ref
     real(realwp), dimension(:), allocatable :: bz_list
     character(len=80) :: fmt_state, fmt_line
     character(len=1024) :: line
@@ -131,7 +131,7 @@ program build_boltz_pop
     write(line, fmt_state) 0, 0
     write(iu_out, fmt_line) line, f0, f1
     n_states = 1
-    rho_tot = f1
+    rho_sum = f1
     do n_modes = 1, max_modes
         if (n_modes <= 1) then
             write(line, '(i0," Excited mode")') n_modes
@@ -155,7 +155,7 @@ program build_boltz_pop
                                             j=1, n_modes)
                     write(iu_out, fmt_line) line, &
                         sum(nq_list(:,i)*vibDB%freq(nq_modes(:n_modes))), bz_list(i)
-                    rho_tot = rho_tot + bz_list(i)
+                    rho_sum = rho_sum + bz_list(i)
                 end do
             end if
             do
@@ -179,6 +179,9 @@ program build_boltz_pop
 
     call sec_header(1, 'Final result')
     write(iu_out, '("> Total number of states : ",i0)') n_states
-    write(iu_out, '("> Total population : ",es14.8)') rho_tot
+    write(iu_out, '("> Computed population : ",es14.8)') rho_sum
+    rho_tot = full_boltz_pop(vibDB, T_ref, .false.)
+    write(iu_out, '("> Analytical population : ",es14.8)') rho_tot
+    write(iu_out, '("> Recovered percentage : ",f0.6,"%")') rho_sum/rho_tot*f10p2
 
 end program build_boltz_pop

@@ -1,7 +1,7 @@
 module vibrational
     !! A module storing procedures related to vibrations.
 
-    use numeric, only: f0, f1, f10m1, realwp, small
+    use numeric, only: f0, f1, f10m1, f2, realwp, small
     use lapack_drv, only: xsyev
     use physics, only: phys_conv, boltzmann, slight, planck
     use geometry, only: Eckart_orient
@@ -14,7 +14,7 @@ module vibrational
     implicit none
 
     private
-    public :: boltz_pop_max_quanta, build_modes, set_orientation
+    public :: boltz_pop_max_quanta, build_modes, full_boltz_pop, set_orientation
 
 ! ----------------------------------------------------------------------
 
@@ -295,6 +295,13 @@ module vibrational
         module procedure boltz_pop_max_quanta_arr, boltz_pop_max_quanta_dim, &
             boltz_pop_max_quanta_db, boltz_pop_max_quanta_db_dim
     end interface boltz_pop_max_quanta
+
+! ----------------------------------------------------------------------
+
+    interface full_boltz_pop
+        !! Compute the total Boltzmann population using analytical sums.
+        module procedure full_boltz_pop_arr, full_boltz_pop_db
+    end interface full_boltz_pop
 
 ! ----------------------------------------------------------------------
 
@@ -649,6 +656,112 @@ subroutine boltz_pop_max_quanta_dim(n_vib, n_modes, freq, nq_index, nq_max, &
     end if
 
 end subroutine boltz_pop_max_quanta_dim
+
+! ======================================================================
+
+function full_boltz_pop_arr(freq, temperature, incl_ZPVE) result(pop)
+    !! Compute the total Boltzmann population at a given temperature.
+    !! The function uses analytic sums true within the harmonic
+    !! approximation.
+    !! The total sum can be computed considering the (electronic)
+    !! minimum of the potential energy surface or using the ground
+    !! vibrational state as reference.
+    !!
+    !! Within the harmonic approximation, the total population is given
+    !! by,
+    !! \[
+    !!     Z = \sum_s
+    !!         e^{-\sum_{i=1}^N \frac{\hbar \omega_i}{k_B T}
+    !!         (n^s_i + \frac{1}{2})}
+    !!     = \sum_s \prod_{i=1}^N e^{-\frac{\hbar \omega_i}{k_B T}
+    !!                            (n^s_i + \frac{1}{2})}
+    !!     = \sum_{n_1=0}^\infty \sum_{n_2=0}^\infty \ldots
+    !!     \sum_{n_N=0}^\infty
+    !!     \prod_{i=1}^N e^{-\frac{\hbar \omega_i}{k_B T}
+    !!                     (n_i + \frac{1}{2})}
+    !! \]
+    !! which can be simplified to
+    !! \[
+    !!     Z = \prod_{i=1}^N \sum_{n_i=0}^\infty
+    !!      e^{-\frac{\hbar \omega_i}{k_B T}(n_i + \frac{1}{2})}
+    !!     = \prod_{i=1}^N Z_i
+    !! \]
+    !! with,
+    !! \[  
+    !!     Z_i = \sum_{n_i=0}^\infty
+    !!      e^{-\frac{\hbar \omega_i}{k_B T}(n_i + \frac{1}{2})}
+    !!     = \frac{e^{-\frac{\hbar \omega_i}{2 k_B T}}}
+    !!         {1 - e^{-\frac{\hbar \omega_i}{k_B T}}}
+    !! \]
+    !!
+    !! @note "version"
+    !! Array version, dimensions are not necessary since elemental
+    !! operations used.
+    !! @endnote
+    real(realwp), dimension(:), intent(in) :: freq
+        !! Harmonic frequencies (in cm^-1).
+    real(realwp), intent(in), optional :: temperature
+        !! Temperature, in K.
+    logical, intent(in), optional :: incl_ZPVE
+        !! Include ZPVE in calculation of the total population (default: false)
+    real(realwp) :: pop
+        !! Total Boltzmann population
+
+    real(realwp) :: bz_kT, fnum
+    logical :: add_zpve
+
+    if (temperature < f0) then
+        call runstat%raise_error( &
+            'Invalid temperature', &
+            details='Failed to compute total Boltzmann population')
+        return
+    end if
+
+    bz_kT = temperature * boltzmann/(planck*slight)
+
+    if (present(incl_ZPVE)) then
+        add_zpve = incl_ZPVE
+    else
+        add_zpve = .false.
+    end if
+
+    if (add_zpve) then
+        fnum = product(exp(-freq/(f2*bz_kT)))
+    else
+        fnum = f1
+    end if
+
+    pop = product(f1/(f1 - exp(-freq/(bz_kT))))
+
+end function full_boltz_pop_arr
+
+! ======================================================================
+
+function full_boltz_pop_db(vibDB, temperature, incl_ZPVE) result(pop)
+    !! Compute the total Boltzmann population at a given temperature.
+    !! The function uses analytic sums true within the harmonic
+    !! approximation.
+    !! The total sum can be computed considering the (electronic)
+    !! minimum of the potential energy surface or using the ground
+    !! vibrational state as reference.
+    !!
+    !! See [[full_boltz_pop_arr]] for implementation details.
+    !!
+    !! @note "version
+    !! This version takes a VibrationsDB object.
+    !! @endnote
+    class(VibrationsDB), intent(in) :: vibDB
+        !! VibrationsDB instance.
+    real(realwp), intent(in), optional :: temperature
+        !! Temperature, in K.
+    logical, intent(in), optional :: incl_ZPVE
+        !! Include ZPVE in calculation of the total population (default: false)
+    real(realwp) :: pop
+        !! Total Boltzmann population
+    
+    pop = full_boltz_pop_arr(vibDB%freq, temperature, incl_ZPVE)
+
+end function full_boltz_pop_db
 
 ! ======================================================================
 

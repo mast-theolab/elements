@@ -561,6 +561,7 @@ subroutine boltz_pop_max_quanta_dim(n_vib, n_modes, freq, nq_index, nq_max, &
         ! We should have taken care of null or negative indexes
         ! Now check duplicate.
         allocate(nqi(n_vib))
+        nqi = 0
         do i = 1, n_modes
             nqi(nq_index(i)) = nqi(nq_index(i)) + 1
         end do

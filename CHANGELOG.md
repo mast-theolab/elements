@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.05
+
+### Fixed
+* ***vibrational***: Fixed missing initialization of `nqi` in `boltz_pop_max_quanta` when checking duplicate modes, which could lead to the false assertion that the list of mode indexes contained duplicates.
+
+
 ## 0.25.04
 
 ### Note

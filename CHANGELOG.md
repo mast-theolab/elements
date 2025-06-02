@@ -15,6 +15,9 @@
 * ***vibrational***: Fixed missing initialization of `nqi` in `boltz_pop_max_quanta` when checking duplicate modes, which could lead to the false assertion that the list of mode indexes contained duplicates.
 * ***vibrational***: Fixed logic associated to optional argument `is_weighted`, which was internally interpreted with the opposite meaning.
 
+### Changed
+* ***input***: To speed up the file type identification process, by default the file is only analyzed if the extension is not conclusive.  The older behavior can be restored with `soft_check` set to `.false.`.
+
 
 ## 0.25.04
 

@@ -72,15 +72,17 @@ end function init_file
 
 ! ----------------------------------------------------------------------
 
-module function get_file_type(fname, read_file, err) result(ftype)
+module function get_file_type(fname, read_file, soft_check, err) result(ftype)
     character(len=*), intent(in) :: fname
-    !! File name.
+        !! File name.
     logical, intent(in), optional :: read_file
-    !! Read file content to guess the type.
+        !! Read file content to guess the type.
+    logical, intent(in), optional :: soft_check
+        !! Perform soft check, trusting extension if unequivocal.
     class(BaseException), allocatable :: err
-    !! Error instance.
+        !! Error instance.
     character(len=:), allocatable :: ftype
-    !! File type.
+        !! File type.
 
 end function get_file_type
 

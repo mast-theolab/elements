@@ -72,20 +72,33 @@ module procedure get_file_type
     !! Gets file type, based on the filename or the file content.
 
     integer :: ios, iu, pos
-    logical :: do_read
+    logical :: always_read, do_read, force_check, req_read
     character(len=10) :: ftype_ext, ftype_file
     character(len=1024) :: line
 
     err = InitError()
 
-    if (present(read_file)) then
-        do_read = read_file
+    if (present(soft_check)) then
+        force_check = .not.soft_check
     else
-        do_read = .true.
+        force_check = .false.
+    end if
+
+    req_read = present(read_file)
+    if (req_read) then
+        always_read = read_file
+    else
+        always_read = .false.
     end if
 
     pos = index(fname, '.', back=.true.)
     ftype_ext = alias_file_type(fname(pos+1:), is_ext=.true.)
+
+    if (ftype_ext /= ' ') then
+        do_read = force_check .or. always_read
+    else
+        do_read = .not.(req_read .and. .not.always_read)
+    end if
 
     ftype_file = ' '
     if (do_read) then
@@ -95,27 +108,34 @@ module procedure get_file_type
                                 'Could not open file to find type.')
             return
         end if
-        do
-            read(iu, '(a)', iostat=ios) line
-            if (ios == 0) then
-                if (line(:49) == &
-                    'Gaussian Version                           C   N=') then
-                    ftype_file = 'GFChk'
-                    exit
-                else if (line(:33) == ' Entering Gaussian System, Link 0') then
-                    ftype_file = 'GLog'
+        read(iu, '(a)', iostat=ios) line
+        if (ios /= 0) goto 10  ! Empty file, bypass
+        ! For log files, 'Entering Gaussian...' on first line, so check first
+        if (line(:33) == ' Entering Gaussian System, Link 0') then
+            ftype_file = 'GLog'
+        else
+            do
+                read(iu, '(a)', iostat=ios) line
+                if (ios == 0) then
+                    if (line(:49) == &
+                        'Gaussian Version                           C   N=' &
+                        ) then
+                        ftype_file = 'GFChk'
+                        exit
+                    end if
                 end if
-            end if
-        end do
+            end do
         close(iu)
+        end if
     end if
+ 10 continue
 
     if (ftype_file /= ' ') then
         ftype = trim(ftype_file)
     else if (ftype_ext /= ' ') then
         ftype = trim(ftype_ext)
     else
-        call RaiseKeyError(err, 'file type', 'analysing', &
+        call RaiseKeyError(err, 'file type', 'analyzing', &
                            'Could not define the file type.')
     end if
 

@@ -499,7 +499,7 @@ subroutine boltz_pop_max_quanta_dim(n_vib, n_modes, freq, nq_index, nq_max, &
     !! population is lower than `pop_min`.
     !! @endwarning
     !!
-    !! @note "version
+    !! @note "version"
     !! This version takes data arrays and dimensions.
     !! @endnote
     integer, intent(in) :: n_vib

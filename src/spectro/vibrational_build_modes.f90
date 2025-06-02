@@ -23,7 +23,7 @@ module procedure build_modes_arr_lt
     end if
 
     if (present(is_weighted)) then
-        do_weigh = is_weighted
+        do_weigh = .not.is_weighted
     else
         do_weigh = .true.
     end if
@@ -74,7 +74,7 @@ module procedure build_modes_arr_sq
     end if
 
     if (present(is_weighted)) then
-        do_weigh = is_weighted
+        do_weigh = .not.is_weighted
     else
         do_weigh = .true.
     end if
@@ -117,7 +117,7 @@ module procedure build_modes_db_lt
     end if
 
     if (present(is_weighted)) then
-        do_weigh = is_weighted
+        do_weigh = .not.is_weighted
     else
         do_weigh = .true.
     end if
@@ -181,13 +181,13 @@ module procedure build_modes_db_lt
     end if
 
     ! now do allocation
-    if(do_Lmat) allocate(vibDB%L_mat(n_at3,n_at3))
-    if(do_freq) then
+    if (do_Lmat) allocate(vibDB%L_mat(n_at3,n_at3))
+    if (do_freq) then
         allocate(vibDB%freq(n_at3))
         allocate(vibDB%red_freq(n_at3))
     end if
-    if(do_Lwgt) allocate(vibDB%L_mwg(n_at3,n_at3))
-    if(do_rmas) allocate(vibDB%red_mass(n_at3))
+    if (do_Lwgt) allocate(vibDB%L_mwg(n_at3,n_at3))
+    if (do_rmas) allocate(vibDB%red_mass(n_at3))
     nvib = 0
 
     if (do_Lmat.and.do_freq.and.do_Lwgt.and.do_rmas) then
@@ -245,14 +245,14 @@ module procedure build_modes_db_lt
     end if
     deallocate(F_mweigh)
     if (runstat%is_ok()) then
-        if(do_Lmat) vibDB%L_mat = vibDB%L_mat(:n_at3,:nvib)
-        if(do_freq) then
+        if (do_Lmat) vibDB%L_mat = vibDB%L_mat(:n_at3,:nvib)
+        if (do_freq) then
             vibDB%freq = vibDB%freq(:nvib)
             vibDB%red_freq = phys_conv%au2cm1(vibDB%freq(:nvib), .true.)
         end if
-        if(do_Lwgt) vibDB%L_mwg = vibDB%L_mwg(:n_at3,:nvib)
-        if(do_rmas) vibDB%red_mass = vibDB%red_mass(:nvib)
-        if(do_nvib) vibDB%n_vib = nvib
+        if (do_Lwgt) vibDB%L_mwg = vibDB%L_mwg(:n_at3,:nvib)
+        if (do_rmas) vibDB%red_mass = vibDB%red_mass(:nvib)
+        if (do_nvib) vibDB%n_vib = nvib
         vibDB%loaded = .true.
     end if
 
@@ -275,7 +275,7 @@ module procedure build_modes_db_sq
     end if
 
     if (present(is_weighted)) then
-        do_weigh = is_weighted
+        do_weigh = .not.is_weighted
     else
         do_weigh = .true.
     end if
@@ -331,13 +331,13 @@ module procedure build_modes_db_sq
     end if
 
     ! now do allocation
-    if(do_Lmat) allocate(vibDB%L_mat(n_at3,n_at3))
-    if(do_freq) then
+    if (do_Lmat) allocate(vibDB%L_mat(n_at3,n_at3))
+    if (do_freq) then
         allocate(vibDB%freq(n_at3))
         allocate(vibDB%red_freq(n_at3))
     end if
-    if(do_Lwgt) allocate(vibDB%L_mwg(n_at3,n_at3))
-    if(do_rmas) allocate(vibDB%red_mass(n_at3))
+    if (do_Lwgt) allocate(vibDB%L_mwg(n_at3,n_at3))
+    if (do_rmas) allocate(vibDB%red_mass(n_at3))
     nvib = 0
 
     if (do_Lmat.and.do_freq.and.do_Lwgt.and.do_rmas) then
@@ -395,14 +395,14 @@ module procedure build_modes_db_sq
     end if
     deallocate(F_mweigh)
     if (runstat%is_ok()) then
-        if(do_Lmat) vibDB%L_mat = vibDB%L_mat(:n_at3,:nvib)
-        if(do_freq) then
+        if (do_Lmat) vibDB%L_mat = vibDB%L_mat(:n_at3,:nvib)
+        if (do_freq) then
             vibDB%freq = vibDB%freq(:nvib)
             vibDB%red_freq = phys_conv%au2cm1(vibDB%freq(:nvib), .true.)
         end if
-        if(do_Lwgt) vibDB%L_mwg = vibDB%L_mwg(:n_at3,:nvib)
-        if(do_rmas) vibDB%red_mass = vibDB%red_mass(:nvib)
-        if(do_nvib) vibDB%n_vib = nvib
+        if (do_Lwgt) vibDB%L_mwg = vibDB%L_mwg(:n_at3,:nvib)
+        if (do_rmas) vibDB%red_mass = vibDB%red_mass(:nvib)
+        if (do_nvib) vibDB%n_vib = nvib
         vibDB%loaded = .true.
     end if
 
@@ -427,7 +427,7 @@ module procedure build_modes_dim_lt
     end if
 
     if (present(is_weighted)) then
-        do_weigh = is_weighted
+        do_weigh = .not.is_weighted
     else
         do_weigh = .true.
     end if
@@ -478,7 +478,7 @@ module procedure build_modes_dim_sq
     end if
 
     if (present(is_weighted)) then
-        do_weigh = is_weighted
+        do_weigh = .not.is_weighted
     else
         do_weigh = .true.
     end if
@@ -521,7 +521,7 @@ module procedure build_modes_moldb_lt
     end if
 
     if (present(is_weighted)) then
-        do_weigh = is_weighted
+        do_weigh = .not.is_weighted
     else
         do_weigh = .true.
     end if
@@ -572,7 +572,7 @@ module procedure build_modes_moldb_sq
     end if
 
     if (present(is_weighted)) then
-        do_weigh = is_weighted
+        do_weigh = .not.is_weighted
     else
         do_weigh = .true.
     end if

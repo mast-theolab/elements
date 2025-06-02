@@ -39,19 +39,21 @@ module numeric
     real(realwp), parameter :: &
         pi = f4*atan(f1)
 
-    ! "Sensible" thresholds for scientific calculations
-    ! These thresholds are used internally for closeness tests.
+    ! Variants of some common numbers that may be used in different modules
+    ! "Sensible" thresholds used for "closeness" tests in scientific calc.:
     ! near0: to test numbers in terms of numeric precision (epsilon)
     ! small: for final quantities with values typically of magnitude around 1
     ! null0: values below this thresholds can be safely considered null.
-    real(real32), parameter, private :: &
+    real(real32), parameter :: &
         near0_r32 = 1.0e-6_real32, &
-        small_r32 = 1.0e-4_real32, &
-        null0_r32 = 1.0e-32_real32
-    real(real64), parameter, private :: &
+        null0_r32 = 1.0e-32_real32, &
+        pi_r32 = 4.0_real32*atan(1.0_real32), &
+        small_r32 = 1.0e-4_real32
+    real(real64), parameter :: &
         near0_r64 = 1.0e-10_real64, &
-        small_r64 = 1.0e-6_real64, &
-        null0_r64 = 1.0e-32_real64
+        null0_r64 = 1.0e-32_real64, &
+        pi_r64 = 4.0_real64*atan(1.0_real64), &
+        small_r64 = 1.0e-6_real64
         
     interface operator(.iscloseto.)
         module procedure :: is_close_to_r32_generic, is_close_to_r64_generic

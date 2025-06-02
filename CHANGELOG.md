@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.25.05
+## 0.25.06
 
 ### Added
+* ***physics***: New derived type `SpectroConv` and new instance `spec_conv` to store common conversion operations related to computational spectroscopy.
+* ***physics***: New type-bound procedure `mwq2q` to facilitate conversions of quantity expressed with respect to normal coordinates.
 * ***vibrational***: New function interface `full_boltz_pop` to compute the analytic total Boltzmann population for a given set of frequencies at any temperature.
 
 ### Fixed

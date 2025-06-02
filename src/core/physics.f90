@@ -440,7 +440,6 @@ elemental real(real32) function s_conv_mwq2q(x, omega, reverse)
     ! in standard atomic units
     real(real64), parameter :: &
         factor = sqrt(hbar_amu_a0_s1/(2.0_real64*pi*slight))
-    real(real64), parameter :: m2ang = 1.0e10
     logical :: do_reverse
 
     if (present(reverse)) then
@@ -490,7 +489,6 @@ elemental real(real64) function d_conv_mwq2q(x, omega, reverse)
     ! in standard atomic units
     real(real64), parameter :: &
         factor = sqrt(hbar_amu_a0_s1/(2.0_real64*pi*slight))
-    real(real64), parameter :: m2ang = 1.0e10
     logical :: do_reverse
 
     if (present(reverse)) then

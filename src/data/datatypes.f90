@@ -172,6 +172,8 @@ module datatypes
         !!  2. property not found.
         !! 10. unspecified error.
         !! 99. inconsistency in query, e.g., end state < start state
+    contains
+        procedure :: clear => clear_propDB
     end type PropertyDB
 
     type, public :: VibrationsDB
@@ -288,6 +290,32 @@ subroutine copy_molDB_from(this, mol)
     this%loaded = mol%loaded
     this%dens_loaded = mol%dens_loaded
 end subroutine copy_molDB_from
+
+! ======================================================================
+
+subroutine clear_propDB(this)
+    !! Delete and reset the content of a `PropertyDB` instance.
+    !!
+    !! Deletes the allocated arrays in a `PropertyDB` object and resets
+    !! its variables.
+    class(PropertyDB), intent(inout) :: this
+        !! PropertyDB instance to clear.
+
+    this%id = -1
+    this%order = -1
+    this%states = [0, 0]
+    this%loaded = .false.
+    this%known = .false.
+    this%istat = 0
+    if (allocated(this%label)) deallocate(this%label)
+    if (allocated(this%name)) deallocate(this%name)
+    if (allocated(this%unit)) deallocate(this%unit)
+    if (allocated(this%pdim)) deallocate(this%pdim)
+    if (allocated(this%shape)) deallocate(this%shape)
+    if (allocated(this%dim_shape)) deallocate(this%dim_shape)
+    if (allocated(this%data)) deallocate(this%data)
+
+end subroutine clear_propDB
 
 ! ======================================================================
 

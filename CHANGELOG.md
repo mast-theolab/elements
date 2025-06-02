@@ -3,6 +3,7 @@
 ## 0.25.06
 
 ### Added
+* ***datatypes***: New method in `PropertyDB` to easily clear the stored data and free memory.
 * ***numeric***: Precision-specific thresholds and value of pi are now publicly available for modules that do not use the _math_ library otherwise.
 * ***physics***: New derived type `SpectroConv` and new instance `spec_conv` to store common conversion operations related to computational spectroscopy.
 * ***physics***: New type-bound procedure `mwq2q` to facilitate conversions of quantity expressed with respect to normal coordinates.

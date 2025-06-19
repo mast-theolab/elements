@@ -17,6 +17,7 @@
 
 ### Changed
 * ***input***: To speed up the file type identification process, by default the file is only analyzed if the extension is not conclusive.  The older behavior can be restored with `soft_check` set to `.false.`.
+* ***build***: Build file `xmake.lua` has been split into 4 files, with three sub-files storing recipes for the library (`xmake_libs.lua`), the internal tests (`xmake_tests.lua`) and the stand-alone programs (`xmake_progs.lua`).
 
 
 ## 0.25.04

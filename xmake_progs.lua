@@ -1,3 +1,10 @@
+target("autoclave")
+    set_default(false)
+    add_packages("openmp")
+    set_rundir("$(projectdir)/tests")
+    add_deps("elements")
+    add_files("src/progs/autoclave.f90")
+
 target("build_boltz_pop")
     set_default(false)
     add_packages("openmp")

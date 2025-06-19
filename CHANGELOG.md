@@ -3,6 +3,7 @@
 ## 0.25.06
 
 ### Added
+* ***autoclave***: New program to compute VPT2 vibrational energies from a (Gaussian) logfile.  The program handles file parsing itself.
 * ***datatypes***: New method in `PropertyDB` to easily clear the stored data and free memory.
 * ***numeric***: Precision-specific thresholds and value of pi are now publicly available for modules that do not use the _math_ library otherwise.
 * ***physics***: New derived type `SpectroConv` and new instance `spec_conv` to store common conversion operations related to computational spectroscopy.

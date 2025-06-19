@@ -8,6 +8,8 @@
 * ***physics***: New derived type `SpectroConv` and new instance `spec_conv` to store common conversion operations related to computational spectroscopy.
 * ***physics***: New type-bound procedure `mwq2q` to facilitate conversions of quantity expressed with respect to normal coordinates.
 * ***vibrational***: New function interface `full_boltz_pop` to compute the analytic total Boltzmann population for a given set of frequencies at any temperature.
+* ***vibrational***: New module `vibrational_pt2` dedicated to vibrational perturbation theory at second order.
+* ***vibrational***: New function interface `calc_en_vib` in `vibrational_pt2` to compute anharmonic vibrational energies without variational correction.
 
 ### Fixed
 * ***build_boltz_pop***: The program now computes the analytical total Boltzmann population and compares it to the computed value, giving some measure of the convergence.

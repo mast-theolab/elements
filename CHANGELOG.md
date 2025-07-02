@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.07
+
+### Fixed
+* ***vibronic***: Extrapolated shift vector (VH, VG) now supports imaginary frequencies given as negative numbers.
+
+
 ## 0.25.06
 
 ### Added

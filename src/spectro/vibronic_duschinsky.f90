@@ -475,7 +475,7 @@ module function Duschinsky_shift_vertical_gradient(n_vib, n_at, L_mat1, at_mass1
             !$omp parallel do private(j)
             do j = 1, n_vib
                 Kvec(j) = Kvec(j) &
-                        - (f1 / red_freq2(j)**2) &
+                        - (f1 / (abs(red_freq2(j))*red_freq2(j))) &
                             * L_mat1(k + (i - 1) * 3, j) * tmp
             end do
             !$omp end parallel do
@@ -519,7 +519,8 @@ module function Duschinsky_shift_vertical_hessian(n_vib, n_at, L_mat1, at_mass1,
 
     !$omp parallel do private(i)
     do i = 1, n_vib
-        tmp1_r2(:, i) = Jmat(:, i) / red_freq2(i)**2
+        tmp1_r2(:, i) = Jmat(:, i) &
+            / (abs(red_freq2(i))*red_freq2(i))
     end do
     !$omp end parallel do
 

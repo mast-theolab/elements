@@ -5,6 +5,9 @@
 ### Fixed
 * ***vibronic***: Extrapolated shift vector (VH, VG) now supports imaginary frequencies given as negative numbers.
 
+### Changed
+* ***build***: OpenMP is now enabled by default in `exc_sos`.
+
 
 ## 0.25.06
 

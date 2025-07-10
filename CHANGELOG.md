@@ -2,6 +2,9 @@
 
 ## 0.25.07
 
+### Added
+* ***arrays***: new interface `indexes_sym2lt` to convert the coordinates (2-4) in a nD symmetric tensor to the linear storage index of the lower-triangular block.
+
 ### Fixed
 * ***vibronic***: Extrapolated shift vector (VH, VG) now supports imaginary frequencies given as negative numbers.
 

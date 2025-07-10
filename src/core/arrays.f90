@@ -7,7 +7,95 @@ module arrays
         module procedure symm_tri_arr_r32, symm_tri_arr_r64
     end interface symm_tri_array
 
+    interface indexes_sym2lt
+        module procedure ij2lin_lt, ijk2lin_lt, ijkl2lin_lt
+    end interface indexes_sym2lt
+
 contains
+
+! ======================================================================
+
+integer function ij2lin_lt(i, j)
+    !! Convert indexes of square matrix to linear lower-tri. form.
+    !!
+    !! Converts a couple of indexes (i,j) to a linear storage of the
+    !! lower-triangular block of a symmetric square matrix.
+    integer, intent(in) :: i, j
+        !! Indexes
+
+    if (i > j) then
+        ij2lin_lt = (i-1)*i/2 + j
+    else if (i < j) then
+        ij2lin_lt = (j-1)*j/2 + i
+    else
+        ij2lin_lt = i*(i+1)/2
+    end if
+
+end function ij2lin_lt
+
+! ======================================================================
+
+integer function ijk2lin_lt(i, j, k)
+    !! Convert indexes of 3D tensor to linear lower-triangular form.
+    !!
+    !! Converts a set of indexes (i,j,k) to a linear storage of the
+    !! lower-triangular block.
+    integer, intent(in) :: i, j, k
+        !! Indexes.
+
+    if (i >= j .and. i >= k) then
+        if (j >= k) then
+            ijk2lin_lt = (i-1)*i*(i+1)/6 + (j-1)*j/2 + k
+        else
+            ijk2lin_lt = (i-1)*i*(i+1)/6 + (k-1)*k/2 + j
+        end if
+    else if (j >= k) then
+        if (i >= k) then
+            ijk2lin_lt = (j-1)*j*(j+1)/6 + (i-1)*i/2 + k
+        else
+            ijk2lin_lt = (j-1)*j*(j+1)/6 + (k-1)*k/2 + i
+        end if
+    else
+        if (i >= j) then
+            ijk2lin_lt = (k-1)*k*(k+1)/6 + (i-1)*i/2 + j
+        else
+            ijk2lin_lt = (k-1)*k*(k+1)/6 + (j-1)*j/2 + i
+        end if
+    end if
+
+end function ijk2lin_lt
+
+! ======================================================================
+
+integer function ijkl2lin_lt(i, j, k, l)
+    !! Convert indexes of 4D tensor to linear lower-triangular form.
+    !!
+    !! Converts a set of indexes (i,j,k,l) to a linear storage of the
+    !! lower-triangular block.
+    integer, intent(in) :: i, j, k, l
+        !! Indexes.
+
+    integer :: ii, ival
+    integer, dimension(4) :: ijkl
+
+    ijkl = [i, j, k, l]
+
+    !! Sort ijkl in increasing order
+    ii = 1
+    do while (ii < 4)
+        if (ijkl(ii) > ijkl(ii+1)) then
+            ival = ijkl(ii)
+            ijkl(ii) = ijkl(ii+1)
+            ijkl(ii+1) = ival
+            ii = 0
+        end if
+        ii = ii + 1
+    end do
+
+    ijkl2lin_lt = (ijkl(4)-1)*ijkl(4)*(ijkl(4)+1)*(ijkl(4)+2)/24 &
+        + (ijkl(3)-1)*ijkl(3)*(ijkl(3)+1)/6 + (ijkl(2)-1)*ijkl(2)/2 + ijkl(1)
+
+end function ijkl2lin_lt
 
 ! ======================================================================
 

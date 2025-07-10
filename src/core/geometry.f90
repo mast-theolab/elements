@@ -50,8 +50,8 @@ function center_of_mass_arr(at_crd, at_mass) result(com)
     !! Computes the center of mass of a given structure.
     !!
     !! @note "Version"
-    !! This version takes data arrays as elements, recovering dimensions
-    !! from their shape.
+    !! This version takes data arrays as arguments, recovering
+    !! dimensions from their shape.
     !! Information that can be easily recovered, like the number of
     !! atoms from the array sizes, is recomputed.
     !! @endnote

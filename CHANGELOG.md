@@ -9,6 +9,7 @@
 * ***vibronic***: new `extrapolate_geom` to compute the extrapolated minimum geometry for vertical vibronic models (VG, VH).
 
 ### Fixed
+* ***input***: the fchk parser now handles better missing quantities related to electronic excited states.
 * ***vibronic***: Extrapolated shift vector (VH, VG) now supports imaginary frequencies given as negative numbers.
 
 ### Changed

@@ -357,7 +357,11 @@ module procedure build_exc_data_fchk
     end if
 
     ! First check that NLR == 1. We do not support the other case for now
-    NLR = to_int(dbase(8)%idata(1))
+    if (dbase(8)%dtype /= '0') then
+        NLR = to_int(dbase(8)%idata(1))
+    else
+        NLR = to_int(dbase(4)%idata(3))
+    end if
     if (NLR > 1) then
         call RaiseError(dfile%error, 'NLR /= 1 not yet supported.  Sorry.')
         return
@@ -395,33 +399,38 @@ module procedure build_exc_data_fchk
             ! CI.
             ! We need to do the inverse operation to get the correct
             ! coefficients.
-            if (dfile%check_version(major='G16')) then
-                exc%g2e_dens = &
-                    reshape(dbase(10)%rdata, [n_basis,n_basis,2,exc%n_states])&
-                    / sqrt(f2)
-            else
-                exc%g2e_dens = reshape(dbase(10)%rdata, &
-                                       [n_basis,n_basis,2,exc%n_states])
+            if (dbase(10)%dtype /= '0') then
+                if (dfile%check_version(major='G16')) then
+                    exc%g2e_dens = &
+                        reshape(dbase(10)%rdata, &
+                                [n_basis,n_basis,2,exc%n_states]) &
+                               / sqrt(f2)
+                else
+                    exc%g2e_dens = reshape(dbase(10)%rdata, &
+                                        [n_basis,n_basis,2,exc%n_states])
+                end if
             end if
 
             ! Excited-state densities are stored in lower-triangular forms.
             ! We need to unpack them.
             ! They are always stored for both a and b, but in case of closed-shell,
             ! we only keep the first block (they are equal.)
-            allocate(exc%exc_dens(n_basis,n_basis,n_ab,exc%n_states))
-            
-            nbas_lt = n_basis*(n_basis+1)/2
-            do i = 1, exc%n_states
-                ioff = (i-1)*2*nbas_lt
-                do i_ab = 1, n_ab
-                    call symm_tri_array(n_basis, &
-                        dbase(11)%rdata(ioff+(i_ab-1)*nbas_lt+1:), &
-                        linear=.true., lower=.true., anti_symm=.false., &
-                        arr_new=exc%exc_dens(:,:,i_ab,i))
+            if (dbase(11)%dtype /= '0') then
+                allocate(exc%exc_dens(n_basis,n_basis,n_ab,exc%n_states))
+                
+                nbas_lt = n_basis*(n_basis+1)/2
+                do i = 1, exc%n_states
+                    ioff = (i-1)*2*nbas_lt
+                    do i_ab = 1, n_ab
+                        call symm_tri_array(n_basis, &
+                            dbase(11)%rdata(ioff+(i_ab-1)*nbas_lt+1:), &
+                            linear=.true., lower=.true., anti_symm=.false., &
+                            arr_new=exc%exc_dens(:,:,i_ab,i))
+                    end do
                 end do
-            end do
 
-            exc%dens_loaded = .true.
+                exc%dens_loaded = .true.
+            end if
         end if
     end if
 

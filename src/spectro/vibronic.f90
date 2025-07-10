@@ -1,13 +1,15 @@
 module vibronic
 
-    use numeric, only: realwp
+    use numeric, only: f0, f1, realwp
     use datatypes, only: MoleculeDB, VibrationsDB
+    use physics, only: phys_conv
+    use exception, only: runstat
 
     implicit none
 
     private
 
-    public :: Duschinsky_matrix, Duschinsky_shift
+    public :: Duschinsky_matrix, Duschinsky_shift, extrapolate_geom
 
     interface Duschinsky_matrix
         !! Computes the Duschinsky matrix J
@@ -122,6 +124,144 @@ module vibronic
 
     end interface Duschinsky_shift
 
+! ----------------------------------------------------------------------
+
+    interface extrapolate_geom
+        !! Extrapolate geometry from shift vector.
+        !!
+        !! Considering a reference, vertical geometry, the routine
+        !! extrapolates a new equilibrium geometry based on the
+        !! Duschinsky vector.
+        module procedure extrapolate_geom_arr, extrapolate_geom_dim, &
+            extrapolate_geom_db
+    end interface extrapolate_geom
+
 contains
+
+! ======================================================================
+
+function extrapolate_geom_arr(coord_ref, at_mass, L_mat, dusch_vec) &
+        result(coord)
+    !! Extrapolate the geometry using data arrays as arguments,
+    !! recovering dimensions from their shape.
+    !! Information that can be easily recovered, like the number of
+    !! atoms from the array sizes, is recomputed.
+    real(realwp), dimension(:,:), intent(in) :: coord_ref
+        !! Coordinates of the reference point, in au.
+    real(realwp), dimension(:), intent(in) :: at_mass
+        !! Atomic masses, in u.
+    real(realwp), dimension(:,:), intent(in) :: L_mat
+        !! Dimensionless Hessian eigenvectors matrix.
+    real(realwp), dimension(:), intent(in) :: dusch_vec
+        !! Duschinsky shift vector, in au.
+    real(realwp), dimension(:,:), allocatable :: coord
+        !! Extrapolated coordinates, in au.
+
+    integer :: n_atoms, n_vib
+
+    n_atoms = size(at_mass)
+    n_vib = size(dusch_vec)
+    if (size(coord_ref, 2) /= n_atoms) then
+        call runstat%raise_error( &
+            'Unable to build extrapolated geometry', &
+            details='Inconsistent size between coordinates and masses', &
+            source='extrapolate_geom_arr', cat='dev')
+        return
+    end if
+
+    if (size(L_mat, 2) /= n_vib .and. size(L_mat, 1) /= 3*n_atoms) then
+        call runstat%raise_error( &
+            'Unable to build extrapolated geometry', &
+            details='Inconsistent size between Lmat and coords/shift vec', &
+            source='extrapolate_geom_arr', cat='dev')
+        return
+    end if
+
+    coord = extrapolate_geom_dim(n_atoms, n_vib, coord_ref, at_mass, L_mat, &
+                                 dusch_vec)
+
+end function extrapolate_geom_arr
+
+! ======================================================================
+
+function extrapolate_geom_db(molDB, vibDB, dusch_vec) result(coord)
+    !! Extrapolate the geometry using data data objects as arguments.
+    class(MoleculeDB), intent(in) :: molDB
+        !! Molecule database.
+    type(VibrationsDB), intent(in) :: vibDB
+        !! Vibration database.
+    real(realwp), dimension(:), intent(in) :: dusch_vec
+        !! Duschinsky shift vector, in au.
+    real(realwp), dimension(:,:), allocatable :: coord
+        !! Extrapolated coordinates, in au.
+
+    if (.not.molDB%loaded) then
+        call runstat%raise_error( &
+            'Unable to build extrapolated geometry', &
+            details='Molecular database is not loaded', &
+            source='extrapolate_geom_db', cat='dev')
+        return
+    end if
+
+    if (.not.vibDB%loaded .or. .not.allocated(vibDB%L_mat)) then
+        call runstat%raise_error( &
+            'Unable to build extrapolated geometry', &
+            details='Missing Hessian eigenvectors matrix', &
+            source='extrapolate_geom_db', cat='dev')
+        return
+    end if
+
+    if (size(vibDB%L_mat, 2) /= size(dusch_vec)) then
+        call runstat%raise_error( &
+            'Unable to build extrapolated geometry', &
+            details='Inconsistent size between Lmat and shift vec', &
+            source='extrapolate_geom_db', cat='dev')
+        return
+    end if
+
+    coord = extrapolate_geom_dim(molDB%n_at, vibDB%n_vib, molDB%at_crd, &
+                                 molDB%at_mas, vibDB%L_mat, dusch_vec)
+
+end function extrapolate_geom_db
+
+! ======================================================================
+
+function extrapolate_geom_dim(n_atoms, n_vib, coord_ref, at_mass, L_mat, &
+                              dusch_vec) result(coord)
+    !! Extrapolate the geometry using data arrays as arguments.
+    !! No check on arrays size is done besides the explicit
+    !! specification.
+    integer, intent(in) :: n_atoms
+        !! Number of atoms.
+    integer, intent(in) :: n_vib
+        !! Number of vibrations.
+    real(realwp), dimension(3,n_atoms), intent(in) :: coord_ref
+        !! Coordinates of the reference point, in au.
+    real(realwp), dimension(n_atoms), intent(in) :: at_mass
+        !! Atomic masses, in u.
+    real(realwp), dimension(3*n_atoms,n_vib), intent(in) :: L_mat
+        !! Dimensionless Hessian eigenvectors matrix.
+    real(realwp), dimension(n_vib), intent(in) :: dusch_vec
+        !! Duschinsky shift vector, in au.
+    real(realwp), dimension(:,:), allocatable :: coord
+        !! Extrapolated coordinates, in au.
+
+    integer :: ia, ix
+    real(realwp) :: weight
+
+    allocate(coord(3,n_atoms))
+
+    do ia = 1, n_atoms
+        weight = f1/sqrt(phys_conv%au2amu(at_mass(ia), reverse=.true.))
+        do ix = 1, 3
+            coord(ix,ia) = coord_ref(ix,ia) &
+                + sum(L_mat((ia-1)+ix,:)*dusch_vec(:))*weight
+        end do
+    end do
+
+end function extrapolate_geom_dim
+
+! ======================================================================
+
 
 end module vibronic

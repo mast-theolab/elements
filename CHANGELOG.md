@@ -4,6 +4,7 @@
 
 ### Added
 * ***arrays***: new interface `indexes_sym2lt` to convert the coordinates (2-4) in a nD symmetric tensor to the linear storage index of the lower-triangular block.
+* ***calcites***: new program to compute the thermal contributions to vibrational spectra within the harmonic approximation for a given type of spectroscopy.
 * ***vertex***: new program to compute and print the extrapolated geometry for vibronic vertical models.
 * ***vibronic***: new `extrapolate_geom` to compute the extrapolated minimum geometry for vertical vibronic models (VG, VH).
 

@@ -22,23 +22,6 @@ target("build_boltz_pop")
                           "-p", "0.005",
                           "-o", "bzpop_meox_T400_P005.txt"}})
 
-target("calcites")
-    set_default(false)
-    add_packages("openmp")
-    set_rundir("$(projectdir)/tests")
-    add_deps("elements")
-    add_files("src/progs/calcites.f90")
-    -- add_tests("h2co",
-    --           {runargs = {"H2CO_S0_frq.fchk",
-    --                       "-t", "1000",
-    --                       "-p", "0.001",
-    --                       "-o", "bzpop_h2co_T1000_P001.txt"}})
-    -- add_tests("meox",
-    --           {runargs = {"meox.S0.vac.B3PW91.junTZ.frq-ROA.fchk",
-    --                       "-t", "400",
-    --                       "-p", "0.005",
-    --                       "-o", "bzpop_meox_T400_P005.txt"}})
-
 target("gen_py_atomDB")
     set_default(false)
     set_rundir("$(projectdir)/tests")
@@ -150,3 +133,10 @@ target("mcd_tensor")
                           "-o", "mcd_hof_closed_50-50_S1_hybrid-exc.txt",
                           "--final=2",
                           "--no-timestamp"}})
+
+target("vertex")
+    set_default(false)
+    add_packages("openmp")
+    set_rundir("$(projectdir)/tests")
+    add_deps("elements")
+    add_files("src/progs/vertex.f90")

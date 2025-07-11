@@ -25,7 +25,7 @@ module parse_cmdline
         character(len=:), private, allocatable :: label
         integer :: min_num = 1
         integer :: max_num = 1
-        integer :: is_set
+        integer :: is_set = 0
         !! is_set: value has been set: 0: no, 1: default, 2: user
         logical :: is_req  ! Argument is not optional
         logical :: is_pos  ! Argument is positional

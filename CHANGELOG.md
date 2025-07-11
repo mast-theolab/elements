@@ -10,6 +10,7 @@
 
 ### Fixed
 * ***input***: the fchk parser now handles better missing quantities related to electronic excited states.
+* ***parse_cmdline***: `ArgObj%is_set` was not properly set if no default value was provided and the user had not provided any value, resulting in a risk of wrong interpretation if the value was randomly set to 1 or 2.
 * ***vibronic***: Extrapolated shift vector (VH, VG) now supports imaginary frequencies given as negative numbers.
 
 ### Changed

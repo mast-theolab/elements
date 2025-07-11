@@ -284,6 +284,8 @@ module procedure add_argument_int
                 call RaiseArgError(this%error, 'def_value', 'Not a number')
                 return
             end if
+        else
+            arg_val%is_set = 0
         end if
         if (present(min_value)) then
             if (is_number(min_value)) then
@@ -540,6 +542,8 @@ module procedure add_argument_real
                 call RaiseArgError(this%error, 'def_value', 'Not a number')
                 return
             end if
+        else
+            arg_val%is_set = 0
         end if
         if (present(min_value)) then
             if (is_number(min_value)) then
@@ -773,6 +777,8 @@ module procedure add_argument_bool
     if (present(def_value)) then
         arg_val%value = def_value
         arg_val%is_set = 1
+    else
+        arg_val%is_set = 0
     end if
 
     this%args(this%nargs)%arg = arg_val

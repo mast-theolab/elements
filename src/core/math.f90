@@ -105,7 +105,7 @@ end interface
     interface operator(.x.)
         !! Operator to compute the cross product: C = A x B
         !! @note
-        !! `A` or `B` can be list of vectors, in which case `C` is a 
+        !! `A` or `B` can be list of vectors, in which case `C` is a
         !! list of vectors
         !! @endnote
         module procedure s_cross, d_cross, &
@@ -248,6 +248,32 @@ subroutine build_PascalTriangle(n, do_real)
 
     return
 end subroutine build_PascalTriangle
+
+! ======================================================================
+
+recursive function double_factorial(n) result(n1)
+    !! Compute the double factorial n!!
+    !!
+    !! Given a value n, computes the double factorial
+    !! \[ n!! = n*(n-2)*(n-4)... \]
+    integer, intent(in) :: n
+        !! Number.
+    integer :: n1
+        !! Double factorial result.
+
+    integer :: i
+
+    if (n < -1) then
+       error stop 'double factorial operation undefined for numbers lower&
+       & than -1!'
+    endif
+
+    n1 = 1
+    do i = n, 2, -2
+       n1 = n1 * i
+    end do
+
+end function double_factorial
 
 ! ======================================================================
 

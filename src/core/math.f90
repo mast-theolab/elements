@@ -11,562 +11,211 @@ module math
     real(real64), parameter :: pi_r64 = 4.0_real64*atan(1.0_real64)
     real(real32), parameter :: pi_r32 = 4.0_real32*atan(1.0_real32)
 
+! ----------------------------------------------------------------------
+
+interface
+    module function d_cross(vecA, vecB) result(vecC)
+        !! Cross vector between 2 64-bits real Cartesian vectors.
+        real(real64), dimension(3), intent(in) :: vecA
+            !! vector A
+        real(real64), dimension(3), intent(in) :: vecB
+            !! vector B
+        real(real64), dimension(3) :: vecC
+            !! vector C
+    end function d_cross
+
+    module function d_cross_mat_mat(matA, matB) result(matC)
+        !! Computes the cross vector between 2 lists of Cartesian vectors.
+        real(real64), dimension(:,:), intent(in) :: matA
+            !! list of vectors A.
+        real(real64), dimension(:,:), intent(in) :: matB
+            !! list of vectors B.
+        real(real64), dimension(:,:,:), allocatable :: matC
+            !! list of lists of vectors C.
+    end function d_cross_mat_mat
+
+    module function d_cross_mat_vec(matA, vecB) result(matC)
+        !! Computes the cross product between a list of 64-bits real
+        !! Cartesian vectors and 1 64-bits real vector.
+        real(real64), dimension(:,:), intent(in) :: matA
+            !! list of vectors A (dimension: 3,N).
+        real(real64), dimension(3), intent(in) :: vecB
+            !! vector B.
+        real(real64), dimension(:,:), allocatable :: matC
+            !! list of vectors C.
+    end function d_cross_mat_vec
+
+    module function d_cross_vec_mat(vecA, matB) result(matC)
+        !! Computes the cross product between 1 64-bits real Cartesian
+        !! vector and a list of 64-bits real vectors.
+        real(real64), dimension(3), intent(in) :: vecA
+            !! vector A.
+        real(real64), dimension(:,:), intent(in) :: matB
+            !! list of vectors B (dimension: 3,N).
+        real(real64), dimension(:,:), allocatable :: matC
+            !! list of vectors C.
+    end function d_cross_vec_mat
+
+    module function s_cross(vecA, vecB) result(vecC)
+        !! Cross vector between 2 32-bits real Cartesian vectors.
+        real(real32), dimension(3), intent(in) :: vecA
+            !! vector A
+        real(real32), dimension(3), intent(in) :: vecB
+            !! vector B
+        real(real32), dimension(3) :: vecC
+            !! vector C
+    end function s_cross
+
+    module function s_cross_mat_mat(matA, matB) result(matC)
+        !! Computes the cross vector between 2 lists of Cartesian vectors.
+        real(real32), dimension(:,:), intent(in) :: matA
+            !! list of vectors A.
+        real(real32), dimension(:,:), intent(in) :: matB
+            !! list of vectors B.
+        real(real32), dimension(:,:,:), allocatable :: matC
+            !! list of lists of vectors C.
+    end function s_cross_mat_mat
+
+    module function s_cross_mat_vec(matA, vecB) result(matC)
+        !! Computes the cross product between a list of 32-bits real
+        !! Cartesian vectors and 1 32-bits real vector.
+        real(real32), dimension(:,:), intent(in) :: matA
+            !! list of vectors A (dimension: 3,N).
+        real(real32), dimension(3), intent(in) :: vecB
+            !! vector B.
+        real(real32), dimension(:,:), allocatable :: matC
+            !! list of vectors C.
+    end function s_cross_mat_vec
+
+    module function s_cross_vec_mat(vecA, matB) result(matC)
+        !! Computes the cross product between 1 32-bits real Cartesian
+        !! vector and a list of 32-bits real vectors.
+        real(real32), dimension(3), intent(in) :: vecA
+            !! vector A.
+        real(real32), dimension(:,:), intent(in) :: matB
+            !! list of vectors B (dimension: 3,N).
+        real(real32), dimension(:,:), allocatable :: matC
+            !! list of vectors C.
+    end function s_cross_vec_mat
+
+end interface
+
+! ----------------------------------------------------------------------
+
     interface operator(.x.)
+        !! Operator to compute the cross product: C = A x B
+        !! @note
+        !! `A` or `B` can be list of vectors, in which case `C` is a 
+        !! list of vectors
+        !! @endnote
         module procedure s_cross, d_cross, &
             s_cross_vec_mat, d_cross_vec_mat, &
             s_cross_mat_vec, d_cross_mat_vec, &
             s_cross_mat_mat, d_cross_mat_mat
     end interface operator(.x.)
 
+! ----------------------------------------------------------------------
+
     interface cross
+        !! Compute the cross product: C = A x B
         module procedure s_cross, d_cross, &
             s_cross_vec_mat, d_cross_vec_mat, &
             s_cross_mat_vec, d_cross_mat_vec, &
             s_cross_mat_mat, d_cross_mat_mat
     end interface cross
 
+! ----------------------------------------------------------------------
+
     interface inv_mat
-        module procedure s_inv_mat, d_inv_mat, c_inv_mat, z_inv_mat
+        !! Invert matrices using LAPACK drivers.
+        module subroutine s_inv_mat(A, A_inv)
+            !! Invert a real (32 bits) matrix using LAPACK.
+            use lapack_drv, only: xgetrf, xgetri
+
+            real(real32), dimension(:, :), intent(in)  :: A
+                !! Input matrix A of size (n, n)
+            real(real32), dimension(:, :), intent(out) :: A_inv
+                !! Inverse of the input matrix A
+        end subroutine s_inv_mat
+
+        module subroutine d_inv_mat(A, A_inv)
+            !! Invert a real (64 bits) matrix using LAPACK.
+            use lapack_drv, only: xgetrf, xgetri
+
+            real(real64), dimension(:, :), intent(in)  :: A
+                !! Input matrix A of size (n, n)
+            real(real64), dimension(:, :), intent(out) :: A_inv
+                !! Inverse of the input matrix A
+        end subroutine d_inv_mat
+
+        module subroutine c_inv_mat(A, A_inv)
+            !! Invert a complex (32 bits) matrix using LAPACK.
+            use lapack_drv, only: xgetrf, xgetri
+
+            complex(real32), dimension(:, :), intent(in)  :: A
+                !! Input complex matrix A of size (n, n)
+            complex(real32), dimension(:, :), intent(out) :: A_inv
+                !! Inverse of the input complex matrix A
+        end subroutine c_inv_mat
+
+        module subroutine z_inv_mat(A, A_inv)
+            !! Invert a complex (64 bits) matrix using LAPACK.
+            use lapack_drv, only: xgetrf, xgetri
+
+            complex(real64), dimension(:, :), intent(in)  :: A
+                !! Input complex matrix A of size (n, n)
+            complex(real64), dimension(:, :), intent(out) :: A_inv
+                !! Inverse of the input complex matrix A
+        end subroutine z_inv_mat
     end interface inv_mat
 
+! ----------------------------------------------------------------------
+
     interface det
-        module procedure s_det, d_det, c_det, z_det
+        !! Compute the determinant of a matrix
+        module function s_det(A) result(det_A)
+            !! Compute the determinant of a real (32 bits) matrix.
+            use lapack_drv, only: xgetrf
+
+            real(real32), dimension(:, :), intent(in) :: A
+                !! Input matrix A of size (n, n)
+            real(real32) :: det_A
+                !! Output determinant det_A
+        end function s_det
+
+        module function d_det(A) result(det_A)
+            !! Compute the determinant of a real (64 bits) matrix.
+            use lapack_drv, only: xgetrf
+
+            real(real64), dimension(:, :), intent(in) :: A
+                !! Input matrix A of size (n, n)
+            real(real64) :: det_A
+                !! Output determinant det_A
+        end function d_det
+
+        module function c_det(A) result(det_A)
+            !! Compute the determinant of a complex (32 bits) matrix.
+            use lapack_drv, only: xgetrf
+
+            complex(real32), dimension(:, :), intent(in) :: A
+            !! Input complex matrix A of size (n, n)
+            complex(real32) :: det_A
+            !! Output determinant det_A
+        end function c_det
+
+        module function z_det(A) result(det_A)
+            !! Compute the determinant of a complex (64 bits) matrix.
+            use lapack_drv, only: xgetrf
+
+            complex(real64), dimension(:, :), intent(in) :: A
+            !! Input complex matrix A of size (n, n)
+            complex(real64) :: det_A
+            !! Output determinant det_A
+        end function z_det
+
     end interface det
 
 contains
-
-! ======================================================================
-
-subroutine s_inv_mat(A, A_inv)
-    !! Invert a real (32 bits) matrix using LAPACK.
-    use lapack_drv, only: xgetrf, xgetri
-
-    real(real32), dimension(:, :), intent(in)  :: A
-    !! Input matrix A of size (n, n)
-    real(real32), dimension(:, :), intent(out) :: A_inv
-    !! Inverse of the input matrix A
-
-    real(real32), allocatable :: work(:)
-    integer, allocatable     :: ipiv(:)
-    integer                  :: n, info
-
-    n = size(A,1)
-    if (size(A,2) /= n) then
-        stop 'Matrix must be square!'
-    end if
-
-    allocate(ipiv(n), work(2*n))
-    A_inv = A
-
-    call xgetrf(n, n, A_inv, n, ipiv, info)
-    if (info /= 0) stop 'Matrix is numerically singular!'
-
-    call xgetri(n, A_inv, n, ipiv, work, 2*n, info)
-    if (info /= 0) stop 'Matrix inversion failed!'
-
-end subroutine s_inv_mat
-
-! ======================================================================
-
-subroutine d_inv_mat(A, A_inv)
-    !! Invert a real (64 bits) matrix using LAPACK.
-    use lapack_drv, only: xgetrf, xgetri
-
-    real(real64), dimension(:, :), intent(in)  :: A
-    !! Input matrix A of size (n, n)
-    real(real64), dimension(:, :), intent(out) :: A_inv
-    !! Inverse of the input matrix A
-
-    real(real64), allocatable :: work(:)
-    integer, allocatable     :: ipiv(:)
-    integer                  :: n, info
-
-    n = size(A,1)
-    if (size(A,2) /= n) then
-        stop 'Matrix must be square!'
-    end if
-
-    allocate(ipiv(n), work(2*n))
-    A_inv = A
-
-    call xgetrf(n, n, A_inv, n, ipiv, info)
-    if (info /= 0) stop 'Matrix is numerically singular!'
-
-    call xgetri(n, A_inv, n, ipiv, work, 2*n, info)
-    if (info /= 0) stop 'Matrix inversion failed!'
-
-end subroutine d_inv_mat
-
-! ======================================================================
-
-subroutine c_inv_mat(A, A_inv)
-    !! Invert a complex (32 bits) matrix using LAPACK.
-    use lapack_drv, only: xgetrf, xgetri
-
-    complex(real32), dimension(:, :), intent(in)  :: A
-    !! Input complex matrix A of size (n, n)
-    complex(real32), dimension(:, :), intent(out) :: A_inv
-    !! Inverse of the input complex matrix A
-
-    complex(real32), allocatable :: work(:)
-    integer, allocatable         :: ipiv(:)
-    integer                      :: n, info
-
-    n = size(A,1)
-    if (size(A,2) /= n) then
-        stop 'Matrix must be square!'
-    end if
-
-    allocate(ipiv(n), work(2*n))
-    A_inv = A
-
-    call xgetrf(n, n, A_inv, n, ipiv, info)
-    if (info /= 0) stop 'Matrix is numerically singular!'
-
-    call xgetri(n, A_inv, n, ipiv, work, 2*n, info)
-    if (info /= 0) stop 'Matrix inversion failed!'
-
-end subroutine c_inv_mat
-
-! ======================================================================
-
-subroutine z_inv_mat(A, A_inv)
-    !! Invert a complex (64 bits) matrix using LAPACK.
-    use lapack_drv, only: xgetrf, xgetri
-
-    complex(real64), dimension(:, :), intent(in)  :: A
-    !! Input complex matrix A of size (n, n)
-    complex(real64), dimension(:, :), intent(out) :: A_inv
-    !! Inverse of the input complex matrix A
-
-    complex(real64), allocatable :: work(:)
-    integer, allocatable         :: ipiv(:)
-    integer                      :: n, info
-
-    n = size(A,1)
-    if (size(A,2) /= n) then
-        stop 'Matrix must be square!'
-    end if
-
-    allocate(ipiv(n), work(2*n))
-    A_inv = A
-
-    call xgetrf(n, n, A_inv, n, ipiv, info)
-    if (info /= 0) stop 'Matrix is numerically singular!'
-
-    call xgetri(n, A_inv, n, ipiv, work, 2*n, info)
-    if (info /= 0) stop 'Matrix inversion failed!'
-
-end subroutine z_inv_mat
-
-! ======================================================================
-
-function s_det(A) result(det_A)
-    !! Compute the determinant of a real (32 bits) matrix.
-    use lapack_drv, only: xgetrf
-
-    real(real32), dimension(:, :), intent(in) :: A
-    !! Input matrix A of size (n, n)
-    real(real32) :: det_A
-    !! Output determinant det_A
-
-    real(real32), allocatable :: work(:)
-    integer, allocatable      :: ipiv(:)
-    integer                   :: n, i, info
-
-    n = size(A,1)
-
-    allocate(ipiv(n))
-    allocate(work(2*n))
-
-    call xgetrf(n, n, A, n, ipiv, info)
-    if (info /= 0) stop 'Matrix is numerically singular!'
-
-    det_A = 0.0_real32
-    do i = 1, n
-        det_A = det_A * A(i, i)
-    end do
-
-    do i = 1, n
-        if (ipiv(i) /= i) then
-            det_A = -det_A
-        end if
-    end do
-
-end function s_det
-
-! ======================================================================
-
-function d_det(A) result(det_A)
-    !! Compute the determinant of a real (64 bits) matrix.
-    use lapack_drv, only: xgetrf
-
-    real(real64), dimension(:, :), intent(in) :: A
-    !! Input matrix A of size (n, n)
-    real(real64) :: det_A
-    !! Output determinant det_A
-
-    real(real64), allocatable :: work(:)
-    integer, allocatable      :: ipiv(:)
-    integer                   :: n, i, info
-
-    n = size(A,1)
-
-    allocate(ipiv(n))
-    allocate(work(2*n))
-
-    call xgetrf(n, n, A, n, ipiv, info)
-    if (info /= 0) stop 'Matrix is numerically singular!'
-
-    det_A = 0.0_real64
-    do i = 1, n
-        det_A = det_A * A(i, i)
-    end do
-
-    do i = 1, n
-        if (ipiv(i) /= i) then
-            det_A = -det_A
-        end if
-    end do
-
-end function d_det
-
-! ======================================================================
-
-function c_det(A) result(det_A)
-    !! Compute the determinant of a complex (32 bits) matrix.
-    use lapack_drv, only: xgetrf
-
-    complex(real32), dimension(:, :), intent(in) :: A
-    !! Input complex matrix A of size (n, n)
-    complex(real32) :: det_A
-    !! Output determinant det_A
-
-    complex(real32), allocatable :: work(:)
-    integer, allocatable         :: ipiv(:)
-    integer                      :: n, i, info
-
-    n = size(A,1)
-
-    allocate(ipiv(n))
-    allocate(work(2*n))
-
-    call xgetrf(n, n, A, n, ipiv, info)
-    if (info /= 0) stop 'Matrix is numerically singular!'
-
-    det_A = (0.0_real32, 0.0_real32)
-    do i = 1, n
-        det_A = det_A * A(i, i)
-    end do
-
-    do i = 1, n
-        if (ipiv(i) /= i) then
-            det_A = -det_A
-        end if
-    end do
-
-end function c_det
-
-! ======================================================================
-
-function z_det(A) result(det_A)
-    !! Compute the determinant of a complex (64 bits) matrix.
-    use lapack_drv, only: xgetrf
-
-    complex(real64), dimension(:, :), intent(in) :: A
-    !! Input complex matrix A of size (n, n)
-    complex(real64) :: det_A
-    !! Output determinant det_A
-
-    complex(real64), allocatable :: work(:)
-    integer, allocatable         :: ipiv(:)
-    integer                      :: n, i, info
-
-    n = size(A,1)
-
-    allocate(ipiv(n))
-    allocate(work(2*n))
-
-    call xgetrf(n, n, A, n, ipiv, info)
-    if (info /= 0) stop 'Matrix is numerically singular!'
-
-    det_A = (0.0_real64, 0.0_real64)
-    do i = 1, n
-        det_A = det_A * A(i, i)
-    end do
-
-    do i = 1, n
-        if (ipiv(i) /= i) then
-            det_A = -det_A
-        end if
-    end do
-
-end function z_det
-
-! ======================================================================
-
-recursive function factorial(n) result(n1)
-    !! Compute the factorial n!
-    !!
-    !! Given a value n, computes the corresponding factorial
-    integer :: n1
-    !! factorial
-    integer, intent(in) :: n
-    !! positive number number
-
-    if (n < 0) then
-        n1 = -1
-    else if (n <= 1) then
-        n1 = 1
-    else
-        n1 = n*factorial(n-1)
-    end if
-
-    return
-end function factorial
-
-! ======================================================================
-
-function d_cross(vecA, vecB) result(vecC)
-    !! Compute the cross product: C = A x B
-    !!
-    !! Computes the cross vector between 2 Cartesian vectors.
-    !! @note: double precision version
-    real(real64), dimension(3), intent(in) :: vecA
-    !! vector A
-    real(real64), dimension(3), intent(in) :: vecB
-    !! vector B
-    real(real64), dimension(3) :: vecC
-    !! vector C
-
-    vecC(1) = vecA(2)*vecB(3) - vecA(3)*vecB(2)
-    vecC(2) = vecA(3)*vecB(1) - vecA(1)*vecB(3)
-    vecC(3) = vecA(1)*vecB(2) - vecA(2)*vecB(1)
-
-end function d_cross
-
-! ======================================================================
-
-function d_cross_vec_mat(vecA, matB) result(matC)
-    !! Compute the cross product: C(,:) = A x B(,:)
-    !!
-    !! Computes the cross vector between 1 Cartesian vector and a list
-    !! of vectors.
-    !!
-    !! @note "version"
-    !! * double precision version
-    !! * B is a matrix of dimension(3:N)
-    !! @endnote
-    real(real64), dimension(3), intent(in) :: vecA
-    !! vector A.
-    real(real64), dimension(:,:), intent(in) :: matB
-    !! list of vectors B.
-    real(real64), dimension(:,:), allocatable :: matC
-    !! list of vectors C.
-
-    integer :: i, n
-
-    n = size(matB,2)
-
-    allocate(matC(3,n))
-
-    do i = 1, n
-        matC(1,i) = vecA(2)*matB(3,i) - VecA(3)*matB(2,i)
-        matC(2,i) = vecA(3)*matB(1,i) - VecA(1)*matB(3,i)
-        matC(3,i) = vecA(1)*matB(2,i) - VecA(2)*matB(1,i)
-    end do
-
-end function d_cross_vec_mat
-
-! ======================================================================
-
-function d_cross_mat_vec(matA, vecB) result(matC)
-    !! Compute the cross product: C(,:) = A(,:) x B
-    !!
-    !! Computes the cross vector between 1 list of Cartesian vectors
-    !! and one Cartesian vector.
-    !!
-    !! @note "version"
-    !! * double precision version
-    !! * A is a matrix of dimension(3:N)
-    !! @endnote
-    real(real64), dimension(:,:), intent(in) :: matA
-    !! vector A.
-    real(real64), dimension(3), intent(in) :: vecB
-    !! list of vectors B.
-    real(real64), dimension(:,:), allocatable :: matC
-    !! list of vectors C.
-
-    integer :: i, m
-
-    m = size(matA,2)
-
-    allocate(matC(3,m))
-
-    do i = 1, m
-        matC(1,i) = matA(2,i)*vecB(3) - matA(3,i)*vecB(2)
-        matC(2,i) = matA(3,i)*vecB(1) - matA(1,i)*vecB(3)
-        matC(3,i) = matA(1,i)*vecB(2) - matA(2,i)*vecB(1)
-    end do
-
-end function d_cross_mat_vec
-
-! ======================================================================
-
-function d_cross_mat_mat(matA, matB) result(matC)
-    !! Compute the cross product: C(:,:) = A(,:) x B(,:)
-    !!
-    !! Computes the cross vector between 2 lists of Cartesian vectors.
-    !! @note "version"
-    !! * double precision version
-    !! * A is a matrix of dimension(3:M)
-    !! * B is a matrix of dimension(3:N)
-    !! @endnote
-    real(real64), dimension(:,:), intent(in) :: matA
-    !! list of vectors A.
-    real(real64), dimension(:,:), intent(in) :: matB
-    !! list of vectors B.
-    real(real64), dimension(:,:,:), allocatable :: matC
-    !! list of lists of vectors C.
-
-    integer :: i, j, m, n
-    real(real64), dimension(3) :: vec
-
-    m = size(matA, 2) ; n = size(matB, 2)
-    allocate(matC(3,m,n))
-
-    do i = 1, n
-        vec = matB(:,i)
-        do j = 1, m
-            matC(1,j,i) = matA(2,j)*vec(3) - matA(3,j)*vec(2)
-            matC(2,j,i) = matA(3,j)*vec(1) - matA(1,j)*vec(3)
-            matC(3,j,i) = matA(1,j)*vec(2) - matA(2,j)*vec(1)
-        end do
-    end do
-
-end function d_cross_mat_mat
-
-! ======================================================================
-
-function s_cross(vecA, vecB) result(vecC)
-    !! Compute the cross product: C = A x B
-    !!
-    !! Computes the cross vector between 2 Cartesian vectors.
-    !! @note: simple precision version
-    real(real32), dimension(3), intent(in) :: vecA
-    !! vector A
-    real(real32), dimension(3), intent(in) :: vecB
-    !! vector B
-    real(real32), dimension(3) :: vecC
-    !! vector C
-
-    VecC(1) = vecA(2)*VecB(3) - VecA(3)*VecB(2)
-    VecC(2) = vecA(3)*VecB(1) - VecA(1)*VecB(3)
-    VecC(3) = vecA(1)*VecB(2) - VecA(2)*VecB(1)
-
-    return
-end function s_cross
-
-! ======================================================================
-
-function s_cross_vec_mat(vecA, matB) result(matC)
-    !! Compute the cross product: C(,:) = A x B(,:)
-    !!
-    !! Computes the cross vector between 1 Cartesian vector and a list
-    !! of vectors.
-    !!
-    !! @note "version"
-    !! * single precision version
-    !! * B is a matrix of dimension(3:N)
-    !! @endnote
-    real(real32), dimension(3), intent(in) :: vecA
-    !! vector A.
-    real(real32), dimension(:,:), intent(in) :: matB
-    !! list of vectors B.
-    real(real32), dimension(:,:), allocatable :: matC
-    !! list of vectors C.
-
-    integer :: i, n
-
-    n = size(matB,2)
-
-    allocate(matC(3,n))
-
-    do i = 1, n
-        matC(1,i) = vecA(2)*matB(3,i) - VecA(3)*matB(2,i)
-        matC(2,i) = vecA(3)*matB(1,i) - VecA(1)*matB(3,i)
-        matC(3,i) = vecA(1)*matB(2,i) - VecA(2)*matB(1,i)
-    end do
-
-end function s_cross_vec_mat
-
-! ======================================================================
-
-function s_cross_mat_vec(matA, vecB) result(matC)
-    !! Compute the cross product: C(,:) = A(,:) x B
-    !!
-    !! Computes the cross vector between 1 list of Cartesian vectors
-    !! and one Cartesian vector.
-    !!
-    !! @note "version"
-    !! * single precision version
-    !! * A is a matrix of dimension(3:N)
-    !! @endnote
-    real(real32), dimension(:,:), intent(in) :: matA
-    !! vector A.
-    real(real32), dimension(3), intent(in) :: vecB
-    !! list of vectors B.
-    real(real32), dimension(:,:), allocatable :: matC
-    !! list of vectors C.
-
-    integer :: i, m
-
-    m = size(matA,2)
-
-    allocate(matC(3,m))
-
-    do i = 1, m
-        matC(1,i) = matA(2,i)*vecB(3) - matA(3,i)*vecB(2)
-        matC(2,i) = matA(3,i)*vecB(1) - matA(1,i)*vecB(3)
-        matC(3,i) = matA(1,i)*vecB(2) - matA(2,i)*vecB(1)
-    end do
-
-end function s_cross_mat_vec
-
-! ======================================================================
-
-function s_cross_mat_mat(matA, matB) result(matC)
-    !! Compute the cross product: C(:,:) = A(,:) x B(,:)
-    !!
-    !! Computes the cross vector between 2 lists of Cartesian vectors.
-    !! @note "version"
-    !! * double precision version
-    !! * A is a matrix of dimension(3:M)
-    !! * B is a matrix of dimension(3:N)
-    !! @endnote
-    real(real32), dimension(:,:), intent(in) :: matA
-    !! list of vectors A.
-    real(real32), dimension(:,:), intent(in) :: matB
-    !! list of vectors B.
-    real(real32), dimension(:,:,:), allocatable :: matC
-    !! list of lists of vectors C.
-
-    integer :: i, j, m, n
-    real(real32), dimension(3) :: vec
-
-    m = size(matA, 2) ; n = size(matB, 2)
-    allocate(matC(3,m,n))
-
-    do i = 1, n
-        vec = matB(:,i)
-        do j = 1, m
-            matC(1,j,i) = matA(2,j)*vec(3) - matA(3,j)*vec(2)
-            matC(2,j,i) = matA(3,j)*vec(1) - matA(1,j)*vec(3)
-            matC(3,j,i) = matA(1,j)*vec(2) - matA(2,j)*vec(1)
-        end do
-    end do
-
-end function s_cross_mat_mat
 
 ! ======================================================================
 
@@ -601,6 +250,29 @@ subroutine build_PascalTriangle(n, do_real)
 end subroutine build_PascalTriangle
 
 ! ======================================================================
+
+recursive function factorial(n) result(n1)
+    !! Compute the factorial n!
+    !!
+    !! Given a value n, computes the corresponding factorial
+    integer, intent(in) :: n
+        !! Positive number.
+    integer :: n1
+        !! Factorial result.
+
+    if (n < 0) then
+        n1 = -1
+    else if (n <= 1) then
+        n1 = 1
+    else
+        n1 = n*factorial(n-1)
+    end if
+
+    return
+end function factorial
+
+! ======================================================================
+
 
 pure function int_xn_e2ax2(n, a) result(res)
     !! Compute the integral int(x^n*exp(-2*a*x^2),x=-inf..inf)

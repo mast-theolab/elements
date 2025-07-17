@@ -22,6 +22,7 @@ target("mathlib")
     add_files("src/drivers/blas.f90")
     add_files("src/drivers/lapack.f90")
     add_files("src/core/math.f90")
+    add_files("src/core/math_*.f90")
 
 
 target("datalib")

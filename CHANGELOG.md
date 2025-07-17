@@ -15,6 +15,8 @@
 
 ### Changed
 * ***build***: OpenMP is now enabled by default in `exc_sos`.
+* ***math***: Definition of linear-algebra routines has been moved to submodules based on the type and kind (real32, real64, complex32, complex64).
+* ***math***: Procedures now ordered by alphabetical order to facilitate search of procedures.
 
 
 ## 0.25.06

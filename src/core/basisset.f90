@@ -2,9 +2,9 @@ module basisset
     !! Basis sets-related modules
     !!
     !! Procedure related to basis sets and their definition
-    use numeric, only: realwp, f0, f1, f2, f3, f4, f5, f10, fhalf, pi
-    use math, only: build_PascalTriangle, factorial, int_xn_e2ax2, &
+    use math, only: build_PascalTriangle, double_factorial, factorial, int_xn_e2ax2, &
         itri_pa, phii_xn_phij
+    use numeric, only: realwp, f0, f1, f2, f3, f3quart, f4, f5, f10, fhalf, pi
     use exception, only: BaseException, ArgumentError, InitError, RaiseError, &
         RaiseArgError
     use output, only: iu_out, len_int
@@ -19,8 +19,9 @@ module basisset
         num_cart_AOs, num_shells_on_atom
     integer, parameter, public :: max_nxyz = 28
     integer, parameter :: L_max = 6
-    integer :: i
-    real(realwp), dimension(0:2*L_max) :: fn = [(gamma(real(i, kind=realwp)), i=1, 2*L_max+1)]
+    integer, private :: i_
+    real(realwp), dimension(0:2*L_max) :: &
+        fn = [(gamma(real(i_, kind=realwp)), i_=1, 2*L_max+1)]
 
 ! ----------------------------------------------------------------------
 
@@ -170,7 +171,7 @@ module basisset
         !! Get length of shells centered on chosen atom.
         module function len_shells_on_atom_bsetBF( &
                 bsetBF, nprim_per_atom, num_shells, ia) &
-                result(len_shells_on_atom)
+                result(len_shells)
             !! Length of each shell on atom `ia`.
             !!
             !! Calculates the length of each shell centered on atom given in
@@ -186,13 +187,13 @@ module basisset
             !! Number of shells
             integer, intent(in) :: ia
             !! Atom index.
-            integer, dimension(num_shells) :: len_shells_on_atom
+            integer, dimension(num_shells) :: len_shells
             !! Size of each shell on atom `ia`.
 
         end function len_shells_on_atom_bsetBF
 
         module function len_shells_on_atom_bsetDB(bsetDB, num_shells, ia) &
-                result(len_shells_on_atom)
+                result(len_shells)
             !! Length of each shell on atom `ia`.
             !!
             !! Calculates the length of each shell centered on atom given in
@@ -206,7 +207,7 @@ module basisset
             !! Number of shells
             integer, intent(in) :: ia
             !! Atom index.
-            integer, dimension(num_shells) :: len_shells_on_atom
+            integer, dimension(num_shells) :: len_shells
             !! Size of each shell on atom `ia`.
 
         end function len_shells_on_atom_bsetDB
@@ -217,7 +218,7 @@ module basisset
     interface num_cart_AOs
         !! Number of Cartesian atomic orbitals based on pure.
         module function num_cart_AOs_bsetBF(n_ao, bsetBF, nprim_per_atom) &
-                result(num_cart_AOs)
+                result(num_AOs)
             !! Number of Cartesian atomic orbitals.
             !!
             !! Computes the number of Cartesian-type atomic orbitals.
@@ -230,14 +231,14 @@ module basisset
             !! Basis set's basis function information (pure).
             integer, dimension(:), intent(in) :: nprim_per_atom
             !! Number of basis primitives per atom.
-            integer :: num_cart_AOs
+            integer :: num_AOs
             !! Number of Cartesian atomic orbitals.
 
         end function num_cart_AOs_bsetBF
 
         ! ----------------------------------------------------------------------
 
-        module function num_cart_AOs_bsetDB(n_ao, bsetDB) result(num_cart_AOs)
+        module function num_cart_AOs_bsetDB(n_ao, bsetDB) result(num_AOs)
             !! Number of Cartesian atomic orbitals.
             !!
             !! Computes the number of Cartesian-type atomic orbitals.
@@ -248,7 +249,7 @@ module basisset
             !! Number of atomic orbitals.
             type(BasisSetDB), intent(in) :: bsetDB
             !! Basis set database (pure).
-            integer :: num_cart_AOs
+            integer :: num_AOs
             !! Number of Cartesian atomic orbitals.
 
         end function num_cart_AOs_bsetDB
@@ -260,7 +261,7 @@ module basisset
     interface num_shells_on_atom
         !! Get the number of shells centered on chosen atom.
         module function num_shells_on_atom_bsetBF(bsetBF, nprim_per_atom, ia) &
-                result(num_shells_on_atom)
+                result(num_shells)
             !! Number of shells on atom `ia`.
             !!
             !! Calculates the number of shells centered on atom given in input.
@@ -273,13 +274,13 @@ module basisset
             !! Number of basis primitives per atom.
             integer, intent(in) :: ia
             !! Atom index.
-            integer :: num_shells_on_atom
+            integer :: num_shells
             !! Number of shells on atom of interest.
 
         end function num_shells_on_atom_bsetBF
 
         module function num_shells_on_atom_bsetDB(bsetDB, ia) &
-                result(num_shells_on_atom)
+                result(num_shells)
             !! Number of shells on atom `ia`.
             !!
             !! Calculates the number of shells centered on atom given in input.
@@ -290,7 +291,7 @@ module basisset
             !! Basis set database.
             integer, intent(in) :: ia
             !! Atom index.
-            integer :: num_shells_on_atom
+            integer :: num_shells
             !! Number of shells on atom of interest.
 
         end function num_shells_on_atom_bsetDB
@@ -844,6 +845,283 @@ subroutine coef_transfo_P2C(L_ang, Ncart, Npure, coef2P, coef2C)
     end do
 
 end subroutine coef_transfo_P2C
+
+! ======================================================================
+
+function get_cart_L_der_sh_at(L_ang, len_shell, x, y, z) result(cart_L_der)
+    !! Angular part derivative of Cart. AOs for a shell at position.
+    !!
+    !! Computes and returns the derivative of the angular component
+    !! of Cartesian atomic orbitals for a given shell at a chosen
+    !! position.
+    integer, intent(in) :: L_ang
+        !! Angular momentum.
+    integer, intent(in) :: len_shell
+        !! Length of the shell.
+    real(realwp), intent(in) :: x, y, z
+        !! Cartesian components of the point of interest.
+    real(realwp), dimension(len_shell,3) :: cart_L_der
+        !! Derivative of the angular momentum component.
+
+    integer :: i, n_x, n_y, n_z, n_powers
+    integer, dimension(:,:), allocatable :: powers
+
+    n_powers = (L_ang+1) * (L_ang+2) / 2
+    allocate(powers(3,n_powers))
+
+    powers = list_L_powers(L_ang, n_powers)
+    cart_L_der = f0
+    do i = 1, n_powers
+        n_x = powers(1, i)
+        n_y = powers(2, i)
+        n_z = powers(3, i)
+        if (n_x /= 0) cart_L_der(i,1) = n_x * x**(n_x-1) * y**n_y * z**n_z
+        if (n_y /= 0) cart_L_der(i,2) = n_y * x**n_x * y**(n_y-1) * z**n_z
+        if (n_z /= 0) cart_L_der(i,3) = n_z * x**n_x * y**n_y * z**(n_z-1)
+    end do
+
+end function get_cart_L_der_sh_at
+
+! ======================================================================
+
+function get_cart_L_norms_sh(L_ang, len_shell) result(cart_L_norm)
+    !! Normalization factor for the angular part of a given shell.
+    !!
+    !! Computes and returns the normalization constant for the angular
+    !! component of a given shell in the Cartesian basis.
+    integer, intent(in) :: L_ang
+        !! Angular momentum.
+    integer, intent(in) :: len_shell
+        !! Length of the shell.
+    real(realwp), dimension(len_shell) :: cart_L_norm
+        !! Normalization constant for angular moment.
+
+    integer :: i, n_x, n_y, n_z, n_powers
+    integer, dimension(:,:), allocatable :: powers
+
+    cart_L_norm = f1
+    n_powers = (L_ang+1) * (L_ang+2) / 2
+
+    allocate(powers(3, n_powers))
+    powers = list_L_powers(L_ang, n_powers)
+    do i = 1, len_shell
+        n_x = powers(1, i)
+        n_y = powers(2, i)
+        n_z = powers(3, i)
+        cart_L_norm(i) = sqrt( &
+            real(double_factorial(2*n_x-1)*double_factorial(2*n_y-1) &
+                 *double_factorial(2*n_z-1), realwp))
+    end do
+
+    deallocate(powers)
+
+end function get_cart_L_norms_sh
+
+! ======================================================================
+
+function get_cart_L_sh_at(L_ang, len_shell, x, y, z) result(cart_L)
+    !! Angular part of Cartesian AOs for a shell at position.
+    !!
+    !! Computes and returns the angular component of Cartesian atomic
+    !! orbitals for a given shell at a chosen position.
+    integer, intent(in) :: L_ang
+        !! Angular momentum.
+    integer, intent(in) :: len_shell
+        !! Length of the shell.
+    real(realwp), intent(in) :: x, y, z
+        !! Cartesian components of the point of interest.
+    real(realwp), dimension(len_shell) :: cart_L
+        !! Derivative of the angular momentum component.
+
+    integer :: i, n_powers, n_x, n_y, n_z
+    integer, dimension(:,:), allocatable :: powers
+
+    n_powers = (L_ang+1) * (L_ang+2) / 2
+
+    allocate(powers(3, n_powers))
+    powers = list_L_powers(L_ang, n_powers)
+
+    do i = 1, n_powers
+        n_x = powers(1, i)
+        n_y = powers(2, i)
+        n_z = powers(3, i)
+        cart_L(i) = x**n_x * y**n_y * z**n_z
+    end do
+
+    deallocate(powers)
+
+end function get_cart_L_sh_at
+
+! ======================================================================
+
+function get_cart_r_der_sh_at(L_ang, coeff_idx, n_prim_sh, bset_sh, x, y, z) &
+                              result(cart_r_der)
+    !! Radial part derivative of Cart. AOs for a shell at position.
+    !!
+    !! Computes and returns the derivative of the radial component
+    !! of Cartesian atomic orbitals for a given shell at a chosen
+    !! position.
+    integer, intent(in) :: L_ang
+        !! Angular momentum.
+    integer, intent(in) :: coeff_idx
+        !! Coefficient index in the basis functions database.
+    integer, intent(in) :: n_prim_sh
+        !! Number of primitives in the shell.
+    type(PrimitiveFunction), dimension(:), intent(in) :: bset_sh
+        !! Basis set functions database for a given shell.
+    real(realwp), intent(in) :: x, y, z
+        !! Cartesian components of the point of interest.
+    real(realwp), dimension(3) :: cart_r_der
+        !! Derivative of the radial component.
+
+    integer :: i
+    real(realwp) :: alpha, anorm, coeff, overlap, r_part
+
+    r_part = f0
+    cart_r_der = f0
+
+    ! Compute the overlap between primitives
+    overlap = get_primitives_overlap_sh(L_ang, coeff_idx, n_prim_sh, bset_sh)
+
+    do i = 1, n_prim_sh
+        alpha = bset_sh(i)%alpha
+        coeff = bset_sh(i)%coeff(coeff_idx)
+        ! Normalization factor
+        anorm = (f4 * alpha)**(f3quart + real(L_ang, kind=realwp)*fhalf)
+        ! Radial part
+        r_part = anorm * coeff * exp(-alpha * (x**2 + y**2 + z**2))
+
+        cart_r_der(1) = cart_r_der(1) - f2 * alpha * x * r_part
+        cart_r_der(2) = cart_r_der(2) - f2 * alpha * y * r_part
+        cart_r_der(3) = cart_r_der(3) - f2 * alpha * z * r_part
+    end do
+    cart_r_der = cart_r_der / sqrt((f2*pi)**(1.5_realwp) * overlap)
+
+end function get_cart_r_der_sh_at
+
+! ======================================================================
+
+function get_cart_r_sh_at(L_ang, coeff_idx, n_prim_sh, bset_sh, x, y, z) &
+                          result(cart_r)
+    !! Radial part of Cartesian AOs for a shell at position.
+    !!
+    !! Computes and returns the derivative of the radial component
+    !! of Cartesian atomic orbitals for a given shell at a chosen
+    !! position.
+    integer, intent(in) :: L_ang
+        !! Angular momentum.
+    integer, intent(in) :: coeff_idx
+        !! Coefficient index in the basis functions database.
+    integer, intent(in) :: n_prim_sh
+        !! Number of primitives in the shell.
+    type(PrimitiveFunction), dimension(:), intent(in) :: bset_sh
+        !! Basis set functions database for a given shell.
+    real(realwp), intent(in) :: x, y, z
+        !! Cartesian components of the point of interest.
+    real(realwp), dimension(3) :: cart_r
+        !! Radial component.
+
+    integer :: i
+    real(realwp) :: alpha, anorm, coeff, overlap
+
+    cart_r = f0
+
+    overlap = get_primitives_overlap_sh(L_ang, coeff_idx, n_prim_sh, bset_sh)
+
+    do i = 1, n_prim_sh
+        alpha = bset_sh(i)%alpha
+        coeff = bset_sh(i)%coeff(coeff_idx)
+
+        anorm = (f4 * alpha)**(f3quart + real(L_ang, kind=realwp) * fhalf)
+        cart_r = cart_r + anorm * coeff * exp(-alpha * (x**2+y**2+z**2))
+    end do
+
+    cart_r = cart_r / sqrt((f2*pi)**(1.5_realwp) * overlap)
+
+end function get_cart_r_sh_at
+
+! ======================================================================
+
+function get_primitives_overlap_sh(L_ang, coeff_idx, n_prim_sh, bset_sh) &
+                                  result(overlap)
+    !! Overlap between primitives for a given shell.
+    !!
+    !! Computes and returns the overlap between primitives for a given
+    !! shell.
+    integer, intent(in) :: L_ang
+        !! Angular momentum.
+    integer, intent(in) :: coeff_idx
+        !! Coefficient index in the basis functions database.
+    integer, intent(in) :: n_prim_sh
+        !! Number of primitives in the shell.
+    type(PrimitiveFunction), dimension(:), intent(in) :: bset_sh
+        !! Basis set functions database for a given shell.
+    real(realwp) :: overlap
+        !! Overlap result.
+
+    integer :: i, j
+    real(realwp) :: base, power
+
+    overlap = f0
+    power = 1.5_realwp + real(L_ang, kind=realwp)
+
+    do i = 1, n_prim_sh
+        do j = 1, n_prim_sh
+            base = sqrt(bset_sh(i)%alpha * bset_sh(j)%alpha) &
+                / (bset_sh(i)%alpha + bset_sh(j)%alpha)
+
+            overlap = overlap &
+                + bset_sh(i)%coeff(coeff_idx) * bset_sh(j)%coeff(coeff_idx) &
+                    * (base**power)
+
+        end do
+    end do
+
+    overlap = overlap * (f2**power)
+
+end function get_primitives_overlap_sh
+
+! ======================================================================
+
+function list_L_powers(L_ang, n_powers) result(powers)
+    !! Return the powers array used in calculating the angular parts.
+    integer, intent(in) :: L_ang
+        !! Angular momentum.
+    integer, intent(in) :: n_powers
+        !! Number of power components.
+    integer, dimension(3,n_powers) :: powers
+        !! List of power coefficients.
+
+    select case (L_ang)
+    case (0)
+        powers(:,1) = [0,0,0]
+    case (1)
+        powers(:,1) = [1,0,0]
+        powers(:,2) = [0,1,0]
+        powers(:,3) = [0,0,1]
+    case (2)
+        powers(:,1) = [2,0,0]
+        powers(:,2) = [0,2,0]
+        powers(:,3) = [0,0,2]
+        powers(:,4) = [1,1,0]
+        powers(:,5) = [1,0,1]
+        powers(:,6) = [0,1,1]
+    case (3)
+        powers(:,1) = [3,0,0]
+        powers(:,2) = [0,3,0]
+        powers(:,3) = [0,0,3]
+        powers(:,4) = [2,1,0]
+        powers(:,5) = [2,0,1]
+        powers(:,6) = [1,2,0]
+        powers(:,7) = [0,2,1]
+        powers(:,8) = [1,0,2]
+        powers(:,9) = [0,1,2]
+        powers(:,10) = [1,1,1]
+    case default
+        error stop 'Unsupported L_ang in [list_L_powers]'
+    end select
+
+end function list_L_powers
 
 ! ======================================================================
 

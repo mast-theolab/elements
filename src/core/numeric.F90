@@ -18,6 +18,7 @@ module numeric
         f6 = 6.0_realwp, f7 = 7.0_realwp, f8 = 8.0_realwp, &
         f9 = 9.0_realwp, f10 = 10.0_realwp, &
         fhalf = 0.5_realwp, fquart = 0.25_realwp, &
+        f3quart = 0.75_realwp, &
         f8th = 0.125_realwp, f16th = 0.0625_realwp
 
     real(realwp), parameter :: &

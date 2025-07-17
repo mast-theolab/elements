@@ -693,7 +693,7 @@ module procedure len_shells_on_atom_bsetBF
         if (.not.bsetBF(i)%shell_last) then
            counter = counter + 1
         else
-           len_shells_on_atom(offset) = counter
+           len_shells(offset) = counter
            counter = 1
            offset = offset + 1
         endif
@@ -713,7 +713,7 @@ module procedure len_shells_on_atom_bsetDB
         if (.not.bsetDB%info(ia,i)%shell_last) then
            counter = counter + 1
         else
-           len_shells_on_atom(offset) = counter
+           len_shells(offset) = counter
            counter = 1
            offset = offset + 1
         endif
@@ -728,28 +728,28 @@ module procedure num_cart_AOs_bsetBF
     ! Local
     integer :: i, center
 
-    num_cart_AOs = 0
+    num_AOs = 0
 
     do center = 1, size(bsetBF, 1)
         do i = 1, nprim_per_atom(center)
             if (bsetBF(center,i)%shell_first) then
                 select case (bsetBF(center,i)%shelltype)
                     case ('SP')
-                        num_cart_AOs = num_cart_AOs + 4
+                        num_AOs = num_AOs + 4
                     case ('S')
-                        num_cart_AOs = num_cart_AOs + 1
+                        num_AOs = num_AOs + 1
                     case ('P')
-                        num_cart_AOs = num_cart_AOs + 3
+                        num_AOs = num_AOs + 3
                     case ('D')
-                        num_cart_AOs = num_cart_AOs + 6
+                        num_AOs = num_AOs + 6
                     case ('F')
-                        num_cart_AOs = num_cart_AOs + 10
+                        num_AOs = num_AOs + 10
                     case ('G')
-                        num_cart_AOs = num_cart_AOs + 15
+                        num_AOs = num_AOs + 15
                     case ('H')
-                        num_cart_AOs = num_cart_AOs + 21
+                        num_AOs = num_AOs + 21
                     case ('I')
-                        num_cart_AOs = num_cart_AOs + 28
+                        num_AOs = num_AOs + 28
                     case default
                         print *, 'Unsupported basis function'
                         stop 99
@@ -766,7 +766,7 @@ module procedure num_cart_AOs_bsetDB
     
     integer :: i, center, n_d, n_f
 
-    num_cart_AOs = 0
+    num_AOs = 0
     n_d = 0
     n_f = 0
 
@@ -775,21 +775,21 @@ module procedure num_cart_AOs_bsetDB
             if (bsetDB%info(center,i)%shell_first) then
                 select case (bsetDB%info(center,i)%shelltype)
                     case ('SP')
-                        num_cart_AOs = num_cart_AOs + 4
+                        num_AOs = num_AOs + 4
                     case ('S')
-                        num_cart_AOs = num_cart_AOs + 1
+                        num_AOs = num_AOs + 1
                     case ('P')
-                        num_cart_AOs = num_cart_AOs + 3
+                        num_AOs = num_AOs + 3
                     case ('D')
-                        num_cart_AOs = num_cart_AOs + 6
+                        num_AOs = num_AOs + 6
                     case ('F')
-                        num_cart_AOs = num_cart_AOs + 10
+                        num_AOs = num_AOs + 10
                     case ('G')
-                        num_cart_AOs = num_cart_AOs + 15
+                        num_AOs = num_AOs + 15
                     case ('H')
-                        num_cart_AOs = num_cart_AOs + 21
+                        num_AOs = num_AOs + 21
                     case ('I')
-                        num_cart_AOs = num_cart_AOs + 28
+                        num_AOs = num_AOs + 28
                     case default
                         print *, 'Unsupported basis function'
                         stop 99
@@ -806,11 +806,11 @@ module procedure num_shells_on_atom_bsetBF
     
     integer :: i
 
-    num_shells_on_atom = 0
+    num_shells = 0
 
     do i = 1, nprim_per_atom(ia)
         if (bsetBF(i)%shell_first) &
-            num_shells_on_atom = num_shells_on_atom + 1
+            num_shells = num_shells + 1
     enddo
 
 end procedure num_shells_on_atom_bsetBF
@@ -821,11 +821,11 @@ module procedure num_shells_on_atom_bsetDB
 
     integer :: i
 
-    num_shells_on_atom = 0
+    num_shells = 0
 
     do i = 1, bsetDB%nprim_per_at(ia)
         if (bsetDB%info(ia,i)%shell_first) &
-            num_shells_on_atom = num_shells_on_atom + 1
+            num_shells = num_shells + 1
     enddo
 
 end procedure num_shells_on_atom_bsetDB

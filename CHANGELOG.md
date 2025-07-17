@@ -4,6 +4,13 @@
 
 ### Added
 * ***arrays***: new interface `indexes_sym2lt` to convert the coordinates (2-4) in a nD symmetric tensor to the linear storage index of the lower-triangular block.
+* ***basisset***: new function to compute the derivative of the angular momentum for a shell made of Cartesian atomic orbitals at a given point: `get_cart_L_der_sh_at`.
+* ***basisset***: new function to compute the normalization factor for the angular momentum component for a shell made of Cartesian atomic orbitals at a given point: `get_cart_L_norms_sh`.
+* ***basisset***: new function to compute the angular momentum for a shell made of Cartesian atomic orbitals at a given point: `get_cart_L_sh_at`.
+* ***basisset***: new function to compute the derivative of the radial component for a shell made of Cartesian atomic orbitals at a given point: `get_cart_r_der_sh_at`.
+* ***basisset***: new function to compute the radial component for a shell made of Cartesian atomic orbitals at a given point: `get_cart_r_sh_at`.
+* ***basisset***: new function to compute the overlap between primitives in a given shell made of Cartesian atomic orbitals: `get_primitives_overlap_sh`.
+* ***basisset***: new function to return the sequence of powers for a given angular momentum: `list_L_powers`.
 * ***calcites***: new program to compute the thermal contributions to vibrational spectra within the harmonic approximation for a given type of spectroscopy.
 * ***math***: new function `double_factorial` to compute the double factorial "n!!".
 * ***vertex***: new program to compute and print the extrapolated geometry for vibronic vertical models.

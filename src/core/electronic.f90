@@ -6,13 +6,13 @@ module electronic
     !! * orbitals-related constants and operations
     !! * integral calculations
 
+    use basisset, only: max_nxyz, set_primC_comp, transfo_cart2pure
     use numeric, only: realwp, f0, f1, f2, fhalf, pi
     use datatypes, only: PrimitiveFunction
-    use output, only: iu_out
     use exception, only: ArgumentError, BaseException, InitError, &
-        RaiseArgError, RaiseError
+        RaiseArgError, RaiseError, runstat
     use math, only: build_PascalTriangle, cross, itri_pa, phii_xn_phij
-    use basisset, only: max_nxyz, set_primC_comp, transfo_cart2pure
+    use orbital, only: convert_AO2MO
 
     implicit none
 
@@ -42,10 +42,6 @@ module electronic
 
     integer, private :: MAXAO = 5000
     !! Maximum number of atomic orbitals, for storage
-
-    interface convert_AO2MO
-        module procedure convert_AO2MO_1, convert_AO2MO_N
-    end interface convert_AO2MO
 
 contains
 
@@ -604,100 +600,6 @@ end subroutine overlap_ao_1e
 
 ! ======================================================================
 
-subroutine convert_AO2MO_1(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
-    !! Convert a scalar quantity from atomic to molecular orbitals
-    !!
-    !! Takes a quantity in atomic orbitals (`q_ao`) to molecular orbitals
-    !!   (`q_mo`).
-    !! Note: The quantity must be scalar (see convert_AO2MO_N otherwise)
-    integer, intent(in) :: n_ao
-    !! Number of atomic orbitals
-    integer, intent(in) :: n_mo
-    !! Number of molecular orbitals
-    real(realwp), dimension(:,:), intent(in) :: c_ia
-    !! Coefficients of MOs in AOs basis (geometry: n_mo, n_ao)
-    real(realwp), dimension(:,:), intent(in) :: q_ao
-    !! Quantity in AO basis
-    real(realwp), dimension(:,:), intent(out) :: q_mo
-    !! Quantity in MO basis
-    real(realwp), dimension(:,:) :: tmp_arr
-    !! Temporary array
-
-    integer :: a, b, i, j
-
-    !$omp parallel do collapse(2)
-    do j = 1, n_mo
-        do a = 1, n_ao
-            tmp_arr(a,j) = f0
-            do b = 1, n_ao
-                tmp_arr(a,j) = tmp_arr(a,j) + c_ia(j,b)*q_ao(a,b)
-            end do
-        end do
-    end do
-    !$omp end parallel do
-    
-    !$omp parallel do collapse(2)
-    do i = 1, n_mo
-        do j = 1, n_mo
-            q_mo(i,j) = f0
-            do a = 1, n_ao
-                q_mo(i,j) = q_mo(i,j) + c_ia(i,a)*tmp_arr(a,j)
-            end do
-        end do
-    end do
-    !$omp end parallel do
-
-end subroutine convert_AO2MO_1
-
-! ======================================================================
-
-subroutine convert_AO2MO_N(n_ao, n_mo, c_ia, q_ao, q_mo, tmp_arr)
-    !! Convert a vector from atomic to molecular orbitals
-    !!
-    !! Takes a quantity in atomic orbitals (`q_ao`) to molecular orbitals
-    !!   (`q_mo`).
-    !! Note: The quantity is expected to be a vector.
-    integer, intent(in) :: n_ao
-    !! Number of atomic orbitals
-    integer, intent(in) :: n_mo
-    !! Number of molecular orbitals
-    real(realwp), dimension(:,:), intent(in) :: c_ia
-    !! Coefficients of MOs in AOs basis (geometry: n_mo, n_ao)
-    real(realwp), dimension(:,:,:), intent(in) :: q_ao
-    !! Quantity in AO basis
-    real(realwp), dimension(:,:,:), intent(out) :: q_mo
-    !! Quantity in MO basis
-    real(realwp), dimension(:,:,:) :: tmp_arr
-    !! Temporary array
-
-    integer :: a, b, i, j
-
-    !$omp parallel do collapse(2)
-    do j = 1, n_mo
-        do a = 1, n_ao
-            tmp_arr(:,a,j) = f0
-            do b = 1, n_ao
-                tmp_arr(:,a,j) = tmp_arr(:,a,j) + c_ia(j,b)*q_ao(:,a,b)
-            end do
-        end do
-    end do
-    !$omp end parallel do
-
-    !$omp parallel do collapse(2)
-    do i = 1, n_mo
-        do j = 1, n_mo
-            q_mo(:,i,j) = f0
-            do a = 1, n_ao
-                q_mo(:,i,j) = q_mo(:,i,j) + c_ia(i,a)*tmp_arr(:,a,j)
-            end do
-        end do
-    end do
-    !$omp end parallel do
-
-end subroutine convert_AO2MO_N
-
-! ======================================================================
-
 function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
                      to_MOs, coefs_ia)
     !! Build and return transition amplitudes in the AO or MO basis.
@@ -772,9 +674,10 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
 
         if (to_MO) then
             if (.not.present(coefs_ia)) then
-                write(iu_out, '(a)') &
-                    'DEVERR: Missing c_ia for the conversion from AO to MO'
-                stop
+                call runstat%raise_error(&
+                    'Missing c_ia for the conversion from AO to MO', &
+                    cat='dev', source='eltrans_amp')
+                return
             end if
             call convert_AO2MO(n_ao, n_mos(iab), coefs_ia(:,:,iab), &
                                tmp(:,:,iab), eltrans_amp(:,:,iab), tmp_arr)

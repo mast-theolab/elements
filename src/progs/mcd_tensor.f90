@@ -1,19 +1,21 @@
 program mcd_tensor
     use iso_fortran_env, only: output_unit
-    use numeric, only: realwp, f0, f1, f2
-    use string, only: timestamp, labXYZ_1D, locase
+
     use input, only: DataFile
-    use parse_cmdline, only: CmdArgDB
-    use output, only: iu_out, sec_header, len_int, prt_coord, prt_mat, &
-      write_err
+    use basisset, only: fix_norm_AOs, chk_bset_redundancy
+    use datatypes, only: MoleculeDB, BasisSetDB, OrbitalsDB, ExcitationDB
+    use electronic, only: eltrans_amp, overlap_ao_1e, ovij_1e
+    use exc_sos, only: sos_eiOg, sos_ejOei, sos_prefac_ejOei, &
+        sos_MCD_tensor_LORG_corr
     use exception, only: BaseException, Error, AllocateError, ArgumentError, &
         FileError, ValueError
     use gmcd_legacy, only: write_control, build_MOs
-    use basisset, only: fix_norm_AOs, chk_bset_redundancy
-    use electronic, only: convert_AO2MO, eltrans_amp, overlap_ao_1e, ovij_1e
-    use exc_sos, only: sos_eiOg, sos_ejOei, sos_prefac_ejOei, &
-        sos_MCD_tensor_LORG_corr
-    use datatypes, only: MoleculeDB, BasisSetDB, OrbitalsDB, ExcitationDB
+    use numeric, only: realwp, f0, f1, f2
+    use orbital, only: convert_AO2MO
+    use output, only: iu_out, sec_header, len_int, prt_coord, prt_mat, &
+      write_err
+    use parse_cmdline, only: CmdArgDB
+    use string, only: timestamp, labXYZ_1D, locase
 
     implicit none
 

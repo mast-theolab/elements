@@ -13,6 +13,7 @@
 * ***basisset***: new function to return the sequence of powers for a given angular momentum: `list_L_powers`.
 * ***calcites***: new program to compute the thermal contributions to vibrational spectra within the harmonic approximation for a given type of spectroscopy.
 * ***math***: new function `double_factorial` to compute the double factorial "n!!".
+* ***orbital***: new module dedicated to operation on atomic/molecular orbitals.
 * ***vertex***: new program to compute and print the extrapolated geometry for vibronic vertical models.
 * ***vibronic***: new `extrapolate_geom` to compute the extrapolated minimum geometry for vertical vibronic models (VG, VH).
 
@@ -23,6 +24,7 @@
 
 ### Changed
 * ***build***: OpenMP is now enabled by default in `exc_sos`.
+* ***electronic***: `convert_AO2MO` is transferred to module `orbital` and thus removed from module `electronic`.
 * ***math***: Definition of linear-algebra routines has been moved to submodules based on the type and kind (real32, real64, complex32, complex64).
 * ***math***: Procedures now ordered by alphabetical order to facilitate search of procedures.
 

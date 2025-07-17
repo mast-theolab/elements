@@ -56,6 +56,7 @@ target("eleclib")
     add_deps("corelib")
     add_deps("datalib")
     add_deps("mathlib")
+    add_files("src/core/orbital.f90")
     add_files("src/core/electronic.f90")
 
 

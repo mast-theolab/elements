@@ -23,6 +23,7 @@ module datatypes
     end type AtomDB
 
     type, public :: BasisSetDB
+        !! Basis Set Database.
         integer :: &
             n_basis = 0, &   ! number of basis functions
             n_basok = 0, &   ! number of basis functions actually used
@@ -38,6 +39,7 @@ module datatypes
     end type BasisSetDB
 
     type, public :: ExcitationDB
+        !! Electronic Excitation Database.
         integer :: &
             n_states = 0, &   ! molecular charge
             id_state = -1     ! index of reference state (0: ground)
@@ -87,6 +89,7 @@ module datatypes
     end type MoleculeDB
 
     type, public :: OrbitalsDB
+        !! Atomic/Molecular Orbital Database.
         integer :: &
             n_ab = 1, &  ! num. of unique alpha-beta orbitals (1=closed shell)
             n_ao = 0, &  ! number of atomic orbitals

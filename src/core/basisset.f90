@@ -1,7 +1,8 @@
 module basisset
-    !! Basis sets-related modules
+    !! Basis sets-related module.
     !!
-    !! Procedure related to basis sets and their definition
+    !! The module defines procedures to build databases of basis
+    !! functions and operate on them.
     use math, only: build_PascalTriangle, double_factorial, factorial, int_xn_e2ax2, &
         itri_pa, phii_xn_phij
     use numeric, only: realwp, f0, f1, f2, f3, f3quart, f4, f5, f10, fhalf, pi
@@ -14,7 +15,9 @@ module basisset
 
     private
     public :: build_bset_DB, chk_bset_redundancy, coef_C2P, coef_transfo_P2C, &
-        coefs_norm_sh, set_primC_comp, transfo_cart2pure
+        coefs_norm_sh, get_cart_L_der_sh_at, get_cart_L_norms_sh, &
+        get_cart_L_sh_at, get_cart_r_der_sh_at, get_cart_r_sh_at, &
+        set_primC_comp, transfo_cart2pure
     public :: convert_pure2cart, fix_norm_AOs, len_shells_on_atom, &
         num_cart_AOs, num_shells_on_atom
     integer, parameter, public :: max_nxyz = 28
@@ -848,7 +851,7 @@ end subroutine coef_transfo_P2C
 
 ! ======================================================================
 
-function get_cart_L_der_sh_at(L_ang, len_shell, x, y, z) result(cart_L_der)
+function get_cart_L_der_sh_at(L_ang, len_sh, x, y, z) result(cart_L_der)
     !! Angular part derivative of Cart. AOs for a shell at position.
     !!
     !! Computes and returns the derivative of the angular component
@@ -856,11 +859,11 @@ function get_cart_L_der_sh_at(L_ang, len_shell, x, y, z) result(cart_L_der)
     !! position.
     integer, intent(in) :: L_ang
         !! Angular momentum.
-    integer, intent(in) :: len_shell
+    integer, intent(in) :: len_sh
         !! Length of the shell.
     real(realwp), intent(in) :: x, y, z
         !! Cartesian components of the point of interest.
-    real(realwp), dimension(len_shell,3) :: cart_L_der
+    real(realwp), dimension(len_sh,3) :: cart_L_der
         !! Derivative of the angular momentum component.
 
     integer :: i, n_x, n_y, n_z, n_powers
@@ -884,16 +887,16 @@ end function get_cart_L_der_sh_at
 
 ! ======================================================================
 
-function get_cart_L_norms_sh(L_ang, len_shell) result(cart_L_norm)
+function get_cart_L_norms_sh(L_ang, len_sh) result(cart_L_norm)
     !! Normalization factor for the angular part of a given shell.
     !!
     !! Computes and returns the normalization constant for the angular
     !! component of a given shell in the Cartesian basis.
     integer, intent(in) :: L_ang
         !! Angular momentum.
-    integer, intent(in) :: len_shell
+    integer, intent(in) :: len_sh
         !! Length of the shell.
-    real(realwp), dimension(len_shell) :: cart_L_norm
+    real(realwp), dimension(len_sh) :: cart_L_norm
         !! Normalization constant for angular moment.
 
     integer :: i, n_x, n_y, n_z, n_powers
@@ -904,7 +907,7 @@ function get_cart_L_norms_sh(L_ang, len_shell) result(cart_L_norm)
 
     allocate(powers(3, n_powers))
     powers = list_L_powers(L_ang, n_powers)
-    do i = 1, len_shell
+    do i = 1, len_sh
         n_x = powers(1, i)
         n_y = powers(2, i)
         n_z = powers(3, i)
@@ -919,18 +922,18 @@ end function get_cart_L_norms_sh
 
 ! ======================================================================
 
-function get_cart_L_sh_at(L_ang, len_shell, x, y, z) result(cart_L)
+function get_cart_L_sh_at(L_ang, len_sh, x, y, z) result(cart_L)
     !! Angular part of Cartesian AOs for a shell at position.
     !!
     !! Computes and returns the angular component of Cartesian atomic
     !! orbitals for a given shell at a chosen position.
     integer, intent(in) :: L_ang
         !! Angular momentum.
-    integer, intent(in) :: len_shell
+    integer, intent(in) :: len_sh
         !! Length of the shell.
     real(realwp), intent(in) :: x, y, z
         !! Cartesian components of the point of interest.
-    real(realwp), dimension(len_shell) :: cart_L
+    real(realwp), dimension(len_sh) :: cart_L
         !! Derivative of the angular momentum component.
 
     integer :: i, n_powers, n_x, n_y, n_z
@@ -954,7 +957,7 @@ end function get_cart_L_sh_at
 
 ! ======================================================================
 
-function get_cart_r_der_sh_at(L_ang, coeff_idx, n_prim_sh, bset_sh, x, y, z) &
+function get_cart_r_der_sh_at(L_ang, idx_coeff, n_prim_sh, bset_sh, x, y, z) &
                               result(cart_r_der)
     !! Radial part derivative of Cart. AOs for a shell at position.
     !!
@@ -963,7 +966,7 @@ function get_cart_r_der_sh_at(L_ang, coeff_idx, n_prim_sh, bset_sh, x, y, z) &
     !! position.
     integer, intent(in) :: L_ang
         !! Angular momentum.
-    integer, intent(in) :: coeff_idx
+    integer, intent(in) :: idx_coeff
         !! Coefficient index in the basis functions database.
     integer, intent(in) :: n_prim_sh
         !! Number of primitives in the shell.
@@ -981,11 +984,11 @@ function get_cart_r_der_sh_at(L_ang, coeff_idx, n_prim_sh, bset_sh, x, y, z) &
     cart_r_der = f0
 
     ! Compute the overlap between primitives
-    overlap = get_primitives_overlap_sh(L_ang, coeff_idx, n_prim_sh, bset_sh)
+    overlap = get_primitives_overlap_sh(L_ang, idx_coeff, n_prim_sh, bset_sh)
 
     do i = 1, n_prim_sh
         alpha = bset_sh(i)%alpha
-        coeff = bset_sh(i)%coeff(coeff_idx)
+        coeff = bset_sh(i)%coeff(idx_coeff)
         ! Normalization factor
         anorm = (f4 * alpha)**(f3quart + real(L_ang, kind=realwp)*fhalf)
         ! Radial part
@@ -1001,7 +1004,7 @@ end function get_cart_r_der_sh_at
 
 ! ======================================================================
 
-function get_cart_r_sh_at(L_ang, coeff_idx, n_prim_sh, bset_sh, x, y, z) &
+function get_cart_r_sh_at(L_ang, idx_coeff, n_prim_sh, bset_sh, x, y, z) &
                           result(cart_r)
     !! Radial part of Cartesian AOs for a shell at position.
     !!
@@ -1010,7 +1013,7 @@ function get_cart_r_sh_at(L_ang, coeff_idx, n_prim_sh, bset_sh, x, y, z) &
     !! position.
     integer, intent(in) :: L_ang
         !! Angular momentum.
-    integer, intent(in) :: coeff_idx
+    integer, intent(in) :: idx_coeff
         !! Coefficient index in the basis functions database.
     integer, intent(in) :: n_prim_sh
         !! Number of primitives in the shell.
@@ -1018,7 +1021,7 @@ function get_cart_r_sh_at(L_ang, coeff_idx, n_prim_sh, bset_sh, x, y, z) &
         !! Basis set functions database for a given shell.
     real(realwp), intent(in) :: x, y, z
         !! Cartesian components of the point of interest.
-    real(realwp), dimension(3) :: cart_r
+    real(realwp) :: cart_r
         !! Radial component.
 
     integer :: i
@@ -1026,11 +1029,11 @@ function get_cart_r_sh_at(L_ang, coeff_idx, n_prim_sh, bset_sh, x, y, z) &
 
     cart_r = f0
 
-    overlap = get_primitives_overlap_sh(L_ang, coeff_idx, n_prim_sh, bset_sh)
+    overlap = get_primitives_overlap_sh(L_ang, idx_coeff, n_prim_sh, bset_sh)
 
     do i = 1, n_prim_sh
         alpha = bset_sh(i)%alpha
-        coeff = bset_sh(i)%coeff(coeff_idx)
+        coeff = bset_sh(i)%coeff(idx_coeff)
 
         anorm = (f4 * alpha)**(f3quart + real(L_ang, kind=realwp) * fhalf)
         cart_r = cart_r + anorm * coeff * exp(-alpha * (x**2+y**2+z**2))
@@ -1042,7 +1045,7 @@ end function get_cart_r_sh_at
 
 ! ======================================================================
 
-function get_primitives_overlap_sh(L_ang, coeff_idx, n_prim_sh, bset_sh) &
+function get_primitives_overlap_sh(L_ang, idx_coeff, n_prim_sh, bset_sh) &
                                   result(overlap)
     !! Overlap between primitives for a given shell.
     !!
@@ -1050,7 +1053,7 @@ function get_primitives_overlap_sh(L_ang, coeff_idx, n_prim_sh, bset_sh) &
     !! shell.
     integer, intent(in) :: L_ang
         !! Angular momentum.
-    integer, intent(in) :: coeff_idx
+    integer, intent(in) :: idx_coeff
         !! Coefficient index in the basis functions database.
     integer, intent(in) :: n_prim_sh
         !! Number of primitives in the shell.
@@ -1071,7 +1074,7 @@ function get_primitives_overlap_sh(L_ang, coeff_idx, n_prim_sh, bset_sh) &
                 / (bset_sh(i)%alpha + bset_sh(j)%alpha)
 
             overlap = overlap &
-                + bset_sh(i)%coeff(coeff_idx) * bset_sh(j)%coeff(coeff_idx) &
+                + bset_sh(i)%coeff(idx_coeff) * bset_sh(j)%coeff(idx_coeff) &
                     * (base**power)
 
         end do

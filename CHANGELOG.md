@@ -14,6 +14,8 @@
 * ***calcites***: new program to compute the thermal contributions to vibrational spectra within the harmonic approximation for a given type of spectroscopy.
 * ***math***: new function `double_factorial` to compute the double factorial "n!!".
 * ***orbital***: new module dedicated to operation on atomic/molecular orbitals.
+* ***orbital***: new subroutine `eval_AOs_chi_at` to evaluate atomic orbitals at a chosen position.
+* ***orbital***: new subroutine `eval_AOs_nabla_chi_at` to evaluate atomic orbitals and their first derivatives at a chosen position.
 * ***vertex***: new program to compute and print the extrapolated geometry for vibronic vertical models.
 * ***vibronic***: new `extrapolate_geom` to compute the extrapolated minimum geometry for vertical vibronic models (VG, VH).
 

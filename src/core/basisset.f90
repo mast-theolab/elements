@@ -220,40 +220,34 @@ module basisset
 
     interface num_cart_AOs
         !! Number of Cartesian atomic orbitals based on pure.
-        module function num_cart_AOs_bsetBF(n_ao, bsetBF, nprim_per_atom) &
+        module function num_cart_AOs_bsetBF(bsetBF, nprim_per_atom) &
                 result(num_AOs)
             !! Number of Cartesian atomic orbitals.
             !!
             !! Computes the number of Cartesian-type atomic orbitals.
             !!
             !! This version expects basis set information as separate arguments.
-
-            integer, intent(in) :: n_ao
-            !! Number of atomic orbitals.
             type(PrimitiveFunction), dimension(:,:), intent(in) :: bsetBF
-            !! Basis set's basis function information (pure).
+                !! Basis set's basis function information (pure).
             integer, dimension(:), intent(in) :: nprim_per_atom
-            !! Number of basis primitives per atom.
+                !! Number of basis primitives per atom.
             integer :: num_AOs
-            !! Number of Cartesian atomic orbitals.
+                !! Number of Cartesian atomic orbitals.
 
         end function num_cart_AOs_bsetBF
 
         ! ----------------------------------------------------------------------
 
-        module function num_cart_AOs_bsetDB(n_ao, bsetDB) result(num_AOs)
+        module function num_cart_AOs_bsetDB(bsetDB) result(num_AOs)
             !! Number of Cartesian atomic orbitals.
             !!
             !! Computes the number of Cartesian-type atomic orbitals.
             !!
             !! This version expects a basis set database as argument.
-
-            integer, intent(in) :: n_ao
-            !! Number of atomic orbitals.
             type(BasisSetDB), intent(in) :: bsetDB
-            !! Basis set database (pure).
+                !! Basis set database (pure).
             integer :: num_AOs
-            !! Number of Cartesian atomic orbitals.
+                !! Number of Cartesian atomic orbitals.
 
         end function num_cart_AOs_bsetDB
 

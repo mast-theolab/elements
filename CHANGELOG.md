@@ -11,6 +11,7 @@
 * ***basisset***: new function to compute the radial component for a shell made of Cartesian atomic orbitals at a given point: `get_cart_r_sh_at`.
 * ***basisset***: new function to compute the overlap between primitives in a given shell made of Cartesian atomic orbitals: `get_primitives_overlap_sh`.
 * ***basisset***: new function to return the sequence of powers for a given angular momentum: `list_L_powers`.
+* ***basisset***: `convert_pure2cart` can now produce a full basis set database in output.
 * ***calcites***: new program to compute the thermal contributions to vibrational spectra within the harmonic approximation for a given type of spectroscopy.
 * ***math***: new function `double_factorial` to compute the double factorial "n!!".
 * ***orbital***: new module dedicated to operation on atomic/molecular orbitals.

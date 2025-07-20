@@ -41,7 +41,8 @@ module basisset
             !! Converts the information for pure basis functions to Cartesian
             !! functions.
             !!
-            !! This version expects basis set information as separate arguments.
+            !! This version expects basis set information as separate
+            !! arguments.
 
             type(PrimitiveFunction), dimension(:,:), intent(in) :: bsetBF
             !! Basis set's basis function information (pure).
@@ -58,7 +59,8 @@ module basisset
             !! Converts the information for pure basis functions to Cartesian
             !! functions.
             !!
-            !! This version expects a basis set database as argument.
+            !! This version expects a basis set database as input
+            !! argument.
 
             type(BasisSetDB), intent(in) :: bsetDB
             !! Basis set database (pure).
@@ -66,6 +68,21 @@ module basisset
             !! Basis set's basis function information (Cartesian).
 
         end subroutine convert_pure2cart_bsetDB
+
+        module subroutine convert_pure2cart_bsetDB2DB(bsetDB, bsetDB_cart)
+            !! Convert basis set information from pure to Cartesian.
+            !!
+            !! Converts a basis set database containing pure basis
+            !! functions into a new database with Cartesian functions.
+            !!
+            !! This version expects basis set databases as arguments.
+
+            type(BasisSetDB), intent(in) :: bsetDB
+            !! Basis set database (pure).
+            type(BasisSetDB), intent(out) :: bsetDB_cart
+            !! Basis set database (Cartesian).
+
+        end subroutine convert_pure2cart_bsetDB2DB
 
         module subroutine convert_pure2cart_matrix_bsetBF( &
                 bsetBF, nprim_per_atom, matrix_pure, matrix_cart)

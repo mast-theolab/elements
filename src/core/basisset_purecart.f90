@@ -9,31 +9,24 @@ contains
 
 module procedure convert_pure2cart_bsetBF
 
-    integer :: center, iprim
+    integer :: ia, iprim
 
     bsetBF_cart = bsetBF
-    do center = 1, size(bsetBF, 1)
-        do iprim = 1, nprim_per_atom(center)
+    do ia = 1, size(bsetBF, 1)
+        do iprim = 1, nprim_per_atom(ia)
 
-            ! bsetBF_cart(center,iprim)%l = bsetBF(center,iprim)%l
-            ! bsetBF_cart(center,iprim)%shelltype = bsetBF(center,iprim)%shelltype
-            ! bsetBF_cart(center,iprim)%shellid = bsetBF(center,iprim)%shellid
-            bsetBF_cart(center,iprim)%pure  = .false.
+            bsetBF_cart(ia,iprim)%pure  = .false.
 
-            ! bsetBF_cart(center,iprim)%shell_first = bsetBF(center,iprim)%shell_first
-            ! bsetBF_cart(center,iprim)%shell_last = bsetBF(center,iprim)%shell_last
-            ! bsetBF_cart(center,iprim)%alpha = bsetBF(center,iprim)%alpha
-            ! bsetBF_cart(center,iprim)%coeff = bsetBF(center,iprim)%coeff
-
-            if (bsetBF(center,iprim)%shelltype == 'D') then
-                bsetBF_cart(center,iprim)%ndim = 6
-            else if (bsetBF(center,iprim)%shelltype == 'F') then
-                bsetBF_cart(center,iprim)%ndim = 10
-            else
-                bsetBF_cart(center,iprim)%ndim = bsetBF(center,iprim)%ndim
-            endif
-        enddo
-    enddo
+            select case (bsetBF(ia,iprim)%shelltype)
+            case ('D')
+                bsetBF_cart(ia,iprim)%ndim = 6
+            case ('F')
+                bsetBF_cart(ia,iprim)%ndim = 10
+            case default
+                bsetBF_cart(ia,iprim)%ndim = bsetBF(ia,iprim)%ndim
+            end select
+        end do
+    end do
 
 end procedure convert_pure2cart_bsetBF
 
@@ -41,43 +34,60 @@ end procedure convert_pure2cart_bsetBF
 
 module procedure convert_pure2cart_bsetDB
 
-    ! Local
-    integer :: center, iprim
+    integer :: ia, iprim
 
     bsetBF_cart = bsetDB%info
-    do center = 1, size(bsetDB%info, 1)
-        do iprim = 1, bsetDB%nprim_per_at(center)
+    do ia = 1, size(bsetDB%info, 1)
+        do iprim = 1, bsetDB%nprim_per_at(ia)
+            bsetBF_cart(ia,iprim)%pure  = .false.
 
-            ! bsetBF_cart(center,iprim)%l = bsetDB%info(center,iprim)%l
-            ! bsetBF_cart(center,iprim)%shelltype = bsetDB%info(center,iprim)%shelltype
-            ! bsetBF_cart(center,iprim)%shellid = bsetDB%info(center,iprim)%shellid
-            bsetBF_cart(center,iprim)%pure  = .false.
-
-            ! bsetBF_cart(center,iprim)%shell_first = bsetDB%info(center,iprim)%shell_first
-            ! bsetBF_cart(center,iprim)%shell_last = bsetDB%info(center,iprim)%shell_last
-            ! bsetBF_cart(center,iprim)%alpha = bsetDB%info(center,iprim)%alpha
-            ! bsetBF_cart(center,iprim)%coeff = bsetDB%info(center,iprim)%coeff
-
-            if (bsetDB%info(center,iprim)%shelltype == 'D') then
-                bsetBF_cart(center,iprim)%ndim = 6
-            else if (bsetDB%info(center,iprim)%shelltype == 'F') then
-                bsetBF_cart(center,iprim)%ndim = 10
-            else
-                bsetBF_cart(center,iprim)%ndim = bsetDB%info(center,iprim)%ndim
-            endif
-        enddo
-    enddo
+            select case (bsetDB%info(ia,iprim)%shelltype)
+            case ('D')
+                bsetBF_cart(ia,iprim)%ndim = 6
+            case ('F')
+                bsetBF_cart(ia,iprim)%ndim = 10
+            case default
+                bsetBF_cart(ia,iprim)%ndim = bsetDB%info(ia,iprim)%ndim
+            end select
+        end do
+    end do
 
 end procedure convert_pure2cart_bsetDB
+
+! ======================================================================
+
+module procedure convert_pure2cart_bsetDB2DB
+
+    integer :: ia, iprim
+
+    bsetDB_cart = bsetDB
+    bsetDB_cart%pureD = .false.
+    bsetDB_cart%pureF = .false.
+    do ia = 1, size(bsetDB%info, 1)
+        do iprim = 1, bsetDB%nprim_per_at(ia)
+            bsetDB_cart%info(ia,iprim)%pure  = .false.
+
+            select case (bsetDB%info(ia,iprim)%shelltype)
+            case ('D')
+                bsetDB_cart%info(ia,iprim)%ndim = 6
+            case('F')
+                bsetDB_cart%info(ia,iprim)%ndim = 10
+            case default
+                bsetDB_cart%info(ia,iprim)%ndim = bsetDB%info(ia,iprim)%ndim
+            end select
+        end do
+    end do
+
+end procedure convert_pure2cart_bsetDB2DB
 
 ! ======================================================================
 
 module procedure convert_pure2cart_matrix_bsetBF
 
     ! Local
-    integer :: center_mu, l_mu, len_mu_C, id_mu_C, id_mu_P, &
+    integer :: ia_mu, l_mu, len_mu_C, id_mu_C, id_mu_P, &
         len_mu_P, offset_mu, shell_mu, shell_per_atom_mu
-    integer :: center_nu, l_nu, len_nu_C, id_nu_C, id_nu_P, &
+    integer :: ia_nu, l_nu, len_nu_C, id_nu_C, id_nu_P, &
         len_nu_P, offset_nu, shell_nu, shell_per_atom_nu
     integer, dimension(:), allocatable :: len_shell_per_atom_mu, len_shell_per_atom_nu
     real(realwp), dimension(:,:), allocatable :: mu_t, nu_t
@@ -89,47 +99,47 @@ module procedure convert_pure2cart_matrix_bsetBF
     id_mu_P = 1
     id_mu_C = 1
 
-    do center_mu = 1, size(bsetBF, 1)
+    do ia_mu = 1, size(bsetBF, 1)
         offset_mu = 1
-        shell_per_atom_mu = num_shells_on_atom(bsetBF(center_mu,:), &
-            nprim_per_atom, center_mu)
+        shell_per_atom_mu = num_shells_on_atom(bsetBF(ia_mu,:), &
+            nprim_per_atom, ia_mu)
         allocate(len_shell_per_atom_mu(shell_per_atom_mu))
         len_shell_per_atom_mu = len_shells_on_atom( &
-            bsetBF(center_mu, :), nprim_per_atom, shell_per_atom_mu, center_mu)
+            bsetBF(ia_mu, :), nprim_per_atom, shell_per_atom_mu, ia_mu)
 
         do shell_mu = 1, shell_per_atom_mu
-            l_mu = bsetBF(center_mu, offset_mu)%l
+            l_mu = bsetBF(ia_mu, offset_mu)%l
             if (l_mu == -1) then
                 len_mu_C = 4
                 len_mu_P = 4
             else
                 len_mu_C = (l_mu + 1) * (l_mu + 2) / 2
                 len_mu_P = 2 * l_mu + 1
-            endif
+            end if
 
             mu_t = transfo_cart2pure(l_mu)
             offset_mu = offset_mu + len_shell_per_atom_mu(shell_mu)
             id_nu_P = 1
             id_nu_C = 1
 
-            do center_nu = 1, size(bsetBF, 1)
+            do ia_nu = 1, size(bsetBF, 1)
                 offset_nu = 1
                 shell_per_atom_nu = num_shells_on_atom( &
-                    bsetBF(center_nu, :), nprim_per_atom, center_nu)
+                    bsetBF(ia_nu, :), nprim_per_atom, ia_nu)
                 allocate(len_shell_per_atom_nu(shell_per_atom_nu))
                 len_shell_per_atom_nu = len_shells_on_atom( &
-                    bsetBF(center_nu, :), nprim_per_atom, shell_per_atom_nu, &
-                    center_nu)
+                    bsetBF(ia_nu, :), nprim_per_atom, shell_per_atom_nu, &
+                    ia_nu)
 
                 do shell_nu = 1, shell_per_atom_nu
-                    l_nu = bsetBF(center_nu, offset_nu)%l
+                    l_nu = bsetBF(ia_nu, offset_nu)%l
                     if (l_nu == -1) then
                         len_nu_C = 4
                         len_nu_P = 4
                     else
                         len_nu_C = (l_nu + 1) * (l_nu + 2) / 2
                         len_nu_P = 2 * l_nu + 1
-                    endif
+                    end if
                     nu_t = transfo_cart2pure(l_nu)
                     call xgemm("T", "N", len_nu_C, len_mu_P, len_nu_P, f1, &
                         nu_t, len_nu_P, &
@@ -162,9 +172,9 @@ end procedure convert_pure2cart_matrix_bsetBF
 module procedure convert_pure2cart_matrix_bsetDB
 
     ! Local
-    integer :: center_mu, l_mu, len_mu_C, id_mu_C, id_mu_P, &
+    integer :: ia_mu, l_mu, len_mu_C, id_mu_C, id_mu_P, &
         len_mu_P, offset_mu, shell_mu, shell_per_atom_mu
-    integer :: center_nu, l_nu, len_nu_C, id_nu_C, id_nu_P, &
+    integer :: ia_nu, l_nu, len_nu_C, id_nu_C, id_nu_P, &
         len_nu_P, offset_nu, shell_nu, shell_per_atom_nu
     integer, dimension(:), allocatable :: len_shell_per_atom_mu, len_shell_per_atom_nu
     real(realwp), dimension(:,:), allocatable :: mu_t, nu_t
@@ -176,44 +186,44 @@ module procedure convert_pure2cart_matrix_bsetDB
     id_mu_P = 1
     id_mu_C = 1
 
-    do center_mu = 1, size(bsetDB%info, 1)
+    do ia_mu = 1, size(bsetDB%info, 1)
         offset_mu = 1
-        shell_per_atom_mu = num_shells_on_atom(bsetDB, center_mu)
+        shell_per_atom_mu = num_shells_on_atom(bsetDB, ia_mu)
         allocate(len_shell_per_atom_mu(shell_per_atom_mu))
         len_shell_per_atom_mu = len_shells_on_atom(bsetDB, shell_per_atom_mu, &
-            center_mu)
+            ia_mu)
 
         do shell_mu = 1, shell_per_atom_mu
-            l_mu = bsetDB%info(center_mu, offset_mu)%l
+            l_mu = bsetDB%info(ia_mu, offset_mu)%l
             if (l_mu == -1) then
                 len_mu_C = 4
                 len_mu_P = 4
             else
                 len_mu_C = (l_mu + 1) * (l_mu + 2) / 2
                 len_mu_P = 2 * l_mu + 1
-            endif
+            end if
 
             mu_t = transfo_cart2pure(l_mu)
             offset_mu = offset_mu + len_shell_per_atom_mu(shell_mu)
             id_nu_P = 1
             id_nu_C = 1
 
-            do center_nu = 1, size(bsetDB%info, 1)
+            do ia_nu = 1, size(bsetDB%info, 1)
                 offset_nu = 1
-                shell_per_atom_nu = num_shells_on_atom(bsetDB, center_nu)
+                shell_per_atom_nu = num_shells_on_atom(bsetDB, ia_nu)
                 allocate(len_shell_per_atom_nu(shell_per_atom_nu))
                 len_shell_per_atom_nu = len_shells_on_atom(bsetDB, &
-                    shell_per_atom_nu, center_nu)
+                    shell_per_atom_nu, ia_nu)
 
                 do shell_nu = 1, shell_per_atom_nu
-                    l_nu = bsetDB%info(center_nu, offset_nu)%l
+                    l_nu = bsetDB%info(ia_nu, offset_nu)%l
                     if (l_nu == -1) then
                         len_nu_C = 4
                         len_nu_P = 4
                     else
                         len_nu_C = (l_nu + 1) * (l_nu + 2) / 2
                         len_nu_P = 2 * l_nu + 1
-                    endif
+                    end if
                     nu_t = transfo_cart2pure(l_nu)
                     call xgemm("T", "N", len_nu_C, len_mu_P, len_nu_P, f1, &
                         nu_t, len_nu_P, &
@@ -696,8 +706,8 @@ module procedure len_shells_on_atom_bsetBF
            len_shells(offset) = counter
            counter = 1
            offset = offset + 1
-        endif
-    enddo
+        end if
+    end do
 
 end procedure len_shells_on_atom_bsetBF
 
@@ -716,8 +726,8 @@ module procedure len_shells_on_atom_bsetDB
            len_shells(offset) = counter
            counter = 1
            offset = offset + 1
-        endif
-    enddo
+        end if
+    end do
 
 end procedure len_shells_on_atom_bsetDB
 
@@ -726,14 +736,14 @@ end procedure len_shells_on_atom_bsetDB
 module procedure num_cart_AOs_bsetBF
 
     ! Local
-    integer :: i, center
+    integer :: i, ia
 
     num_AOs = 0
 
-    do center = 1, size(bsetBF, 1)
-        do i = 1, nprim_per_atom(center)
-            if (bsetBF(center,i)%shell_first) then
-                select case (bsetBF(center,i)%shelltype)
+    do ia = 1, size(bsetBF, 1)
+        do i = 1, nprim_per_atom(ia)
+            if (bsetBF(ia,i)%shell_first) then
+                select case (bsetBF(ia,i)%shelltype)
                     case ('SP')
                         num_AOs = num_AOs + 4
                     case ('S')
@@ -754,9 +764,9 @@ module procedure num_cart_AOs_bsetBF
                         print *, 'Unsupported basis function'
                         stop 99
                 end select
-            endif
-        enddo
-    enddo
+            end if
+        end do
+    end do
 
 end procedure num_cart_AOs_bsetBF
 
@@ -764,16 +774,16 @@ end procedure num_cart_AOs_bsetBF
 
 module procedure num_cart_AOs_bsetDB
     
-    integer :: i, center, n_d, n_f
+    integer :: i, ia, n_d, n_f
 
     num_AOs = 0
     n_d = 0
     n_f = 0
 
-    do center = 1, size(bsetDB%info, 1)
-        do i = 1, bsetDB%nprim_per_at(center)
-            if (bsetDB%info(center,i)%shell_first) then
-                select case (bsetDB%info(center,i)%shelltype)
+    do ia = 1, size(bsetDB%info, 1)
+        do i = 1, bsetDB%nprim_per_at(ia)
+            if (bsetDB%info(ia,i)%shell_first) then
+                select case (bsetDB%info(ia,i)%shelltype)
                     case ('SP')
                         num_AOs = num_AOs + 4
                     case ('S')
@@ -794,9 +804,9 @@ module procedure num_cart_AOs_bsetDB
                         print *, 'Unsupported basis function'
                         stop 99
                 end select
-            endif
-        enddo
-    enddo
+            end if
+        end do
+    end do
 
 end procedure num_cart_AOs_bsetDB
 
@@ -811,7 +821,7 @@ module procedure num_shells_on_atom_bsetBF
     do i = 1, nprim_per_atom(ia)
         if (bsetBF(i)%shell_first) &
             num_shells = num_shells + 1
-    enddo
+    end do
 
 end procedure num_shells_on_atom_bsetBF
 
@@ -826,7 +836,7 @@ module procedure num_shells_on_atom_bsetDB
     do i = 1, bsetDB%nprim_per_at(ia)
         if (bsetDB%info(ia,i)%shell_first) &
             num_shells = num_shells + 1
-    enddo
+    end do
 
 end procedure num_shells_on_atom_bsetDB
 

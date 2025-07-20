@@ -10,9 +10,9 @@ module orbital
     use exception, only: runstat
     use numeric, only: realwp, f0, f10m10
 
-    real(realwp), parameter, private :: thresh_at_center = f10m10
-
     implicit none
+
+    real(realwp), parameter, private :: thresh_at_center = f10m10
 
     interface eval_AOs_nabla_chi_at
         !! Evaluate AOs and first derivatives at position.

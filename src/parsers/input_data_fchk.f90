@@ -188,7 +188,7 @@ module procedure build_bset_data_fchk
     call build_bset_DB(n_at, bset%n_shells, bset%pureD, bset%pureF, &
                        shell_types, prim_per_sh, shell_to_at, coef_contr, &
                        coef_contrSP, prim_exp, bset%nprim_per_at, bset%info, &
-                       suberr)
+                       bset%L_max, suberr)
     if (suberr%raised()) then
         select type(suberr)
             class is (Error)

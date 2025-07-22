@@ -27,7 +27,8 @@ module datatypes
         integer :: &
             n_basis = 0, &   ! number of basis functions
             n_basok = 0, &   ! number of basis functions actually used
-            n_shells = 0     ! number of primitive shells
+            n_shells = 0, &  ! number of primitive shells
+            L_max = 0        ! highest angular momentum component in basis set
         integer, dimension(:), allocatable :: &
             nprim_per_at     ! number of primitive basis funcs / atom
         logical :: &

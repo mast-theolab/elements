@@ -21,10 +21,10 @@ module basisset
     public :: convert_pure2cart, fix_norm_AOs, len_shells_on_atom, &
         num_cart_AOs, num_shells_on_atom
     integer, parameter, public :: max_nxyz = 28
-    integer, parameter :: L_max = 6
+    integer, parameter :: MAX_L_ANG = 6
     integer, private :: i_
-    real(realwp), dimension(0:2*L_max) :: &
-        fn = [(gamma(real(i_, kind=realwp)), i_=1, 2*L_max+1)]
+    real(realwp), dimension(0:2*MAX_L_ANG) :: &
+        fn = [(gamma(real(i_, kind=realwp)), i_=1, 2*MAX_L_ANG+1)]
 
 ! ----------------------------------------------------------------------
 
@@ -318,39 +318,39 @@ contains
 
 subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
                          prim_per_sh, shell_to_at, coef_contr, coef_contrSP, &
-                         prim_exp, nprim_per_at, bset, err)
+                         prim_exp, nprim_per_at, bset, L_max, err)
     !! Build basis set database.
     !!
     !! Builds a list of the basis functions sorted by atoms and
     !! primitives.
-
-    ! Arguments
     integer, intent(in) :: n_at
-    !! Number of atoms.
+        !! Number of atoms.
     integer, intent(in) :: n_shells
-    !! Number of contracted shells.
+        !! Number of contracted shells.
     logical, intent(in) :: pureD
-    !! If True, spherical harm. are used for D orbitals, Cart. otherwise.
+        !! If True, spherical harm. are used for D orbitals, Cart. otherwise.
     logical, intent(in) :: pureF
-    !! If True, spherical harmonics are used for F and above.
+        !! If True, spherical harmonics are used for F and above.
     integer, dimension(:), intent(in) :: shell_types
-    !! Shell types, as integers.
+        !! Shell types, as integers.
     integer, dimension(:), intent(in) :: prim_per_sh
-    !! number of primitives per shell.
+        !! number of primitives per shell.
     integer, dimension(:), intent(in) :: shell_to_at
-    !! shell to atom mapping.
+        !! shell to atom mapping.
     real(realwp), dimension(:), intent(in) :: coef_contr
-    !! contraction coefficients.
+        !! contraction coefficients.
     real(realwp), dimension(:), allocatable, intent(in) :: coef_contrSP
-    !! contraction coefficients for shells of type S=P.
+        !! contraction coefficients for shells of type S=P.
     real(realwp), dimension(:), intent(in) :: prim_exp
-    !! primitives exponents.
+        !! primitives exponents.
     integer, dimension(:), allocatable, intent(out) :: nprim_per_at
-    !! Number of primitive per atom.
+        !! Number of primitive per atom.
     type(PrimitiveFunction), dimension(:,:), allocatable, intent(out) :: bset
-    !! Basis set database.
+        !! Basis set database.
+    integer, intent(out) :: L_max
+        !! Highest angular moment in the basis set.
     class(BaseException), allocatable, intent(out) :: err
-    !! Error instance.
+        !! Error instance.
 
     ! Local
     integer :: i, ia, ippa, iprim, iptot, L_ang, ndim, ntot_AOs
@@ -376,6 +376,7 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
 
     ntot_AOs = 0
     iptot = 0
+    L_max = 0
     do ish = 1, n_shells
         select case(shell_types(ish))
             ! ndim for spherical: 2*L + 1
@@ -449,6 +450,7 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
                 call RaiseError(err, 'Unrecognized shell type')
                 return
         end select
+        if (abs(L_ang) > abs(L_max)) L_max = L_ang
         ntot_AOs = ntot_AOs + ndim
         ia = shell_to_at(ish)
         shell_per_at(ia) = shell_per_at(ia) + 1

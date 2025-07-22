@@ -46,6 +46,12 @@ module procedure convert_pure2cart_bsetDB
                 bsetBF_cart(ia,iprim)%ndim = 6
             case ('F')
                 bsetBF_cart(ia,iprim)%ndim = 10
+            case ('G')
+                bsetBF_cart(ia,iprim)%ndim = 15
+            case ('H')
+                bsetBF_cart(ia,iprim)%ndim = 21
+            case ('I')
+                bsetBF_cart(ia,iprim)%ndim = 28
             case default
                 bsetBF_cart(ia,iprim)%ndim = bsetDB%info(ia,iprim)%ndim
             end select
@@ -59,10 +65,14 @@ end procedure convert_pure2cart_bsetDB
 module procedure convert_pure2cart_bsetDB2DB
 
     integer :: ia, iprim
+    logical :: n_basok_diff
 
     bsetDB_cart = bsetDB
     bsetDB_cart%pureD = .false.
     bsetDB_cart%pureF = .false.
+    n_basok_diff = bsetDB_cart%n_basis /= bsetDB_cart%n_basok
+
+    bsetDB_cart%n_basis = 0
     do ia = 1, size(bsetDB%info, 1)
         do iprim = 1, bsetDB%nprim_per_at(ia)
             bsetDB_cart%info(ia,iprim)%pure  = .false.
@@ -70,13 +80,28 @@ module procedure convert_pure2cart_bsetDB2DB
             select case (bsetDB%info(ia,iprim)%shelltype)
             case ('D')
                 bsetDB_cart%info(ia,iprim)%ndim = 6
-            case('F')
+            case ('F')
                 bsetDB_cart%info(ia,iprim)%ndim = 10
+            case ('G')
+                bsetDB_cart%info(ia,iprim)%ndim = 15
+            case ('H')
+                bsetDB_cart%info(ia,iprim)%ndim = 21
+            case ('I')
+                bsetDB_cart%info(ia,iprim)%ndim = 28
             case default
                 bsetDB_cart%info(ia,iprim)%ndim = bsetDB%info(ia,iprim)%ndim
+            if (bsetDB_cart%info(ia,iprim)%shell_first) &
+                bsetDB_cart%n_basis = bsetDB_cart%n_basis &
+                    + bsetDB_cart%info(ia,iprim)%ndim
             end select
         end do
     end do
+    
+    if (n_basok_diff) then
+        bsetDB_cart%n_basok = 0
+    else
+        bsetDB_cart%n_basok = bsetDB_cart%n_basis
+    end if
 
 end procedure convert_pure2cart_bsetDB2DB
 

@@ -37,6 +37,9 @@ module datatypes
         type(PrimitiveFunction), dimension(:,:), allocatable :: &
             info ! basis set information
         logical :: loaded = .false.
+    contains
+        procedure :: is_pure => is_bsetDB_pure
+        procedure :: is_cart => is_bsetDB_cart
     end type BasisSetDB
 
     type, public :: ExcitationDB
@@ -456,6 +459,45 @@ function get_atom_rvdw(this, db, err) result(rvdw)
     end select
 
 end function get_atom_rvdw
+
+! ======================================================================
+
+logical function is_bsetDB_pure(bsetDB)
+    !! Check if basis set is pure.
+    !!
+    !! Use a few simple heuristics to establish if basis set is pure.
+    class(BasisSetDB), intent(in) :: bsetDB
+
+    select case (abs(bsetDB%L_max))
+    case(0,1)
+        is_bsetDB_pure = .true.
+    case(2)
+        is_bsetDB_pure = bsetDB%pureD
+    case(3:)
+        is_bsetDB_pure = bsetDB%pureD .and. bsetDB%pureF
+    end select
+
+end function is_bsetDB_pure
+
+! ======================================================================
+
+logical function is_bsetDB_cart(bsetDB)
+    !! Check if basis set is Cartesian.
+    !!
+    !! Use a few simple heuristics to establish if basis set is
+    !! Cartesian.
+    class(BasisSetDB), intent(in) :: bsetDB
+
+    select case (abs(bsetDB%L_max))
+    case(0,1)
+        is_bsetDB_cart = .true.
+    case(2)
+        is_bsetDB_cart = .not.bsetDB%pureD
+    case(3:)
+        is_bsetDB_cart = .not.(bsetDB%pureD .or. bsetDB%pureF)
+    end select
+
+end function is_bsetDB_cart
 
 ! ======================================================================
 

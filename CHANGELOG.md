@@ -15,6 +15,7 @@
 * ***basisset***: `convert_pure2cart` can now produce a full basis set database in output.
 * ***calcites***: new program to compute the thermal contributions to vibrational spectra within the harmonic approximation for a given type of spectroscopy.
 * ***datatypes***: new component `L_max` to derived type `BasisSetDB` storing the highest component in the whole basis set.
+* ***datatypes***: added methods `is_pure` and `is_cart` to `BasisSetDB` to check the type of basis set.  Note that mixed basis sets could lead to both functions yielding `.false.`.
 * ***math***: new function `double_factorial` to compute the double factorial "n!!".
 * ***orbital***: new module dedicated to operation on atomic/molecular orbitals.
 * ***orbital***: new subroutine `eval_AOs_chi_at` to evaluate atomic orbitals at a chosen position.

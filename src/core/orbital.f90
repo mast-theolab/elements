@@ -517,7 +517,7 @@ subroutine eval_AOs_nabla_chi_at_db(molDB, bsetDB, x, y, z, chi_at, &
     else
         warn = .false.
     end if
-    
+
     chi_at = f0
     d1_chi_at = f0
     beg_sh = 1
@@ -777,8 +777,6 @@ function get_AOs_sh_at(len_sh, bset_sh, x, y, z) result(chi_sh_at)
     chi_sh_at = f0
     nprim_sh = size(bset_sh)
     idx_coeff = 0
-    
-
 
     if (bset_sh(1)%shelltype == 'SP') then
         ! Treat S part

@@ -152,7 +152,7 @@ subroutine eval_AOs_chi_at_arr(at_crd, nprim_per_at, bsetBF, x, y, z, chi_at, &
         !! Atomic coordinates.
     integer, dimension(:), intent(in) :: nprim_per_at
         !! Number of primitives on each atomic center.
-    class(PrimitiveFunction), dimension(:,:), intent(in) :: bsetBF
+    class(PrimitiveFunction), dimension(:,:), intent(in), target :: bsetBF
         !! Basis set's basis function information.
     real(realwp), intent(in) :: x, y, z
         !! Cartesian components of the point of interest.
@@ -166,6 +166,7 @@ subroutine eval_AOs_chi_at_arr(at_crd, nprim_per_at, bsetBF, x, y, z, chi_at, &
     real(realwp) :: x_rel, y_rel, z_rel
     logical :: warn
     character(len=256) :: msg
+    type(PrimitiveFunction), dimension(:), pointer :: bset
 
     if (present(prt_warn)) then
         warn = prt_warn
@@ -200,10 +201,9 @@ subroutine eval_AOs_chi_at_arr(at_crd, nprim_per_at, bsetBF, x, y, z, chi_at, &
             n_prim = n_prim + n_prim_sh
             end_bset = beg_bset + n_prim_sh - 1
             end_sh = beg_sh + bsetBF(ia,i_sh)%ndim - 1
-
+            bset => bsetBF(ia,beg_bset:end_bset)
             chi_at(beg_sh:end_sh) = get_AOs_sh_at( &
-                bsetBF(ia,i_sh)%ndim, bsetBF(ia,beg_bset:end_bset), &
-                x_rel, y_rel, z_rel)
+                bsetBF(ia,i_sh)%ndim, bset, x_rel, y_rel, z_rel)
 
             beg_sh = beg_sh + bsetBF(ia,i_sh)%ndim
 
@@ -233,7 +233,7 @@ subroutine eval_AOs_chi_at_db(molDB, bsetDB, x, y, z, chi_at, prt_warn)
     !! @endnote
     class(MoleculeDB), intent(in) :: molDB
         !! Molecule database.
-    class(BasisSetDB), intent(in) :: bsetDB
+    class(BasisSetDB), intent(in), target :: bsetDB
         !! Basis set database
     real(realwp), intent(in) :: x, y, z
         !! Cartesian components of the point of interest.
@@ -247,6 +247,7 @@ subroutine eval_AOs_chi_at_db(molDB, bsetDB, x, y, z, chi_at, prt_warn)
     real(realwp) :: x_rel, y_rel, z_rel
     logical :: warn
     character(len=256) :: msg
+    type(PrimitiveFunction), dimension(:), pointer :: bset
 
     if (present(prt_warn)) then
         warn = prt_warn
@@ -281,10 +282,9 @@ subroutine eval_AOs_chi_at_db(molDB, bsetDB, x, y, z, chi_at, prt_warn)
             n_prim = n_prim + n_prim_sh
             end_bset = beg_bset + n_prim_sh - 1
             end_sh = beg_sh + bsetDB%info(ia, i_sh)%ndim - 1
-
+            bset => bsetDB%info(ia,beg_bset:end_bset)
             chi_at(beg_sh:end_sh) = get_AOs_sh_at( &
-                bsetDB%info(ia,i_sh)%ndim, bsetDB%info(ia,beg_bset:end_bset), &
-                x_rel, y_rel, z_rel)
+                bsetDB%info(ia,i_sh)%ndim, bset, x_rel, y_rel, z_rel)
 
             beg_sh = beg_sh + bsetDB%info(ia, i_sh)%ndim
 
@@ -321,7 +321,7 @@ subroutine eval_AOs_chi_at_dim(n_at, at_crd, nprim_per_at, bsetBF, x, y, z, &
         !! Atomic coordinates.
     integer, dimension(:), intent(in) :: nprim_per_at
         !! Number of primitives on each atomic center.
-    class(PrimitiveFunction), dimension(:,:), intent(in) :: bsetBF
+    class(PrimitiveFunction), dimension(:,:), intent(in), target :: bsetBF
         !! Basis set's basis function information.
     real(realwp), intent(in) :: x, y, z
         !! Cartesian components of the point of interest.
@@ -335,6 +335,7 @@ subroutine eval_AOs_chi_at_dim(n_at, at_crd, nprim_per_at, bsetBF, x, y, z, &
     real(realwp) :: x_rel, y_rel, z_rel
     logical :: warn
     character(len=256) :: msg
+    type(PrimitiveFunction), dimension(:), pointer :: bset
 
     if (present(prt_warn)) then
         warn = prt_warn
@@ -351,7 +352,7 @@ subroutine eval_AOs_chi_at_dim(n_at, at_crd, nprim_per_at, bsetBF, x, y, z, &
 
         if (sum(abs([x_rel, y_rel, z_rel])) < thresh_at_center .and. warn) then
             write(msg, '("Chosen point close to atom center ",i0,&
-                &". Divergence may occur!")') ia
+                  &". Divergence may occur!")') ia
             call runstat%raise_warning(trim(msg))
         end if
 
@@ -369,10 +370,9 @@ subroutine eval_AOs_chi_at_dim(n_at, at_crd, nprim_per_at, bsetBF, x, y, z, &
             n_prim = n_prim + n_prim_sh
             end_bset = beg_bset + n_prim_sh - 1
             end_sh = beg_sh + bsetBF(ia,i_sh)%ndim - 1
-
+            bset => bsetBF(ia,beg_bset:end_bset)
             chi_at(beg_sh:end_sh) = get_AOs_sh_at( &
-                bsetBF(ia,i_sh)%ndim, bsetBF(ia,beg_bset:end_bset), &
-                x_rel, y_rel, z_rel)
+                bsetBF(ia,i_sh)%ndim, bset, x_rel, y_rel, z_rel)
 
             beg_sh = beg_sh + bsetBF(ia,i_sh)%ndim
 

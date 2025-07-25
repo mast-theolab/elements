@@ -90,10 +90,10 @@ module procedure convert_pure2cart_bsetDB2DB
                 bsetDB_cart%info(ia,iprim)%ndim = 28
             case default
                 bsetDB_cart%info(ia,iprim)%ndim = bsetDB%info(ia,iprim)%ndim
+            end select
             if (bsetDB_cart%info(ia,iprim)%shell_first) &
                 bsetDB_cart%n_basis = bsetDB_cart%n_basis &
                     + bsetDB_cart%info(ia,iprim)%ndim
-            end select
         end do
     end do
     

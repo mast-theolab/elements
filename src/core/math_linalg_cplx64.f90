@@ -9,6 +9,7 @@ contains
 ! ======================================================================
 
 module procedure z_det
+    use lapack_drv, only: xgetrf
 
     complex(real64), allocatable :: work(:)
     integer, allocatable         :: ipiv(:)
@@ -38,6 +39,7 @@ end procedure z_det
 ! ======================================================================
 
 module procedure z_inv_mat
+    use lapack_drv, only: xgetrf, xgetri
 
     complex(real64), allocatable :: work(:)
     integer, allocatable         :: ipiv(:)

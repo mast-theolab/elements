@@ -75,6 +75,8 @@ end procedure s_cross_vec_mat
 ! ======================================================================
 
 module procedure s_det
+    use lapack_drv, only: xgetrf
+
     real(real32), allocatable :: work(:)
     integer, allocatable      :: ipiv(:)
     integer                   :: n, i, info
@@ -103,6 +105,8 @@ end procedure s_det
 ! ======================================================================
 
 module procedure s_inv_mat
+    use lapack_drv, only: xgetrf, xgetri
+
     real(real32), allocatable :: work(:)
     integer, allocatable     :: ipiv(:)
     integer                  :: n, info

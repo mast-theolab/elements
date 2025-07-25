@@ -9,6 +9,8 @@ contains
 ! ======================================================================
 
 module procedure c_det
+    use lapack_drv, only: xgetrf
+
     complex(real32), allocatable :: work(:)
     integer, allocatable         :: ipiv(:)
     integer                      :: n, i, info
@@ -37,6 +39,8 @@ end procedure c_det
 ! ======================================================================
 
 module procedure c_inv_mat
+    use lapack_drv, only: xgetrf, xgetri
+
     complex(real32), allocatable :: work(:)
     integer, allocatable         :: ipiv(:)
     integer                      :: n, info

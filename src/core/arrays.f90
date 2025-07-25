@@ -3,6 +3,15 @@ module arrays
 
     implicit none
 
+    interface antisymm_sum
+        !! Build the antisymmetric sum of matrix A.
+        !!
+        !! The routine performs in-place:
+        !! \[ A(p,q) = A(p,q) - A(q,p) \]
+        !! No copy of A is done.
+        module procedure antisymm_sum_r32, antisymm_sum_r64
+    end interface antisymm_sum
+
     interface symm_tri_array
         module procedure symm_tri_arr_r32, symm_tri_arr_r64
     end interface symm_tri_array
@@ -12,6 +21,68 @@ module arrays
     end interface indexes_sym2lt
 
 contains
+
+! ======================================================================
+
+subroutine antisymm_sum_r32(N, A)
+    !! @note "version"
+    !! 32-bits version.
+    !! @endnote
+    integer, intent(in) :: N
+        !! Dimension of the matrix.
+    real(real32), dimension(N,N), intent(inout) :: A
+        !! Matrix to antisymmetrize.
+
+    integer :: i, j
+
+    !$omp parallel do private(i, j)
+    do i = 1, N
+        do j = i, N
+            A(j,i) = A(j,i) - A(i,j)
+        end do
+    end do
+    !$omp end parallel do
+   
+    !$omp parallel do private(i, j)
+    do i = 1, N
+        do j = 1, i-1
+            A(j,i) = -A(i,j)
+        end do
+    end do
+    !$omp end parallel do
+
+end subroutine antisymm_sum_r32
+
+! ======================================================================
+
+subroutine antisymm_sum_r64(N, A)
+    !! @note "version"
+    !! 64-bits version.
+    !! @endnote
+    integer, intent(in) :: N
+        !! Dimension of the matrix.
+    real(real64), dimension(N,N), intent(inout) :: A
+        !! Matrix to antisymmetrize.
+
+    integer :: i, j
+
+    !$omp parallel do private(i, j)
+    do i = 1, N
+        do j = i, N
+            A(j,i) = A(j,i) - A(i,j)
+        end do
+    end do
+    !$omp end parallel do
+   
+    !$omp parallel do private(i, j)
+    do i = 1, N
+        do j = 1, i-1
+            A(j,i) = -A(i,j)
+        end do
+    end do
+    !$omp end parallel do
+
+end subroutine antisymm_sum_r64
 
 ! ======================================================================
 

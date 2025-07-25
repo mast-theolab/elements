@@ -4,6 +4,7 @@
 
 ### Added
 * ***arrays***: new interface `indexes_sym2lt` to convert the coordinates (2-4) in a nD symmetric tensor to the linear storage index of the lower-triangular block.
+* ***arrays***: new interface `antisymm_sum` to build the antisymmetric matrix in the form: A = A - A^T.
 * ***basisset***: new function to compute the derivative of the angular momentum for a shell made of Cartesian atomic orbitals at a given point: `get_cart_L_der_sh_at`.
 * ***basisset***: new function to compute the normalization factor for the angular momentum component for a shell made of Cartesian atomic orbitals at a given point: `get_cart_L_norms_sh`.
 * ***basisset***: new function to compute the angular momentum for a shell made of Cartesian atomic orbitals at a given point: `get_cart_L_sh_at`.

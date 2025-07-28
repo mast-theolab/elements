@@ -876,7 +876,7 @@ function get_cart_L_der_sh_at(L_ang, len_sh, x, y, z) result(cart_L_der)
         !! Length of the shell.
     real(realwp), intent(in) :: x, y, z
         !! Cartesian components of the point of interest.
-    real(realwp), dimension(len_sh,3) :: cart_L_der
+    real(realwp), dimension(3,len_sh) :: cart_L_der
         !! Derivative of the angular momentum component.
 
     integer :: i, n_x, n_y, n_z, n_powers
@@ -888,12 +888,12 @@ function get_cart_L_der_sh_at(L_ang, len_sh, x, y, z) result(cart_L_der)
     powers = list_L_powers(L_ang, n_powers)
     cart_L_der = f0
     do i = 1, n_powers
-        n_x = powers(1, i)
-        n_y = powers(2, i)
-        n_z = powers(3, i)
-        if (n_x /= 0) cart_L_der(i,1) = n_x * x**(n_x-1) * y**n_y * z**n_z
-        if (n_y /= 0) cart_L_der(i,2) = n_y * x**n_x * y**(n_y-1) * z**n_z
-        if (n_z /= 0) cart_L_der(i,3) = n_z * x**n_x * y**n_y * z**(n_z-1)
+        n_x = powers(1,i)
+        n_y = powers(2,i)
+        n_z = powers(3,i)
+        if (n_x /= 0) cart_L_der(1,i) = n_x * x**(n_x-1) * y**n_y * z**n_z
+        if (n_y /= 0) cart_L_der(2,i) = n_y * x**n_x * y**(n_y-1) * z**n_z
+        if (n_z /= 0) cart_L_der(3,i) = n_z * x**n_x * y**n_y * z**(n_z-1)
     end do
 
 end function get_cart_L_der_sh_at
@@ -958,9 +958,9 @@ function get_cart_L_sh_at(L_ang, len_sh, x, y, z) result(cart_L)
     powers = list_L_powers(L_ang, n_powers)
 
     do i = 1, n_powers
-        n_x = powers(1, i)
-        n_y = powers(2, i)
-        n_z = powers(3, i)
+        n_x = powers(1,i)
+        n_y = powers(2,i)
+        n_z = powers(3,i)
         cart_L(i) = x**n_x * y**n_y * z**n_z
     end do
 

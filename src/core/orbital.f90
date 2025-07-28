@@ -683,7 +683,7 @@ subroutine get_AOs_d1_sh_at(len_sh, bset_sh, x, y, z, chi_sh_at, &
     real(realwp) :: rad
     real(realwp), dimension(3) :: d1_rad
     real(realwp), dimension(len_sh) :: ang
-    real(realwp), dimension(len_sh, 3) :: d1_ang
+    real(realwp), dimension(3,len_sh) :: d1_ang
     real(realwp), dimension(len_sh) :: anorm
     real(realwp), dimension(:), allocatable :: anorm_SP
 
@@ -702,14 +702,14 @@ subroutine get_AOs_d1_sh_at(len_sh, bset_sh, x, y, z, chi_sh_at, &
         anorm_SP = get_cart_L_norms_sh(L_ang, len_sub_sh)
 
         ang(1:1) = get_cart_L_sh_at(L_ang, len_sub_sh, x, y, z)
-        d1_ang(1:1,:) = get_cart_L_der_sh_at(L_ang, len_sub_sh, x, y, z)
+        d1_ang(:,1:1) = get_cart_L_der_sh_at(L_ang, len_sub_sh, x, y, z)
         chi_sh_at(1:1) = rad * ang(1:1) / anorm_SP
         d1_chi_sh_at(1,1:1) = &
-            (rad * d1_ang(1:1,1) + d1_rad(1) * ang(1:1)) / anorm_SP
+            (rad * d1_ang(1,1:1) + d1_rad(1) * ang(1:1)) / anorm_SP
         d1_chi_sh_at(2,1:1) = &
-            (rad * d1_ang(1:1,2) + d1_rad(2) * ang(1:1)) / anorm_SP
+            (rad * d1_ang(2,1:1) + d1_rad(2) * ang(1:1)) / anorm_SP
         d1_chi_sh_at(3,1:1) = &
-            (rad * d1_ang(1:1,3) + d1_rad(3) * ang(1:1)) / anorm_SP
+            (rad * d1_ang(3,1:1) + d1_rad(3) * ang(1:1)) / anorm_SP
         deallocate(anorm_SP)
 
         ! P part
@@ -725,14 +725,14 @@ subroutine get_AOs_d1_sh_at(len_sh, bset_sh, x, y, z, chi_sh_at, &
         anorm_SP = get_cart_L_norms_sh(L_ang, len_sub_sh)
 
         ang(2:4) = get_cart_L_sh_at(L_ang, len_sub_sh, x, y, z)
-        d1_ang(2:4,:) = get_cart_L_der_sh_at(L_ang, len_sub_sh, x, y, z)
+        d1_ang(:,2:4) = get_cart_L_der_sh_at(L_ang, len_sub_sh, x, y, z)
         chi_sh_at(2:4) = rad * ang(2:4) / anorm_SP
         d1_chi_sh_at(1,2:4) = &
-            (rad * d1_ang(2:4,1) + d1_rad(1) * ang(2:4)) / anorm_SP
+            (rad * d1_ang(1,2:4) + d1_rad(1) * ang(2:4)) / anorm_SP
         d1_chi_sh_at(2,2:4) = &
-            (rad * d1_ang(2:4,2) + d1_rad(2) * ang(2:4)) / anorm_SP
+            (rad * d1_ang(2,2:4) + d1_rad(2) * ang(2:4)) / anorm_SP
         d1_chi_sh_at(3,2:4) = &
-            (rad * d1_ang(2:4,3) + d1_rad(3) * ang(2:4)) / anorm_SP
+            (rad * d1_ang(3,2:4) + d1_rad(3) * ang(2:4)) / anorm_SP
         deallocate(anorm_SP)
 
     else
@@ -744,10 +744,9 @@ subroutine get_AOs_d1_sh_at(len_sh, bset_sh, x, y, z, chi_sh_at, &
         ang = get_cart_L_sh_at(bset_sh(1)%L, len_sh, x, y, z)
         d1_ang = get_cart_L_der_sh_at(bset_sh(1)%L, len_sh, x, y, z)
         chi_sh_at = rad * ang / anorm
-        d1_chi_sh_at(1,:) = (rad * d1_ang(:,1) + d1_rad(1) * ang) / anorm
-        d1_chi_sh_at(2,:) = (rad * d1_ang(:,2) + d1_rad(2) * ang) / anorm
-        d1_chi_sh_at(3,:) = (rad * d1_ang(:,3) + d1_rad(3) * ang ) / anorm
-
+        d1_chi_sh_at(1,:) = (rad * d1_ang(1,:) + d1_rad(1) * ang) / anorm
+        d1_chi_sh_at(2,:) = (rad * d1_ang(2,:) + d1_rad(2) * ang) / anorm
+        d1_chi_sh_at(3,:) = (rad * d1_ang(3,:) + d1_rad(3) * ang) / anorm
     end if
 
 end subroutine get_AOs_d1_sh_at

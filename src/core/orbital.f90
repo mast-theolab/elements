@@ -589,7 +589,7 @@ subroutine eval_AOs_nabla_chi_at_dim(n_at, at_crd, nprim_per_at, bsetBF, x, &
         !! Atomic coordinates.
     integer, dimension(:), intent(in) :: nprim_per_at
         !! Number of primitives on each atomic center.
-    class(PrimitiveFunction), dimension(:,:), intent(in) :: bsetBF
+    class(PrimitiveFunction), dimension(:,:), intent(in), target :: bsetBF
         !! Basis set's basis function information.
     real(realwp), intent(in) :: x, y, z
         !! Cartesian components of the point of interest.
@@ -605,6 +605,7 @@ subroutine eval_AOs_nabla_chi_at_dim(n_at, at_crd, nprim_per_at, bsetBF, x, &
     real(realwp) :: x_rel, y_rel, z_rel
     logical :: warn
     character(len=256) :: msg
+    type(PrimitiveFunction), dimension(:), pointer :: bset
 
     if (present(prt_warn)) then
         warn = prt_warn
@@ -640,9 +641,9 @@ subroutine eval_AOs_nabla_chi_at_dim(n_at, at_crd, nprim_per_at, bsetBF, x, &
             n_prim = n_prim + n_prim_sh
             end_bset = beg_bset + n_prim_sh - 1
             end_sh = beg_sh + bsetBF(ia,i_sh)%ndim - 1
-
+            bset => bsetBF(ia,beg_bset:end_bset)
             call get_AOs_d1_sh_at(bsetBF(ia,i_sh)%ndim, &
-                                  bsetBF(ia,beg_bset:end_bset), &
+                                  bset, &
                                   x_rel, y_rel, z_rel, &
                                   chi_at(beg_sh:end_sh), &
                                   d1_chi_at(:,beg_sh:end_sh))

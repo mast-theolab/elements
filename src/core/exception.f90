@@ -423,9 +423,9 @@ end function check_status
 ! ======================================================================
 
 function get_base_message(this) result(msg)
-    !! Check status of an exception
+    !! Return error message.
     !!
-    !! Checks the status of an exception and returns True if raised
+    !! Returns the error messages.
     class(BaseException) :: this
     character(len=len_trim(this%errmsg)) :: msg
 

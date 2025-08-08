@@ -409,7 +409,7 @@ module procedure get_datafile_name
     !!
     !! Returns the filename stored in the DataFile instance.
 
-    err = dfile%name
+    name = dfile%name
 
 end procedure get_datafile_name
 
@@ -420,7 +420,7 @@ module procedure get_datafile_type
     !!
     !! Returns the filetype stored in the DataFile instance.
 
-    err = dfile%type
+    dtype = dfile%type
 
 end procedure get_datafile_type
 

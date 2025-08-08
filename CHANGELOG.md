@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.25.08
+
+### Fixed
+* ***exception***: Fixed misleading variable names and routines documentations.
+* ***input***: Fixed header documentation of routines.
+
+
 ## 0.25.07
 
 ### Added

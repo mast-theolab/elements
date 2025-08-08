@@ -26,9 +26,13 @@ module input
     type, public :: DataFile
         private
         character(len=:), allocatable :: name
+            !! Filename associated to data file.
         character(len=:), allocatable :: type
+            !! File type associated to data file.
         type(ProgramInfo) :: prog
+            !! Information on program that generated file.
         class(BaseException), allocatable :: error
+            !! Error instance
     contains
         procedure :: get_mol_data => build_mol_data
         procedure :: get_bset_data => build_bset_data
@@ -108,7 +112,7 @@ module function get_prog_name(prog_info, file_data) result(name)
     class(DataFile), intent(in), optional :: file_data
     !! Instance of DataFile.
     character(len=:), allocatable :: name
-    !! Program name.
+    !! Name of file associated to data file.
 
 end function get_prog_name
 
@@ -120,7 +124,7 @@ module function get_prog_version(prog_info, file_data) result(version)
     class(DataFile), intent(in), optional :: file_data
     !! Instance of DataFile.
     character(len=:), allocatable :: version
-    !! Program version.
+    !! Type of file storing original data.
 
 end function get_prog_version
 
@@ -167,20 +171,20 @@ end function check_prog_version
 
 ! ----------------------------------------------------------------------
 
-module function get_datafile_name(dfile) result(err)
+module function get_datafile_name(dfile) result(name)
     class(DataFile), intent(in) :: dfile
     !! DataFile instance.
-    character(len=:), allocatable :: err
-    !! Error instance.
+    character(len=:), allocatable :: name
+    !! Name of he .
 
 end function get_datafile_name
 
 ! ----------------------------------------------------------------------
 
-module function get_datafile_type(dfile) result(err)
+module function get_datafile_type(dfile) result(dtype)
     class(DataFile), intent(in) :: dfile
     !! DataFile instance.
-    character(len=:), allocatable :: err
+    character(len=:), allocatable :: dtype
     !! Error instance.
 
 end function get_datafile_type

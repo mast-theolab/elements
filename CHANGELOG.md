@@ -5,6 +5,7 @@
 ### Added
 * ***numeric***: New work kind for integer, that can be set to 32 or 64 bits (not yet used in library).
 * ***physics***: Conversion from Hartree to eV in `phys_conv`.
+* ***run_env***: New module to manage core runtime variables and parameters.  The module also provide core derived types to be inherited by other objects.
 
 ## 0.25.08
 

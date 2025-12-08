@@ -5,6 +5,11 @@ module string
     !! - Conversion to lower case
     !! - Conversion to upper case
     !! - find string in array
+    !!
+    !! @note
+    !! By design, the module does not have non-intrinsic dependence, since core
+    !! modules depend on it.
+    !! @endnote
     use iso_fortran_env, only: int32, int64
 
     implicit none

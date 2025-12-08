@@ -86,3 +86,5 @@ target("elements")
     add_deps("speclib")
     add_packages("openmp")
     add_files("src/core/exc_sos.f90")
+
+includes("xmake_gauopen.lua")

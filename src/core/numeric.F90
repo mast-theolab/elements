@@ -10,6 +10,13 @@ module numeric
 #else
     integer, parameter :: realwp = real64
 #endif
+#ifdef USE_I8
+    integer, parameter :: intwp = int64
+#elif defined USE_I4
+    integer, parameter :: intwp = int32
+#else
+    integer, parameter :: intwp = int32
+#endif
     !! Working precision for real, can be changed through 
 
     real(realwp), parameter :: &

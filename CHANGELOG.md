@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.12
+
+### Added
+* ***numeric***: New work kind for integer, that can be set to 32 or 64 bits (not yet used in library).
+
+
 ## 0.25.08
 
 ### Fixed

@@ -754,7 +754,7 @@ function gfaf_read_data(gfaf, label, NI, NR, NTot, LenBuf, N1, N2, N3, N4, &
         else
             dbase%dtype = 'I'
             allocate(dbase%idata(NTot))
-            call Rd_IBuf(gfaf%unit, NTot, LenBuf, dbase%idata, gfaf%unit)
+            call Rd_IBuf(gfaf%unit, NTot, LenBuf, dbase%idata, gfaf%int_size)
         end if
     else if (NI == 0 .and. NR == 1 .and. NRI == 1) then
         dbase%dtype = 'R'

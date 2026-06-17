@@ -10,22 +10,20 @@ program gen_py_atomdb
     use iso_fortran_env, only: real64
     use atominfo, only: atdata
     use physics, only: bohr => bohr_radius
-    use parse_cmdline, only: CmdArgDB
+    use parse_cmdline, only: CmdLineArgsDB
+    use run_env, only: run
     use string, only: locase
 
     implicit none
 
     integer :: iout, iunit
     character(len=1024) :: arg
-    type(CmdArgDB) :: opts
+    type(CmdLineArgsDB) :: opts
     
-    opts = CmdArgDB(progname='gen_py_atomdb')
+    opts = CmdLineArgsDB(progname='gen_py_atomdb')
+    call run%check(opts%error, &
+        'Failed to initialize the command-line parser')
 
-    if (opts%has_error()) then
-        write(*, '(a)') 'Failed to initialize the command-line parser'
-        write(*, '(a)') opts%get_error()
-        stop 1
-    end if
 
     call opts%add_arg_char( &
         'string', label='outfile', &
@@ -35,11 +33,7 @@ program gen_py_atomdb
         help='Unit for distance: au, bohr or ang, angstrom')
     
     call opts%parse_args()
-    if (opts%has_error()) then
-        write(*, '(a)') 'Error found while parsing'
-        write(*, '(a)') opts%get_error()
-        stop 1
-    end if
+    call run%check(opts%error, 'Error found while parsing')
 
     call opts%get_value('outfile', arg)
     open(newunit=iout, file=arg)
@@ -52,8 +46,8 @@ program gen_py_atomdb
         case('ang', 'angstrom')
             iunit = 1
         case default
-            write(*, '(a)') 'ERROR: Unsupported type of unit'
-            stop 1
+            call run%error%raise_error('opt', 'val', &
+                'Unsupported type of unit')
         end select
     else
         iunit = 1
@@ -74,7 +68,7 @@ subroutine write_atomic_data_head(out)
     integer, intent(in) :: out
     !! Identifier of the output file.
 
-    write(out, '(a)') 'def atomic_data(*atoms: TypeAtLab) -> TypeAtData:'
+    write(out, '(a)') 'def atomic_data(*atoms: AtLabType) -> AtDatType:'
     write(out, '(a)') '    """Generates atomic data.'
     write(out, '(a)') ''
     write(out, '(a)') '    Generates a dictionary containing atomic data for each atom given in'
@@ -142,10 +136,10 @@ subroutine write_atomic_data_head(out)
     write(out, '(a)') '    """'
     write(out, '(a)') '    at_data = {}'
     write(out, '(a)') '    for atom in set(atoms):'
-    write(out, '(a)') '        try:'
+    write(out, '(a)') '        if isinstance(atom, str):'
     write(out, '(a)') '            at_symb = atom.title()'
     write(out, '(a)') '            at_idx = at_symb'
-    write(out, '(a)') '        except AttributeError:'
+    write(out, '(a)') '        else:'
     write(out, '(a)') '            at_symb = ELEMENTS[atom]'
     write(out, '(a)') '            at_idx = atom'
 
@@ -304,7 +298,7 @@ subroutine write_dict_entry(iat, out, indent, to_ang)
         end if
         write(out, 1001) trim(key), trim(val)
         
-        write(out, fmt_key) '}'
+        write(out, fmt_key) '},'
 
         write(key, fmt_key) "'rvis'"
         if (abs(atdata(iat)%rvis) < epsilon(fact_r)) then

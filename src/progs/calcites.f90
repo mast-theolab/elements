@@ -7,16 +7,17 @@ program calcites
     !! The intensity can depend on the spectroscopy of interest and the
     !! description model
     use iso_fortran_env, only: int64
-    use numeric, only: f0, f1, f2, f10m1, f10p2, realwp
-    use input, only: DataFile
-    use string, only: locase, num_chars_int, upcase
-    use parse_cmdline, only: CmdArgDB
-    use output, only: iu_out, sec_header, write_err
-    use exception, only: BaseException, runstat
-    use datatypes, only: ExcitationDB, MoleculeDB, PropertyDB, VibrationsDB
-    use vibrational, only: boltz_pop_max_quanta, build_modes, full_boltz_pop
+
     use blas_drv, only: xgemm
+    use datatypes, only: ExcitationDB, MoleculeDB, PropertyDB, VibrationsDB
+    use input, only: DataFile
+    use numeric, only: f0, f1, f2, f10m1, f10p2, realwp
+    use output, only: iu_out, sec_header, write_err
+    use parse_cmdline, only: CmdLineArgsDB
     use physics, only: spec_conv
+    use run_env, only: run
+    use string, only: locase, num_chars_int, upcase
+    use vibrational, only: boltz_pop_max_quanta, build_modes, full_boltz_pop
 
     implicit none
 
@@ -49,7 +50,6 @@ program calcites
 
     type(Params) :: opts
     type(Property), dimension(:), allocatable :: prop
-    class(BaseException), allocatable :: err
 
     call parse_options(opts)
 
@@ -183,7 +183,7 @@ subroutine build_states(opts_db, nvib, omega, int_min, coef_cst, coef_nq1, &
         case ('RROA')
             id_spec = 6
         case default
-            call runstat%raise_error('Unsupported spectroscopy')
+            call run%error%raise_argerror('val', 'Unsupported spectroscopy')
     end select
     select case (upcase(trim(opts_db%level)))
         case ('FC')
@@ -193,7 +193,7 @@ subroutine build_states(opts_db, nvib, omega, int_min, coef_cst, coef_nq1, &
         case ('HT')
             id_level = 2
         case default
-            call runstat%raise_error('Unsupported level')
+            call run%error%raise_argerror('val', 'Unsupported level')
     end select
     max_modes = opts_db%max_modes
 
@@ -284,24 +284,10 @@ subroutine extract_data(opts_db, nvib, omega, props)
 
     ! Extract data for the definition of the vibrational states
     dfile_vib = DataFile(opts_db%file_vib)
-    if (dfile_vib%has_error()) then
-        call runstat%raise_error( &
-            'Failed to initialize data file', dfile_vib%get_error())
-    end if
 
     vib_db = dfile_vib%get_vib_data()
-    if (dfile_vib%has_error()) then
-        call runstat%raise_error( &
-            'Unable to parse vibrational data, check file.', &
-            dfile_vib%get_error())
-    end if
 
     mol_db0 = dfile_vib%get_mol_data()
-    if (dfile_vib%has_error()) then
-        call runstat%raise_error( &
-            'Unable to parse molecular data, check file.', &
-            dfile_vib%get_error())
-    end if
 
     n_at3 = 3*mol_db0%n_at
     nvib = vib_db%n_vib
@@ -312,28 +298,18 @@ subroutine extract_data(opts_db, nvib, omega, props)
 
     ! Initialize file storing properties of interest.
     dfile_prp = DataFile(opts_db%file_prp)
-    if (dfile_prp%has_error()) then
-        call runstat%raise_error( &
-            'Failed to initialize data file', dfile_prp%get_error())
-    end if
 
     select case (upcase(trim(opts_db%spec)))
         case ('OPA', 'RR')
             allocate(props(1))
             props(1)%id = 101
             exc_db = dfile_prp%get_exc_data()
-            if (dfile_prp%has_error()) then
-                call runstat%raise_error( &
-                    'Unable to parse excited-state data, check file.', &
-                    dfile_prp%get_error())
-            end if
             istate_exc = exc_db%id_state
             if (upcase(opts_db%level(:2)) == 'FC') then
                 p0_db = dfile_prp%get_data(props(1)%id, 0, istate_exc)
                 if (.not.p0_db%loaded) then
-                    call runstat%raise_error( &
-                        'Unable to extract property', &
-                        dfile_prp%get_error())
+                    call run%check(dfile_prp%error, &
+                                   'Unable to extract property')
                 end if
                 ! Now convert property quantities
                 props(1)%p_ref = p0_db%data
@@ -346,10 +322,8 @@ subroutine extract_data(opts_db, nvib, omega, props)
             if (index(upcase(trim(opts_db%level)), 'HT') > 0) then
                 p_d1_db = dfile_prp%get_data(props(1)%id, 0, istate_exc, 1)
                 if (.not.p_d1_db%loaded) then
-                        call runstat%raise_error( &
-                            'Unable to extract property', &
-                            dfile_prp%get_error())
-                    end if
+                    call run%check(dfile_prp%error, 'Unable to extract property')
+                end if
                 tmp_mat = reshape(p_d1_db%data, [p_d1_db%shape(1), p_d1_db%shape(2)])
                 allocate(props(1)%p_d1(3,nvib))
                 call xgemm('N', 'N', 3, nvib, n_at3, f1, tmp_mat, 3, &
@@ -365,7 +339,8 @@ subroutine extract_data(opts_db, nvib, omega, props)
                 deallocate(tmp_vec)
             end if
         case default
-            call runstat%raise_error('Unsupported spectroscopy.')
+            call run%error%raise_error('opt', 'value', &
+                'unsupported spectroscopy.')
     end select
 
 end subroutine extract_data
@@ -394,8 +369,8 @@ subroutine get_spectro_coeffs(opts_db, omega, props, coef_cst, coef_nq)
     select case(opts_db%spec)
         case ('OPA')
             if (props(1)%id /= 101) &
-                call runstat%raise_error( &
-                    'Unexpected property found. Aborting.')
+                call run%error%raise_error('data', 'missing', &
+                    'unexpected property found. Aborting.')
             select case(opts_db%level)
                 case ('FC')
                     coef_cst = sum(props(1)%p_ref**2)
@@ -413,10 +388,12 @@ subroutine get_spectro_coeffs(opts_db, omega, props, coef_cst, coef_nq)
                         coef_nq(i) = sum(props(1)%p_d1(:,i)**2)/f2
                     end do
                 case default
-                    call runstat%raise_error('Unsupported level for OPA.')
+                    call run%error%raise_deverror('nyi', &
+                        'unsupported level for OPA.')
             end select
         case default
-            call runstat%raise_error('Unsupported spectroscopy.')
+            call run%error%raise_error('opt', 'value', &
+                'unsupported spectroscopy.')
     end select
 
 end subroutine get_spectro_coeffs
@@ -456,7 +433,7 @@ function get_spectro_contrib(nq_modes, nq_quanta, id_spectro, id_level, &
                 contrib = coef_cst + sum(coef_nq1(nq_modes)*(2*nq_quanta))
             end if
         case default
-            call runstat%raise_error('Unsupported spectroscopy')
+            call run%error%raise_deverror('nyi', 'unsupported spectroscopy')
     end select
 
 end function get_spectro_contrib
@@ -467,16 +444,11 @@ subroutine parse_options(opts_db)
     type(Params), intent(out) :: opts_db
 
     character(len=1024) :: argval
-    type(CmdArgDB) :: parser
+    type(CmdLineArgsDB) :: parser
 
     ! Build option parser for commandline
-    parser = CmdArgDB(progname=locase(PROGNAME))
-    if (parser%has_error()) then
-        err = parser%exception()
-        call runstat%raise_error( &
-            'Unable to initialize the commandline parser', &
-            err%msg())
-    end if
+    parser = CmdLineArgsDB(progname=locase(PROGNAME))
+    call run%check(parser%error, 'Unable to initialize the commandline parser')
     call parser%add_arg_char( &
         'string', label='file_vib', &
         help='Gaussian formatted checkpoint file containing the description &
@@ -507,12 +479,7 @@ subroutine parse_options(opts_db)
         def_value=opts%temp, help='Temperature.')
 
     call parser%parse_args()
-    if (parser%has_error()) then
-        err = parser%exception()
-        call runstat%raise_error( &
-            'Failure to parse commandline options', &
-            err%msg())
-    end if
+    call run%check(parser%error, 'Failure to parse commandline options')
 
     ! Check commandline arguments and set information
     call parser%get_value('file_vib', argval)
@@ -531,20 +498,20 @@ subroutine parse_options(opts_db)
     call parser%get_value('num-modes', opts_db%max_modes)
 
     if (opts_db%temp <= f0) then
-        call runstat%raise_error(&
-            'Temperature must be strictly positive')
+        call run%error%raise_error('opt', 'value', &
+            'temperature must be strictly positive')
     end if
     if (opts_db%rho_min <= f0) then
-        call runstat%raise_error(&
-            'Minimum population must be strictly positive')
+        call run%error%raise_error('opt', 'value', &
+            'minimum population must be strictly positive')
     end if
     if (opts_db%thresh_int <= f0) then
-        call runstat%raise_error(&
-            'Minimum relative intensity must be strictly positive')
+        call run%error%raise_error('opt', 'value', &
+            'minimum relative intensity must be strictly positive')
     end if
     if (opts_db%max_modes <= 0) then
-        call runstat%raise_error(&
-            'Maximum number of modes must be strictly positive')
+        call run%error%raise_error('opt', 'value', &
+            'maximum number of modes must be strictly positive')
     end if
 
 end subroutine parse_options

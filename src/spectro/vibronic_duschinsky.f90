@@ -2,9 +2,9 @@ submodule (vibronic) vibronic_Duschinsky
     !! Submodule containing the Duschinsky matrix and shift calculation
 
     use blas_drv, only: xgemm
-    use exception, only: runstat
     use numeric, only: f0, f1
     use physics, only: phys_conv
+    use run_env, only: run
     use string, only: upcase
 
 contains
@@ -31,9 +31,11 @@ module procedure Duschinsky_matrix_identity
         !$omp end parallel do
 
     else
-        call runstat%raise_error('Duschinsky matrix cannot be constructed', &
-            details='Only n_vib as parameter but is_identity is false', &
-            source='Duschinsky_matrix_identity', cat='dev')
+        call run%error%raise_argerror('missing', &
+            'Duschinsky matrix cannot be constructed', &
+            details='only n_vib as parameter but is_identity is false', &
+            source='Duschinsky_matrix_identity')
+        return
     end if
 
 end procedure Duschinsky_matrix_identity
@@ -43,26 +45,31 @@ end procedure Duschinsky_matrix_identity
 module procedure Duschinsky_matrix_arr
 
     ! Local variables
-    integer :: i
     integer :: local_n_vib, local_n_at
     logical :: local_is_identity
 
     ! Sanity check
     if (size(L_mat1, 1) /= size(L_mat2, 1) &
         .or. size(L_mat1, 2) /= size(L_mat2, 2)) then
-        call runstat%raise_error('L_mat1 and L_mat2 must have the same dimensions', &
-            source='Duschinsky_matrix_arr', cat='dev')
+        call run%error%raise_argerror('size', &
+            'L_mat1 and L_mat2 must have the same dimensions', &
+            source='Duschinsky_matrix_arr')
+        return
     end if
     if (present(at_mass1)) then
         if (size(at_mass1) * 3 /= size(L_mat1, 1) ) then
-            call runstat%raise_error('at_mass1 and L_mat1 must have 3*n_at elements', &
-                source='Duschinsky_matrix_arr', cat='dev')
+            call run%error%raise_argerror('size', &
+                'at_mass1 and L_mat1 must have 3*n_at elements', &
+                source='Duschinsky_matrix_arr')
+            return
         end if
     end if
     if (present(at_mass2)) then
         if (size(at_mass2) * 3 /= size(L_mat2, 1) ) then
-            call runstat%raise_error('at_mass2 and L_mat2 must have 3*n_at elements', &
-                source='Duschinsky_matrix_arr', cat='dev')
+            call run%error%raise_argerror('size', &
+                'at_mass2 and L_mat2 must have 3*n_at elements', &
+                source='Duschinsky_matrix_arr')
+            return
         end if
     end if
 
@@ -94,38 +101,46 @@ module procedure Duschinsky_matrix_db
 
     ! Sanity check
     if (.not.(vib1%loaded)) then
-        call runstat%raise_error('vib1 VibrationsDB is not loaded', &
-            source='Duschinsky_matrix_db', cat='dev')
+        call run%error%raise_argerror('missing', &
+            'vib1 VibrationsDB is not loaded', source='Duschinsky_matrix_db')
+        return
     else if (.not.allocated(vib1%L_mat)) then
-        call runstat%raise_error('vib1 L_mat is not loaded', &
-            source='Duschinsky_matrix_db', cat='dev')
+        call run%error%raise_argerror('missing', 'vib1 L_mat is not loaded', &
+            source='Duschinsky_matrix_db')
+        return
     end if
 
     if (.not.(vib2%loaded)) then
-        call runstat%raise_error('vib2 VibrationsDB is not loaded', &
-            source='Duschinsky_matrix_db', cat='dev')
+        call run%error%raise_argerror('missing', &
+            'vib2 VibrationsDB is not loaded', source='Duschinsky_matrix_db')
+        return
     else if (.not.allocated(vib2%L_mat)) then
-        call runstat%raise_error('vib2 L_mat is not loaded', &
-            source='Duschinsky_matrix_db', cat='dev')
+        call run%error%raise_argerror('missing', 'vib2 L_mat is not loaded', &
+            source='Duschinsky_matrix_db')
+        return
     end if
 
     if (present(mol1)) then
         if (.not.(mol1%loaded)) then
-            call runstat%raise_error('mol1 MoleculeDB is not loaded', &
-                source='Duschinsky_matrix_db', cat='dev')
+            call run%error%raise_argerror('missing', &
+                'mol1 MoleculeDB is not loaded', source='Duschinsky_matrix_db')
+            return
         else if (.not.allocated(mol1%at_mas)) then
-            call runstat%raise_error('mol1 mass is not loaded', &
-                source='Duschinsky_matrix_db', cat='dev')
+            call run%error%raise_argerror('missing', &
+                'mol1 mass is not loaded', source='Duschinsky_matrix_db')
+            return
         end if
     end if
 
     if (present(mol2)) then
         if (.not.(mol2%loaded)) then
-            call runstat%raise_error('mol2 MoleculeDB is not loaded', &
-                source='Duschinsky_matrix_db', cat='dev')
+            call run%error%raise_argerror('missing', &
+                'mol2 MoleculeDB is not loaded', source='Duschinsky_matrix_db')
+            return
         else if (.not.allocated(mol2%at_mas)) then
-            call runstat%raise_error('mol2 mass is not loaded', &
-                source='Duschinsky_matrix_db', cat='dev')
+            call run%error%raise_argerror('missing', &
+                'mol2 mass is not loaded', source='Duschinsky_matrix_db')
+            return
         end if
     end if
 
@@ -134,14 +149,18 @@ module procedure Duschinsky_matrix_db
 
     local_n_vib = vib1%n_vib
     if (local_n_vib /= vib2%n_vib) then
-        call runstat%raise_error('vib1 and vib2 must have the same number of vibrational modes', &
-            source='Duschinsky_matrix_db', cat='dev')
+        call run%error%raise_argerror('size', &
+            'vib1 and vib2 must have the same number of vibrational modes', &
+            source='Duschinsky_matrix_db')
+        return
     end if
 
     local_n_at = size(vib1%L_mat, 1) / 3
     if (local_n_at /= size(vib2%L_mat, 1) / 3) then
-        call runstat%raise_error('vib1 and vib2 must have the same number of atoms', &
-            source='Duschinsky_matrix_db', cat='dev')
+        call run%error%raise_argerror('size', &
+            'vib1 and vib2 must have the same number of atoms', &
+            source='Duschinsky_matrix_db')
+        return
     end if
 
     if (local_is_identity) then
@@ -223,7 +242,8 @@ end function Duschinsky_matrix_orthogonal_with_mass
 
 ! ======================================================================
 
-module function Duschinsky_matrix_internal(n_vib, n_at, L_mat1, L_mat2, Ginv_mat) result(Jmat) 
+module function Duschinsky_matrix_internal(n_vib, n_at, L_mat1, L_mat2, &
+                                           Ginv_mat) result(Jmat) 
     !! Computes the Duschinsky matrix J for internal coordinates
     !!
     !! @note "Not implemented"
@@ -237,9 +257,11 @@ module function Duschinsky_matrix_internal(n_vib, n_at, L_mat1, L_mat2, Ginv_mat
     !! Masses of the atoms
     real(realwp), dimension(:, :), allocatable :: Jmat
 
-    call runstat%raise_error('Not implemented', &
-        details='Construction of Duschinsky matrix in internal coordinates is not implemented', &
-        source='Duschinsky_matrix_internal', cat='dev')
+    call run%error%raise_deverror('nyi', &
+        'construction of Duschinsky matrix in internal coordinates is not &
+        &implemented', &
+        source='Duschinsky_matrix_internal')
+    return
 
 end function Duschinsky_matrix_internal
 
@@ -248,27 +270,29 @@ end function Duschinsky_matrix_internal
 module procedure Duschinsky_shift_arr
 
     ! Local variables
-    real(realwp), dimension(:, :), allocatable :: tmp_r2
-    real(realwp) :: tmp
-    integer :: i, j, k
     character(len=2) :: local_mode
     integer :: local_n_vib, local_n_at
 
     ! Sanity checks for alway present arguments
     if (present(n_vib)) then
         if (size(L_mat1, 2) /= n_vib) then
-            call runstat%raise_error('L_mat1 must have n_vib columns', &
-                source='Duschinsky_shift_arr', cat='dev')
+            call run%error%raise_argerror('size', &
+                'L_mat1 must have n_vib columns', &
+                source='Duschinsky_shift_arr')
+            return
         end if
     end if
     if (present(n_at)) then
         if (size(L_mat1, 1) /= 3 * n_at) then
-            call runstat%raise_error('L_mat1 must have 3*n_at rows', &
-                source='Duschinsky_shift_arr', cat='dev')
+            call run%error%raise_argerror('size', &
+                'L_mat1 must have 3*n_at rows', source='Duschinsky_shift_arr')
+            return
         end if
         if (size(at_mass1) /= n_at) then
-            call runstat%raise_error('at_mass1 must have n_at elements', &
-                source='Duschinsky_shift_arr', cat='dev')
+            call run%error%raise_argerror('size', &
+                'at_mass1 must have n_at elements', &
+                source='Duschinsky_shift_arr')
+            return
         end if
     end if
 
@@ -282,44 +306,62 @@ module procedure Duschinsky_shift_arr
         case ('AS', 'AH')
             ! Sanity checks for optional arguments
             if (.not. present(coord1) .or. .not. present(coord2)) then
-                call runstat%raise_error('Provide coord1 and coord2 for AS and AH', &
-                    source='Duschinsky_shift_arr', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'provide coord1 and coord2 for AS and AH', &
+                    source='Duschinsky_shift_arr')
+                return
             end if
             if (local_n_at /= size(coord1, 2) .or. local_n_at /= size(coord2, 2)) then
-                call runstat%raise_error('coord1 and coord2 must have n_at columns', &
-                    source='Duschinsky_shift_arr', cat='dev')
+                call run%error%raise_argerror('size', &
+                    'coord1 and coord2 must have n_at columns', &
+                    source='Duschinsky_shift_arr')
+                return
             end if
 
-            Kvec = Duschinsky_shift_adiabatic(local_n_vib, local_n_at, L_mat1, at_mass1, coord1, coord2)
+            Kvec = Duschinsky_shift_adiabatic(local_n_vib, local_n_at, &
+                L_mat1, at_mass1, coord1, coord2)
         case ('VG')
             ! Sanity checks for optional arguments
             if (.not. present(red_freq2) .or. .not. present(grad2)) then
-                call runstat%raise_error('Provide red_freq2 and grad2 for VG', &
-                    source='Duschinsky_shift_arr', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'provide red_freq2 and grad2 for VG', &
+                    source='Duschinsky_shift_arr')
+                return
             end if
             if (local_n_vib /= size(red_freq2)) then
-                call runstat%raise_error('red_freq2 must have n_vib elements', &
-                    source='Duschinsky_shift_arr', cat='dev')
+                call run%error%raise_argerror('size', &
+                    'red_freq2 must have n_vib elements', &
+                    source='Duschinsky_shift_arr')
+                return
             end if
-            Kvec = Duschinsky_shift_vertical_gradient(local_n_vib, local_n_at, L_mat1, at_mass1, red_freq2, grad2)
+            Kvec = Duschinsky_shift_vertical_gradient(local_n_vib, &
+                local_n_at, L_mat1, at_mass1, red_freq2, grad2)
         case ('VH')
             ! Sanity checks for optional arguments
             if (.not. present(red_freq2) .or. .not. present(grad2) .or. .not. present(Jmat)) then
-                call runstat%raise_error('Provide red_freq2, grad2 and Jmat for VH', &
-                    source='Duschinsky_shift_arr', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'provide red_freq2, grad2 and Jmat for VH', &
+                    source='Duschinsky_shift_arr')
+                return
             end if
             if (local_n_vib /= size(red_freq2)) then
-                call runstat%raise_error('red_freq2 must have n_vib elements', &
-                    source='Duschinsky_shift_arr', cat='dev')
+                call run%error%raise_argerror('size', &
+                    'red_freq2 must have n_vib elements', &
+                    source='Duschinsky_shift_arr')
+                return
             end if
             if (size(Jmat, 1) /= local_n_vib .or. size(Jmat, 2) /= local_n_vib) then
-                call runstat%raise_error('Jmat must be a square matrix of size n_vib', &
-                    source='Duschinsky_shift_arr', cat='dev')
+                call run%error%raise_argerror('size', &
+                    'Jmat must be a square matrix of size n_vib', &
+                    source='Duschinsky_shift_arr')
+                return
             end if
             Kvec = Duschinsky_shift_vertical_hessian(local_n_vib, local_n_at, L_mat1, at_mass1, red_freq2, grad2, Jmat)
         case default
-            call runstat%raise_error('Provide appropriate mode for K-vector calculation', &
-                source='Duschinsky_shift_arr', cat='dev')
+            call run%error%raise_deverror('case', &
+                'provide appropriate mode for K-vector calculation', &
+                source='Duschinsky_shift_arr')
+            return
     end select
 
 end procedure Duschinsky_shift_arr
@@ -333,18 +375,22 @@ module procedure Duschinsky_shift_db
 
     ! Sanity check for always present arguments
     if (.not.(vib1%loaded)) then
-        call runstat%raise_error('vib1 VibrationsDB is not loaded', &
-            source='Duschinsky_shift_db', cat='dev')
+        call run%error%raise_argerror('missing', &
+            'vib1 VibrationsDB is not loaded', source='Duschinsky_shift_db')
+        return
     else if (.not.allocated(vib1%L_mat)) then
-        call runstat%raise_error('vib1 L_mat is not loaded', &
-            source='Duschinsky_shift_db', cat='dev')
+        call run%error%raise_argerror('missing', &
+            'vib1 L_mat is not loaded', source='Duschinsky_shift_db')
+        return
     end if
     if (.not.(mol1%loaded)) then
-        call runstat%raise_error('mol1 MoleculeDB is not loaded', &
-            source='Duschinsky_shift_db', cat='dev')
+        call run%error%raise_argerror('missing', &
+            'mol1 MoleculeDB is not loaded', source='Duschinsky_shift_db')
+        return
     else if (.not.allocated(mol1%at_mas)) then
-        call runstat%raise_error('mol1 mass is not loaded', &
-            source='Duschinsky_shift_db', cat='dev')
+        call run%error%raise_argerror('missing', &
+            'mol1 mass is not loaded', source='Duschinsky_shift_db')
+        return
     end if
 
     local_mode = 'AH'
@@ -354,51 +400,65 @@ module procedure Duschinsky_shift_db
         case ('AS', 'AH')
             ! Sanity checks for optional arguments
             if (.not. present(mol2)) then
-                call runstat%raise_error('Provide mol2 for AS and AH', &
-                    source='Duschinsky_shift_db', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'provide mol2 for AS and AH', source='Duschinsky_shift_db')
+                return
             end if
             if (.not.(mol2%loaded)) then
-                call runstat%raise_error('mol2 MoleculeDB is not loaded', &
-                    source='Duschinsky_shift_db', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'mol2 MoleculeDB is not loaded', &
+                    source='Duschinsky_shift_db')
+                return
             else if (.not.allocated(mol2%at_crd)) then
-                call runstat%raise_error('mol2 coords is not loaded', &
-                    source='Duschinsky_shift_db', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'mol2 coords is not loaded', source='Duschinsky_shift_db')
+                return
             end if
             Kvec = Duschinsky_shift_adiabatic(vib1%n_vib, mol1%n_at, vib1%L_mat, &
                 mol1%at_mas, mol1%at_crd, mol2%at_crd)
         case ('VG')
             ! Sanity checks for optional arguments
             if (.not. present(grad2)) then
-                call runstat%raise_error('Provide grad2 for VG', &
-                    source='Duschinsky_shift_db', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'provide grad2 for VG', source='Duschinsky_shift_db')
+                return
             end if
             Kvec = Duschinsky_shift_vertical_gradient(vib1%n_vib, mol1%n_at, vib1%L_mat, &
                 mol1%at_mas, vib1%red_freq, grad2)
         case ('VH')
             ! Sanity checks for optional arguments
             if (.not. present(vib2) .or. .not. present(grad2) .or. .not. present(Jmat)) then
-                call runstat%raise_error('Provide vib2, grad2 and Jmat for VH', &
-                    source='Duschinsky_shift_db', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'provide vib2, grad2 and Jmat for VH', &
+                    source='Duschinsky_shift_db')
+                return
             end if
             if (.not.(vib2%loaded)) then
-                call runstat%raise_error('vib2 VibrationsDB is not loaded', &
-                    source='Duschinsky_shift_db', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'vib2 VibrationsDB is not loaded', &
+                    source='Duschinsky_shift_db')
+                return
             else if (.not.allocated(vib2%red_freq)) then
-                call runstat%raise_error('vib2 red_freq is not loaded', &
-                    source='Duschinsky_shift_db', cat='dev')
+                call run%error%raise_argerror('missing', &
+                    'vib2 red_freq is not loaded', &
+                    source='Duschinsky_shift_db')
+                return
             end if
             Kvec = Duschinsky_shift_vertical_hessian(vib1%n_vib, mol1%n_at, vib1%L_mat, &
                 mol1%at_mas, vib2%red_freq, grad2, Jmat)
         case default
-            call runstat%raise_error('Provide appropriate mode for K-vector calculation', &
-                source='Duschinsky_shift_db', cat='dev')
+            call run%error%raise_deverror('case', &
+                'provide appropriate mode for K-vector calculation', &
+                source='Duschinsky_shift_db')
+            return
     end select
 
 end procedure Duschinsky_shift_db
 
 ! ======================================================================
 
-module function Duschinsky_shift_adiabatic(n_vib, n_at, L_mat1, at_mass1, coord1, coord2) result(Kvec) 
+module function Duschinsky_shift_adiabatic(n_vib, n_at, L_mat1, at_mass1, &
+                                           coord1, coord2) result(Kvec) 
     !! Computes the Duschinsky vector K for adiabatic states (AS and AH)
     !!
     !! The Duschinsky vector can be calculated as:

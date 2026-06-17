@@ -2,19 +2,17 @@ submodule (input) input_file
     !! Submodule containing the definition of procedures related to the
     !! File/Program instances.
     use string, only: locase
-    use parsefchk, only: fchkdata, fchkparser
-    use exception, only: BaseException, Error, InitError, RaiseArgError, &
-        RaiseFileError, RaiseKeyError, runstat
+    use fchk_io, only: fchk_data, fchk_parser
 
     implicit none
 
 contains
 
 ! ======================================================================
-! MODULE INTERFACE
+! PSEUDO-CONSTRUCTORS
 ! ======================================================================
 
-module procedure init_file
+module procedure init_data_file
     !! Initialize an instance of the DataFile class.
     !!
     !! Initialize a DataFile instance based on the input file and,
@@ -25,44 +23,258 @@ module procedure init_file
     !! as the version.
 
     integer :: iu, ios
-    logical :: exists
-    class(BaseException), allocatable :: suberr
+    logical :: exit_ok, exists, no_print
+    type(ErrorHandle) :: err
 
-    ! initialize error handling
-    file%error = InitError()
+    ! Set error handling policy.
+    if (present(exit_on_error)) then
+        exit_ok = exit_on_error
+    else
+        exit_ok = .true.
+    end if
+
+    if (present(silent)) then
+        no_print = silent
+    else
+        no_print = .false.
+    end if
+
+    call dfile%error%init(exit_on_error=exit_ok, no_printing=no_print)
 
     ! check if file exists
     inquire(file=fname, exist=exists)
     if (.not.exists) then
-        call RaiseFileError(file%error, fname, 'searching', 'File not found.')
+        call dfile%error%raise_error('file', 'missing', 'file not found')
         return
     end if
 
-    file%name = fname
-    open(file=file%name, newunit=iu, action='read', iostat=ios)
+    dfile%name = fname
+    open(file=dfile%name, newunit=iu, action='read', iostat=ios)
     if (ios /= 0) then
-        call RaiseFileError(file%error, fname, 'opening', 'Operation failed')
+        call dfile%error%raise_error('file', 'open', 'operation failed')
         return
     end if
     close(iu)
 
     if (present(ftype)) then
-        file%type = alias_file_type(ftype)
-        if (file%type == ' ') then
-            call RaiseArgError(file%error, 'ftype', 'Unsupported file format')
+        dfile%type = alias_file_type(ftype)
+        if (dfile%type == ' ') then
+            call dfile%error%raise_error('file', 'type', &
+                                         'unsupported file format')
             return
         end if
     else
-        file%type = get_file_type(file%name, err=suberr)
-        if (suberr%raised()) then
-            file%error = suberr
+        call err%init(.false., .true.)
+        dfile%type = get_file_type(dfile%name, err=err)
+        if (err%raised()) then
+            call dfile%error%from(err)
             return
         end if
     end if
 
-    file%prog = get_program_version(file%name, file%type)
+    dfile%prog = init_program_version(dfile%name, dfile%type, prog_name, &
+        prog_major, prog_minor, no_prog_version_ok, exit_on_error, silent)
 
-end procedure init_file
+end procedure init_data_file
+
+! ======================================================================
+
+module procedure init_program_version
+    !! Extracts information on program version from file.
+    !!
+    !! Extracts information about the program version from file `fname`.
+    !! The filetype (`ftype`) must be set.
+    !!
+    !! It is assumed that the validity of the file has been checked, the
+    !! function directly opens the file to parse it.
+    !!
+    !! @note
+    !! If major version is provided, there is no automatic search at all.
+    !! If `minor` is not set, it is assumed to be `NA`.
+    !!
+    !! If `no_version_ok` is set and no version is found, the version is set
+    !! to `NA`.
+    !!
+    !! Since this may not make sense for some programs/formats, the routine
+    !! accepts empty major version.
+    !! @endnote
+
+    integer :: pos
+    logical :: exit_ok, has_progname, has_version, no_print
+    character(len=:), allocatable :: ft, gvers
+    character(len=100) :: msg
+    type(fchk_parser) :: fchk
+    type(fchk_data) :: fchk_db
+
+        ! Set error handling policy.
+    if (present(exit_on_error)) then
+        exit_ok = exit_on_error
+    else
+        exit_ok = .true.
+    end if
+
+    if (present(silent)) then
+        no_print = silent
+    else
+        no_print = .false.
+    end if
+
+    call prog%error%init(exit_on_error=exit_ok, no_printing=no_print)
+
+    has_progname = present(prog_name)
+    has_version = present(major)
+
+    if (has_progname) prog%name = trim(prog_name)
+
+    if (has_version) then
+        if (len_trim(major) == 0) then
+            prog%major = 'NA'
+        else
+            prog%major = trim(major)
+            if (present(minor)) then
+                if (len_trim(minor) == 0) then
+                    prog%minor = 'NA'
+                    prog%version = prog%major
+                else
+                    prog%minor = trim(minor)
+                    prog%version = prog%major // ' ' // prog%minor
+                end if
+            else
+                prog%minor = 'NA'
+                prog%version = prog%major
+            end if
+        end if
+    end if
+
+    if (.not.has_progname .or. .not.has_version) then
+        ft = alias_file_type(ftype)
+        if (ft == ' ') then
+            call prog%error%raise_error('file', 'type', 'unrecognized value')
+            return
+        end if
+        ! Note
+        select case(ft)
+            case ('GFChk')
+                if (.not.has_progname) prog%name = 'Gaussian'
+                if (.not.has_version) then
+                    fchk = fchk_parser(fname)
+                    if (allocated(fchk%gaussian)) then
+                        gvers = fchk%gaussian
+                    else
+                        fchk_db = fchk%get('Gaussian Version')
+                        if (fchk_db%dtype == '0') then
+                            if (no_version_ok) then
+                                prog%major = 'NA'
+                                prog%minor = 'NA'
+                                prog%version = 'NA'
+                            else
+                                call prog%error%raise_error( &
+                                    'data', 'missing', &
+                                    'Gaussian version is missing')
+                            end if
+                        end if
+                        gvers = fchk_db%sdata(1)
+                    end if
+                    pos = index(gvers, 'Rev')
+                    if (pos == 0) then
+                        call prog%error%raise_error( &
+                            'data', 'structure', &
+                            'unable to parse the Gaussian version string')
+                        return
+                    else
+                        if (gvers(pos+3:pos+3) == '-') then
+                            ! Structure of the type CDVRev-XXX
+                            prog%minor = gvers(pos+4:)
+                            prog%major = gvers(:pos-1)
+                            if (prog%major /= 'CDV') then
+                                call prog%error%raise_error( &
+                                    'data', 'structure', &
+                                    'unable to parse the Gaussian version &
+                                    &string')
+                                return
+                            end if
+                            if (prog%major(1:1) == 'C') prog%major(1:1) = 'G'
+                        else
+                            ! Structure of the type <arch>-GxxRevXXX
+                            if (index(gvers(:pos-1), '-') == 0) then
+                                call prog%error%raise_error( &
+                                    'data', 'structure', &
+                                    'unable to parse the Gaussian version &
+                                    &string')
+                                return
+                            end if
+                            prog%minor = gvers(pos+3:)
+                            prog%major = gvers(pos-3:pos-1)
+                        end if
+                        prog%version = prog%major // ' ' // prog%minor
+                    end if
+                end if
+            case default
+                write(msg, &
+                    '("Support of file type """,a,""" not yet implemented")') &
+                    ft
+                call prog%error%raise_error('file', 'type', &
+                    'unsupported file type')
+                return
+        end select
+    end if
+
+end procedure init_program_version
+
+! ======================================================================
+! MODULE PROCEDURES
+! ======================================================================
+
+module procedure check_prog_version
+    !! Check if version in ProgramInfo instance matches query.
+    !!
+    !! Returns a True/False if the version in a ProgramInfo instance,
+    !! matches the major and optionally minor revision.
+    !! The format of the version is software dependent.
+    !! The procedure can extract it from:
+    !!
+    !! 1. a ProgramInfo instance directly, provided as `prog_info`.
+    !! 2. a DataFile instance, provided as `file_data`.
+    !!
+    !! The procedure takes the first available in this order.
+    class(ProgramInfo), pointer :: prog => null()
+
+    if (present(prog_info)) then
+        prog => prog_info
+    else if (present(file_data)) then
+        prog => file_data%prog
+    else
+        res = .false.
+        return
+    end if
+
+    res = locase(trim(major)) == locase(prog%major)
+    if (res .and. present(minor)) &
+        res = locase(trim(minor)) == locase(prog%minor)
+
+end procedure check_prog_version
+
+! ======================================================================
+
+module procedure get_datafile_name
+    !! Gets name of the file in DataFile instance.
+    !!
+    !! Returns the filename stored in the DataFile instance.
+
+    name = dfile%name
+
+end procedure get_datafile_name
+
+! ======================================================================
+
+module procedure get_datafile_type
+    !! Gets type of the ifle in DataFile instance.
+    !!
+    !! Returns the filetype stored in the DataFile instance.
+
+    dtype = dfile%type
+
+end procedure get_datafile_type
 
 ! ======================================================================
 
@@ -75,8 +287,6 @@ module procedure get_file_type
     logical :: always_read, do_read, force_check, req_read
     character(len=10) :: ftype_ext, ftype_file
     character(len=1024) :: line
-
-    err = InitError()
 
     if (present(soft_check)) then
         force_check = .not.soft_check
@@ -104,8 +314,13 @@ module procedure get_file_type
     if (do_read) then
         open(file=fname, newunit=iu, action='read', iostat=ios)
         if (ios /= 0) then
-            call RaiseFileError(err, fname, 'opening', &
-                                'Could not open file to find type.')
+            if (present(err)) then
+                call err%raise_error('file', 'open', &
+                                     'could not open file to find type.')
+            else
+                call run%error%raise_error('file', 'open', &
+                                           'could not open file to find type.')
+            end if
             return
         end if
         read(iu, '(a)', iostat=ios) line
@@ -118,7 +333,7 @@ module procedure get_file_type
                 read(iu, '(a)', iostat=ios) line
                 if (ios == 0) then
                     if (line(:49) == &
-                        'Gaussian Version                           C   N=' &
+                        'Route                                      C   N=' &
                         ) then
                         ftype_file = 'GFChk'
                         exit
@@ -135,143 +350,16 @@ module procedure get_file_type
     else if (ftype_ext /= ' ') then
         ftype = trim(ftype_ext)
     else
-        call RaiseKeyError(err, 'file type', 'analyzing', &
-                           'Could not define the file type.')
+        if (present(err)) then
+            call err%raise_error('file', 'type', &
+                                 'could not define the file type.')
+        else
+            call run%error%raise_error('file', 'type', &
+                                       'could not define the file type.')
+        end if
     end if
 
 end procedure get_file_type
-
-! ======================================================================
-
-module procedure get_program_version
-    !! Extracts information on program version from file.
-    !!
-    !! Extracts information about the program version from file `fname`.
-    !! The filetype (`ftype`) must be set.
-    !!
-    !! It is assumed that the validity of the file has been checked, the
-    !! function directly opens the file to parse it.
-
-    integer :: pos
-    logical :: ok
-    character(len=:), allocatable :: ft
-    character(len=100) :: msg
-    type(fchkparser) :: fchk
-    type(fchkdata) :: fchk_db
-
-    if (present(err)) err = InitError()
-
-    ft = alias_file_type(ftype)
-    if (ft == ' ') then
-        if (present(err)) then
-            call RaiseArgError(err, 'ftype', 'Unrecognized value.')
-            return
-        else
-                call runstat%raise_error('Unrecognized file type', &
-                details='Could not determine the type of file given in &
-                    &input', &
-                source='get_program_version', cat='dev')
-            return
-        end if
-    end if
-    ! Note
-    select case(ft)
-        case ('GFChk')
-            prog%name = 'Gaussian'
-            fchk = fchkparser(fname)
-            fchk_db = fchk%read('Gaussian Version')
-            ok = fchk%close()
-            if (.not. ok) then
-                if (present(err)) then
-                    call RaiseFileError(err, fname, 'closing')
-                else
-                    msg = ' '
-                    write(msg, '("Failed to close file: ",a)') trim(fname)
-                    call runstat%raise_error('Unable to close file', &
-                        details=trim(msg), source='ProgramInfo')
-                    return
-                end if
-            end if
-            if (fchk_db%dtype == '0') then
-                if (present(err)) then
-                    call RaiseKeyError(err, 'Gaussian version', &
-                        'looking for', &
-                        'Could not determine Gaussian version, missing key.')
-                    return
-                else
-                    call runstat%raise_error( &
-                        'Unable to determine Gaussian version', &
-                        details='The version of Gaussian is not available', &
-                        source='ProgramInfo')
-                    return
-                end if
-            end if
-            pos = index(fchk_db%cdata, 'Rev')
-            if (pos == 0) then
-                if (present(err)) then
-                    call RaiseKeyError(err, 'Gaussian version', 'parsing', &
-                                       'Unknown structure.')
-                    return
-                else
-                    call runstat%raise_error( &
-                        'Unable to determine Gaussian version', &
-                        details='Unable to parse the string with the &
-                            &version', &
-                        source='ProgramInfo')
-                    return
-                end if
-            else
-                if (fchk_db%cdata(pos+3:pos+3) == '-') then
-                    ! Structure of the type CDVRev-XXX
-                    prog%minor = fchk_db%cdata(pos+4:)
-                    prog%major = fchk_db%cdata(:pos-1)
-                    if (prog%major /= 'CDV') then
-                        if (present(err)) then
-                            call RaiseKeyError(err, 'Gaussian version', &
-                                'parsing', 'Unsupported C86xx version.')
-                            return
-                        else
-                            call runstat%raise_error( &
-                                'Unable to determine Gaussian version', &
-                                details='Unable to parse the string with the &
-                                    &version', &
-                                source='ProgramInfo')
-                            return
-                        end if
-                    end if
-                    if (prog%major(1:1) == 'C') prog%major(1:1) = 'G'
-                else
-                    ! Structure of the type <arch>-GxxRevXXX
-                    if (index(fchk_db%cdata(:pos-1), '-') == 0) then
-                        if (present(err)) then
-                            call RaiseKeyError(err, 'Gaussian version', &
-                                'parsing', 'Unknown structure.')
-                            return
-                        else
-                            call runstat%raise_error( &
-                                'Unable to determine Gaussian version', &
-                                details='Unable to parse the string with the &
-                                    &version', &
-                                source='ProgramInfo')
-                            return
-                        end if
-                    end if
-                    prog%minor = fchk_db%cdata(pos+3:)
-                    prog%major = fchk_db%cdata(pos-3:pos-1)
-                end if
-                prog%version = prog%major // ' ' // prog%minor
-            end if
-        case default
-            write(msg, &
-                 '("Support of file type """,a,""" not yet implemented")') &
-                 ft
-            call runstat%raise_error( &
-                'Unsupported file type', &
-                details=trim(msg), source='ProgramInfo', cat='dev')
-            return
-    end select
-
-end procedure get_program_version
 
 ! ======================================================================
 
@@ -369,106 +457,6 @@ module procedure get_prog_minor
     end if
 
 end procedure get_prog_minor
-
-! ======================================================================
-
-module procedure check_prog_version
-    !! Check if version in ProgramInfo instance matches query.
-    !!
-    !! Returns a True/False if the version in a ProgramInfo instance,
-    !! matches the major and optionally minor revision.
-    !! The format of the version is software dependent.
-    !! The procedure can extract it from:
-    !!
-    !! 1. a ProgramInfo instance directly, provided as `prog_info`.
-    !! 2. a DataFile instance, provided as `file_data`.
-    !!
-    !! The procedure takes the first available in this order.
-
-    class(ProgramInfo), pointer :: prog => null()
-
-    if (present(prog_info)) then
-        prog => prog_info
-    else if (present(file_data)) then
-        prog => file_data%prog
-    else
-        res = .false.
-        return
-    end if
-
-    res = locase(trim(major)) == locase(prog%major)
-    if (res .and. present(minor)) &
-        res = locase(trim(minor)) == locase(prog%minor)
-
-end procedure check_prog_version
-
-! ======================================================================
-
-module procedure get_datafile_name
-    !! Gets name of the file in DataFile instance.
-    !!
-    !! Returns the filename stored in the DataFile instance.
-
-    name = dfile%name
-
-end procedure get_datafile_name
-
-! ======================================================================
-
-module procedure get_datafile_type
-    !! Gets type of the ifle in DataFile instance.
-    !!
-    !! Returns the filetype stored in the DataFile instance.
-
-    dtype = dfile%type
-
-end procedure get_datafile_type
-
-! ======================================================================
-
-module procedure get_error_instance
-    !! Gets error instance.
-    !!
-    !! Returns the error instance stored in the DataFile instance.
-
-    err = dfile%error
-
-end procedure get_error_instance
-
-! ======================================================================
-
-module procedure set_error_instance
-    !! Sets error instance.
-    !!
-    !! Sets the error instance stored in the DataFile instance.
-
-    dfile%error = err
-
-end procedure set_error_instance
-
-! ======================================================================
-
-module procedure get_error_msg
-    !! Gets error message.
-    !!
-    !! Returns the content of the error instance stored in the DataFile
-    !! instance.
-
-    err = dfile%error%msg()
-
-end procedure get_error_msg
-
-! ======================================================================
-
-module procedure check_error_status
-    !! Checks error status.
-    !!
-    !! Returns the error status of the internal component of a DataFile
-    !! instance.
-
-    raised = dfile%error%raised()
-
-end procedure check_error_status
 
 ! ======================================================================
 ! SUB-MODULE COMPONENTS

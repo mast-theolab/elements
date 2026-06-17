@@ -1,15 +1,14 @@
 module vibrational
     !! A module storing procedures related to vibrations.
 
-    use numeric, only: f0, f1, f10m1, f2, realwp, small
-    use lapack_drv, only: xsyev
-    use physics, only: phys_conv, boltzmann, slight, planck
-    use geometry, only: Eckart_orient
-    use math, only: operator(.x.)
-    use datatypes, only: MoleculeDB, VibrationsDB
     use blas_drv, only: xgemm
-    use lapack_drv, only: xgeqrf, xlasrt, xorgqr
-    use exception, only: runstat
+    use datatypes, only: MoleculeDB, VibrationsDB
+    use geometry, only: Eckart_orient
+    use lapack_drv, only: xgeqrf, xlasrt, xorgqr, xsyev
+    use math, only: operator(.x.)
+    use numeric, only: f0, f1, f10m1, f2, realwp, small
+    use physics, only: phys_conv, boltzmann, slight, planck
+    use run_env, only: run
 
     implicit none
 
@@ -361,8 +360,9 @@ subroutine boltz_pop_max_quanta_arr(freq, nq_index, nq_max, temperature, &
     n_vib = size(freq)
     n_modes = size(nq_index)
     if (size(nq_max) < n_modes) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='boltz_pop_max_quanta_arr')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', &
+            source='boltz_pop_max_quanta_arr')
         return
     end if
 
@@ -417,8 +417,9 @@ subroutine boltz_pop_max_quanta_db(vibDB, nq_index, nq_max, temperature, &
 
     n_modes = size(nq_index)
     if (size(nq_max) < n_modes) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='boltz_pop_max_quanta_arr')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', &
+            source='boltz_pop_max_quanta_arr')
         return
     end if
 
@@ -503,27 +504,27 @@ subroutine boltz_pop_max_quanta_dim(n_vib, n_modes, freq, nq_index, nq_max, &
     !! This version takes data arrays and dimensions.
     !! @endnote
     integer, intent(in) :: n_vib
-    !! Total number of vibrational modes.
+        !! Total number of vibrational modes.
     integer, intent(in) :: n_modes
-    !! Number of excited modes.
+        !! Number of excited modes.
     real(realwp), dimension(n_vib), intent(in) :: freq
-    !! Harmonic frequencies (in cm^-1).
+        !! Harmonic frequencies (in cm^-1).
     integer, dimension(n_modes), intent(in), target :: nq_index
-    !! Index of the modes to be excited.  It should not contain null values.
+        !! Index of the modes to be excited.  It should not contain null values.
     integer, dimension(n_modes), intent(out) :: nq_max
-    !! Maximum number of quanta achievable for each mode.
+        !! Maximum number of quanta achievable for each mode.
     real(realwp), intent(in), optional :: temperature
-    !! Temperature, in K.
+        !! Temperature, in K.
     real(realwp), intent(in), optional :: pop_min
-    !! Minimum population of a state compared to ground state for inclusion.
+        !! Minimum population of a state compared to ground state for inclusion.
     logical, intent(in), optional :: ignore_0
-    !! If true, ignore sub-states with less excited modes in `list_states`.
+        !! If true, ignore sub-states with less excited modes in `list_states`.
     integer, dimension(:,:), allocatable, intent(out), optional :: list_states
-    !! List of states with population > `pop_min`.
-    !! If `ignore_0=.true.`, all sub-states are included, otherwise only states
-    !! with same number of quanta.
+        !! List of states with population > `pop_min`.
+        !! If `ignore_0=.true.`, all sub-states are included, otherwise only
+        !! states with same number of quanta.
     real(realwp), dimension(:), allocatable, intent(out), optional :: list_pops
-    !! List of populations with respect to vibrational ground state.
+        !! List of populations with respect to vibrational ground state.
 
     integer :: i, ibase, i_state, n_states
     integer, dimension(:), allocatable :: nqi
@@ -534,9 +535,8 @@ subroutine boltz_pop_max_quanta_dim(n_vib, n_modes, freq, nq_index, nq_max, &
     ! Set the work temperature
     if (present(temperature)) then
         if (temperature <= f0) then
-            call runstat%raise_error( &
-                'Invalid temperature', &
-                details='Failed to set populated vibrational states')
+            call run%error%raise_argerror('value', 'invalid temperature', &
+                details='failed to set populated vibrational states')
             return
         end if
         T_val = temperature
@@ -547,9 +547,9 @@ subroutine boltz_pop_max_quanta_dim(n_vib, n_modes, freq, nq_index, nq_max, &
     ! Set the minimum population
     if (present(pop_min)) then
         if (temperature <= f0) then
-            call runstat%raise_error( &
-                'Invalid value for the minimum population', &
-                details='Failed to set populated vibrational states')
+            call run%error%raise_argerror('value', &
+                'invalid value for the minimum population', &
+                details='failed to set populated vibrational states')
             return
         end if
         p_min = pop_min
@@ -559,9 +559,8 @@ subroutine boltz_pop_max_quanta_dim(n_vib, n_modes, freq, nq_index, nq_max, &
 
     ! Check if all modes are set in `nq_index`.
     if (any(nq_index <= 0)) then
-        call runstat%raise_error( &
-            'Invalid list of indexes', &
-            'Mode indexes cannot be null or negative')
+        call run%error%raise_argerror('value', 'invalid list of indexes', &
+            details='mode indexes cannot be null or negative')
         return
     else
         nq_max = 0
@@ -573,9 +572,9 @@ subroutine boltz_pop_max_quanta_dim(n_vib, n_modes, freq, nq_index, nq_max, &
             nqi(nq_index(i)) = nqi(nq_index(i)) + 1
         end do
         if (any(nqi > 1)) then
-            call runstat%raise_error( &
-                'Invalid list of indexes', &
-                'Duplicate indexes in list of indexes')
+            call run%error%raise_argerror('value', &
+                'invalid list of indexes', &
+                details='duplicate indexes in list of indexes')
             return
         end if
         deallocate(nqi)
@@ -645,8 +644,8 @@ subroutine boltz_pop_max_quanta_dim(n_vib, n_modes, freq, nq_index, nq_max, &
         if (i_state > n_states) then
             write(msg, '(i0," states expected but ",i0," built.")') &
                 n_states, i_state
-            call runstat%raise_error( &
-                'Inconsistency in listing of populated states', &
+            call run%error%raise_error('calc', 'inconsistency', &
+                'inconsistency in listing of populated states', &
                 msg)
             return
         else if(i_state < n_states) then
@@ -711,9 +710,8 @@ function full_boltz_pop_arr(freq, temperature, incl_ZPVE) result(pop)
     logical :: add_zpve
 
     if (temperature < f0) then
-        call runstat%raise_error( &
-            'Invalid temperature', &
-            details='Failed to compute total Boltzmann population')
+        call run%error%raise_argerror('value', 'invalid temperature', &
+            details='failed to compute total Boltzmann population')
         return
     end if
 

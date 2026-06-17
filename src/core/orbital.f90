@@ -7,8 +7,8 @@ module orbital
     use basisset, only: get_cart_L_der_sh_at, get_cart_L_norms_sh, &
         get_cart_L_sh_at, get_cart_r_der_sh_at, get_cart_r_sh_at
     use datatypes, only: BasisSetDB, MoleculeDB, PrimitiveFunction
-    use exception, only: runstat
     use numeric, only: realwp, f0, f10m10
+    use run_env, only: run
 
     implicit none
 
@@ -184,7 +184,7 @@ subroutine eval_AOs_chi_at_arr(at_crd, nprim_per_at, bsetBF, x, y, z, chi_at, &
         if (sum(abs([x_rel, y_rel, z_rel])) < thresh_at_center .and. warn) then
             write(msg, '("Chosen point close to atom center ",i0,&
                 &". Divergence may occur!")') ia
-            call runstat%raise_warning(trim(msg))
+            call run%error%raise_warning('calc', 'singularity', trim(msg))
         end if
 
         n_prim_at = nprim_per_at(ia)
@@ -265,7 +265,7 @@ subroutine eval_AOs_chi_at_db(molDB, bsetDB, x, y, z, chi_at, prt_warn)
         if (sum(abs([x_rel, y_rel, z_rel])) < thresh_at_center .and. warn) then
             write(msg, '("Chosen point close to atom center ",i0,&
                 &". Divergence may occur!")') ia
-            call runstat%raise_warning(trim(msg))
+            call run%error%raise_warning('calc', 'singularity', trim(msg))
         end if
 
         n_prim_at = bsetDB%nprim_per_at(ia)
@@ -353,7 +353,7 @@ subroutine eval_AOs_chi_at_dim(n_at, at_crd, nprim_per_at, bsetBF, x, y, z, &
         if (sum(abs([x_rel, y_rel, z_rel])) < thresh_at_center .and. warn) then
             write(msg, '("Chosen point close to atom center ",i0,&
                   &". Divergence may occur!")') ia
-            call runstat%raise_warning(trim(msg))
+            call run%error%raise_warning('calc', 'singularity', trim(msg))
         end if
 
         n_prim_at = nprim_per_at(ia)
@@ -441,7 +441,7 @@ subroutine eval_AOs_nabla_chi_at_arr(at_crd, nprim_per_at, bsetBF, x, y, z, &
         if (sum(abs([x_rel, y_rel, z_rel])) < thresh_at_center .and. warn) then
             write(msg, '("Chosen point close to atom center ",i0,&
                 &". Divergence may occur!")') ia
-            call runstat%raise_warning(trim(msg))
+            call run%error%raise_warning('calc', 'singularity', trim(msg))
         end if
 
         n_prim_at = nprim_per_at(ia)
@@ -529,7 +529,7 @@ subroutine eval_AOs_nabla_chi_at_db(molDB, bsetDB, x, y, z, chi_at, &
         if (sum(abs([x_rel, y_rel, z_rel])) < thresh_at_center .and. warn) then
             write(msg, '("Chosen point close to atom center ",i0,&
                 &". Divergence may occur!")') ia
-            call runstat%raise_warning(trim(msg))
+            call run%error%raise_warning('calc', 'singularity', trim(msg))
         end if
 
         n_prim_at = bsetDB%nprim_per_at(ia)
@@ -624,7 +624,7 @@ subroutine eval_AOs_nabla_chi_at_dim(n_at, at_crd, nprim_per_at, bsetBF, x, &
         if (sum(abs([x_rel, y_rel, z_rel])) < thresh_at_center .and. warn) then
             write(msg, '("Chosen point close to atom center ",i0,&
                 &". Divergence may occur!")') ia
-            call runstat%raise_warning(trim(msg))
+            call run%error%raise_warning('calc', 'singularity', trim(msg))
         end if
 
         n_prim_at = nprim_per_at(ia)

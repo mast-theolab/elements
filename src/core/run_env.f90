@@ -18,7 +18,10 @@ module run_env
     logical, private :: def_exit_error = .true.
         !! Default behavior of error instances to force quit on error.
 
-    type, public :: error_handle
+    integer, parameter, private :: WARN_LVL = 1, ERROR_LVL = 3, &
+        ERROR_LOW_LVL = 2, ERROR_DEV_LVL = -1
+
+    type, public :: ErrorHandle
         !! Error type
         !!
         !! The type can manage printing and exiting.
@@ -39,31 +42,53 @@ module run_env
             !! Category of error.
             !! 10^1^ for the main category, 10^0^ for the sub-category
             !!
-            !! | code | meaning                   |
-            !! |-----:|---------------------------|
-            !! |    0 | generic                   |
-            !! |   10 | memory                    |
-            !! |   11 | memory - allocation       |
-            !! |   12 | memory - exceeded         |
-            !! |   20 | file - generic            |
-            !! |   21 | file - not found          |
-            !! |   22 | file - wrong type         |
-            !! |   23 | file - cannot open        |
-            !! |   24 | file - cannot close       |
-            !! |   25 | file - cannot read        |
-            !! |   26 | file - cannot write       |
-            !! |   27 | file - EOF reached        |
-            !! |   30 | keyword - generic         |
-            !! |   31 | keyword - not found       |
-            !! |   40 | data - generic            |
-            !! |   41 | data - missing            |
-            !! |   42 | data - inconsistency      |
-            !! |   43 | data - excess             |
-            !! |   50 | value - generic           |
-            !! |   51 | value - failed conversion |
-            !! |  -10 | dev - generic error       |
-            !! |  -11 | dev - wrong value in call |
-            !! |  -12 | dev - unsupported case    |
+            !! | code | meaning                           |
+            !! |-----:|-----------------------------------|
+            !! |    0 | generic                           |
+            !! |   10 | memory                            |
+            !! |   11 | memory - allocation               |
+            !! |   12 | memory - exceeded                 |
+            !! |   20 | file - generic                    |
+            !! |   21 | file - not found                  |
+            !! |   22 | file - wrong type                 |
+            !! |   23 | file - cannot open                |
+            !! |   24 | file - cannot close               |
+            !! |   25 | file - cannot read                |
+            !! |   26 | file - cannot write               |
+            !! |   27 | file - EOF reached                |
+            !! |   30 | keyword - generic                 |
+            !! |   31 | keyword - not found               |
+            !! |   32 | keyword - input arguments         |
+            !! |   40 | data - generic                    |
+            !! |   41 | data - missing                    |
+            !! |   42 | data - inconsistency              |
+            !! |   43 | data - excess/insufficiency       |
+            !! |   44 | data - unknown structure          |
+            !! |   50 | value - generic                   |
+            !! |   51 | value - failed conversion         |
+            !! |   52 | value - incompatibility           |
+            !! |   53 | value - unset                     |
+            !! |   54 | value - wrong type                |
+            !! |   55 | value - wrong/unexpected          |
+            !! |   60 | calc - generic                    |
+            !! |   61 | calc - NaN/invalid operation      |
+            !! |   62 | calc - singularity (or risk)      |
+            !! |   63 | calc - inconsistency in results   |
+            !! |   70 | option - generic                  |
+            !! |   71 | option - unsupported option       |
+            !! |   72 | option - unsupported value        |
+            !! |   73 | option - conflicting options      |
+            !! |  -10 | dev - generic error               |
+            !! |  -11 | dev - wrong value in call         |
+            !! |  -12 | dev - unsupported case            |
+            !! |  -13 | dev - feature NYI                 |
+            !! |  -14 | dev - internal limit reached      |
+            !! |  -20 | arg - generic problem             |
+            !! |  -21 | arg - wrong/unexpected value      |
+            !! |  -22 | arg - wrong type                  |
+            !! |  -23 | arg - empty content               |
+            !! |  -24 | arg - missing                     |
+            !! |  -25 | arg - array size/number           |
         ! integer :: label
         !     !! Internal classifier of the error type.
         !     !! -1: undefined
@@ -95,174 +120,138 @@ module run_env
             procedure, private :: reset => error_reset
             procedure, private :: set => error_set
             procedure, private :: finish => error_finish
-            procedure :: raise_error => error_raise_error
-            procedure :: raise_warning => error_raise_warn
-            procedure :: raise_deverror => error_raise_deverror
+            procedure :: from => error_copy_from_error
+            procedure :: get_level => error_query_level
+            procedure :: get_id => error_query_category
+            procedure :: get_type => error_query_type
             procedure :: has_error => error_query_error
             procedure :: has_warning => error_query_warn
+            procedure :: has_type => error_check_type
+            procedure :: info => error_query_info
             procedure :: is_ok => error_query_ok
-            procedure :: info => error_get
             procedure :: print => error_print
-    end type error_handle
+            procedure :: raise_error => error_raise_error
+            procedure :: raise_warning => error_raise_warn
+            procedure :: raise_argerror => error_raise_argerror
+            procedure :: raise_deverror => error_raise_deverror
+            procedure :: raise_generror => error_raise_generror
+            procedure :: raised => error_query_raised
+    end type ErrorHandle
 
-    type, public :: base_obj
+    type, public :: CoreExecObject
         !! Basic object providing core functions
         !!
         !! The object can be inherited to provide core features to objects
         !! used in the ELEMENTS library
-        type(error_handle) :: error
-    end type base_obj
+        type(ErrorHandle) :: error
+    end type CoreExecObject
 
-    type, private :: run_handle
+    type, private :: ExecHandle
         private
         integer :: is_set = 0
             !! Non-default parameters (cf. [run_set_params] for details).
-        type(error_handle), public :: &
-            error = error_handle( &
+        type(ErrorHandle), public :: &
+            error = ErrorHandle( &
                 exit_on_error=.true., &
                 print_min_level=0, &
                 has_been_set=[.true., .true.])
             !! Error handling at execution level.
     contains
         procedure :: set => run_set_params
-        procedure :: check => run_check_error 
-    end type run_handle
-    
-    type(run_handle) :: run
+        procedure :: check => run_check_error
+    end type ExecHandle
+
+    type(ExecHandle) :: run
 
 contains
 
 ! ======================================================================
+! TYPE-BOUND PROCEDURES
+! ======================================================================
 
-subroutine error_init(err, exit_on_error, no_printing, print_level, &
-                      force)
-    !! Initialize the `error_base` instance.
-    !!
-    !! Initializes an `error_base` instance, setting basic parameters.
-    class(error_handle), intent(inout) :: err
+function error_check_type(err, to_check) result(query)
+    !! Check if error type matches `to_check`.
+    class(ErrorHandle), intent(in) :: err
         !! Instance of `error_base`.
-    logical, intent(in), optional :: exit_on_error
-        !! A raised error will cause the termination of the program.
-    logical, intent(in), optional :: no_printing
-        !! The error instance should not automatically print messages.
-    character, intent(in), optional :: print_level
-        !! Any error at or above chosen level will be printed.
-    logical, intent(in), optional :: force
-        !! Force reinitialization, even if set before.
+    character(len=*), intent(in) :: to_check
+        !! Error type to check.
+    logical :: query
+        !! Result of the check query.
 
-    logical :: force_init
-
-    if (.not.present(exit_on_error) .and. .not.present(no_printing) &
-        .and. .not.present(print_level)) &
-        return
-
-    if (present(force)) then
-        force_init = force
+    if (err%is_ok()) then
+        query = .false.
     else
-        force_init = .false.
-    end if
-
-    if (present(exit_on_error)) then
-        if (err%has_been_set(1) .and. .not.force_init) then
-            call err%set(-1, 'Error instance already parametrized', &
-                         details='`exit_on_error` already set.', &
-                         source='internal')
-            return
-        end if
-        err%exit_on_error = exit_on_error
-        err%has_been_set(1) = .true.
-    end if
-    if (present(no_printing) .or. present(print_level)) then
-        if (err%has_been_set(2) .and. .not.force_init) then
-            call err%set(-1, 'Error instance already parametrized', &
-                         details='`print_min_level` already set.', &
-                         source='internal')
-            return
-        end if
-        err%has_been_set(2) = .true.
-    end if
-    if (present(no_printing)) then
-        err%print_min_level = 100
-    else if (present(print_level)) then
-        select case(locase(trim(print_level)))
-        case ('warn', 'warning')
-            err%print_min_level = 1
-        case ('error')
-            err%print_min_level = 3
-        case ('any error', 'anyerror')
-            err%print_min_level = 2
-        case default
-            call err%set(-1, 'Unrecognized error level')
-            err%has_been_set(2) = .false.
-            return
+        select case (locase(trim(to_check)))
+            case ('gen', 'generic')
+                query = err%category/10 == 0
+            case ('mem', 'memory')
+                query = err%category/10 == 1
+            case ('file')
+                query = err%category/10 == 2
+            case ('key', 'keyword')
+                query = err%category/10 == 3
+            case ('dat', 'data', 'qty', 'quantity')
+                query = err%category/10 == 4
+            case ('val', 'value')
+                query = err%category/10 == 5
+            case ('calc', 'math')
+                query = err%category/10 == 6
+            case ('opt', 'option')
+                query = err%category/10 == 7
+            case ('dev', 'devel', 'developer')
+                query = err%category/10 == -1
+            case ('arg')
+                query = err%category/10 == -2
+            case default
+                query = .false.
         end select
     end if
 
-end subroutine error_init
+end function error_check_type
 
 ! ======================================================================
 
-subroutine error_reset(err)
-    !! Reset the error status.
+subroutine error_copy_from_error(dest, src, check_and_raise)
+    !! Copy error information from an existing error.
     !!
-    !! Resets the attributes of the error instance.
-    class(error_handle), intent(inout) :: err
-        !! Instance of `error_base`.
+    !! Copies error information from an existing error.
+    !! The core parameters (error level for printing and raising errors...)
+    !! are not affected.
+    !! By default, the system test if an error needs to be raised from
+    !! these new data.
+    class(ErrorHandle), intent(inout) :: dest
+        !! Error instance to update.
+    class(ErrorHandle), intent(in) :: src
+        !! Source error instance.
+    logical, intent(in), optional :: check_and_raise
+        !! Check error level and raise if necessary.
 
-    if (err%error_set) then
-        err%error_set = .false.
-        err%level = 0
-        err%category = 0
-        if (allocated(err%source)) deallocate(err%source)
-        if (allocated(err%cause)) deallocate(err%cause)
-        if (allocated(err%details)) deallocate(err%details)
-        if (allocated(err%extra)) deallocate(err%extra)
-    end if
+    logical :: check
 
-end subroutine error_reset
-
-! ======================================================================
-
-subroutine error_set(err, lvl, cause, details, extra, cat, source)
-    !! Set error parameters.
-    !!
-    !! General routine to set error parameters.
-    !! This is a low-level routine, not intended to be called directly.
-    class(error_handle), intent(inout) :: err
-        !! Instance of `error_base`.
-    integer, intent(in) :: lvl
-        !! Level of error.
-    character(len=*), intent(in) :: cause
-        !! Cause of the error.
-    character(len=*), intent(in), optional :: details
-        !! Details on the error.
-    character(len=*), intent(in), optional :: extra
-        !! Extra information.
-    integer, intent(in), optional :: cat
-        !! Category of the error.
-    character(len=*), intent(in), optional :: source
-        !! Source of the error: procedure, unit, method...
-
-    call err%reset()
-    err%level = lvl
-    err%cause = trim(cause)
-    if (present(details)) err%details = trim(details)
-    if (present(extra)) err%extra = trim(extra)
-    if (present(source)) err%source = trim(source)
-    if (present(cat)) then
-        err%category = cat
+    if (present(check_and_raise)) then
+        check = check_and_raise
     else
-        err%category = 0
+        check = .true.
     end if
-    err%error_set = .true.
 
-end subroutine error_set
+    call dest%reset()
+    dest%error_set = src%error_set
+    dest%level = src%level
+    dest%category = src%category
+    if (allocated(src%source)) dest%source = src%source
+    if (allocated(src%cause)) dest%cause = src%cause
+    if (allocated(src%details)) dest%details = src%details
+    if (allocated(src%extra)) dest%extra = src%extra
+
+    if (check) call dest%finish()
+
+end subroutine error_copy_from_error
 
 ! ======================================================================
 
 subroutine error_finish(err, no_exit)
     !! Finalize error condition and interrupt if needed.
-    class(error_handle), intent(inout) :: err
+    class(ErrorHandle), intent(inout) :: err
         !! Instance of `error_base`.
     logical, intent(in), optional :: no_exit
         !! Do not exit on error, the default is set based on error level and
@@ -300,140 +289,170 @@ end subroutine error_finish
 
 ! ======================================================================
 
-subroutine error_raise_deverror(err, op, cause, details, extra, source)
-    !! Raise development-related error..
+subroutine error_init(err, exit_on_error, no_printing, print_level, &
+                      force)
+    !! Initialize the `error_base` instance.
     !!
-    !! Sets parameters, messages and behavior for an error of level
-    !! "DEVERROR".
-    class(error_handle), intent(inout) :: err
+    !! Initializes an `error_base` instance, setting basic parameters.
+    class(ErrorHandle), intent(inout) :: err
         !! Instance of `error_base`.
-    character(len=*), intent(in) :: op
-        !! Type of operation attempted: opening, reading, conversion...
-        !! The error type may be kept empty (generic)
-    character(len=*), intent(in) :: cause
-        !! Cause of the error.
-    character(len=*), intent(in), optional :: details
-        !! Details on the error.
-    character(len=*), intent(in), optional :: extra
-        !! Extra information.
-    character(len=*), intent(in), optional :: source
-        !! Source of the error: name of the procedure, unit, method...
+    logical, intent(in), optional :: exit_on_error
+        !! A raised error will cause the termination of the program.
+    logical, intent(in), optional :: no_printing
+        !! The error instance should not automatically print messages.
+    character, intent(in), optional :: print_level
+        !! Any error at or above chosen level will be printed.
+    logical, intent(in), optional :: force
+        !! Force reinitialization, even if set before.
 
-    integer :: cat_code
+    logical :: force_init
 
-    cat_code = get_error_code('dev', op)
+    if (.not.present(exit_on_error) .and. .not.present(no_printing) &
+        .and. .not.present(print_level)) &
+        return
 
-    call err%set(-1, cause, details, extra, cat_code, source)
-
-    call err%finish()
-
-end subroutine error_raise_deverror
-
-! ======================================================================
-
-subroutine error_raise_error(err, cat, op, cause, details, extra, source, &
-                             low_err, no_exit)
-    !! Raise error of level "error".
-    !!
-    !! Sets parameters, messages and behavior for an error of level
-    !! "ERROR".
-    !! If `low_risk` is true, the error is likely recoverable and the
-    !! job may still proceed.
-    class(error_handle), intent(inout) :: err
-        !! Instance of `error_base`.
-    character(len=*), intent(in) :: cat
-        !! (Main) category of the error, in singular (except data):
-        !! allocate file, keyword, data/quantity, value
-        !! Unknown category are assumed to "generic".
-    character(len=*), intent(in) :: op
-        !! Type of operation attempted: opening, reading, conversion...
-        !! The error type may be kept empty (generic)
-    character(len=*), intent(in) :: cause
-        !! Cause of the error.
-    character(len=*), intent(in), optional :: details
-        !! Details on the error.
-    character(len=*), intent(in), optional :: extra
-        !! Extra information.
-    character(len=*), intent(in), optional :: source
-        !! Source of the error: name of the procedure, unit, method...
-    logical, intent(in), optional :: low_err
-        !! The error appears recoverable, and is not critical.
-    logical, intent(in), optional :: no_exit
-        !! Do not exit on error, the default is set based on error level and
-        !! the initial setup of the error.
-
-    integer :: cat_code, level
-
-    cat_code = get_error_code(cat, op)
-
-    if (present(low_err)) then
-        if (low_err) then
-            level = 2
-        else
-            level = 3
-        end if
+    if (present(force)) then
+        force_init = force
     else
-        level = 3
+        force_init = .false.
     end if
 
-    call err%set(level, cause, details, extra, cat_code, source)
+    if (present(exit_on_error)) then
+        if (err%has_been_set(1) .and. .not.force_init) then
+            call err%set(ERROR_DEV_LVL, &
+                         'error instance already parametrized', &
+                         details='`exit_on_error` already set.', &
+                         source='internal')
+            return
+        end if
+        err%exit_on_error = exit_on_error
+        err%has_been_set(1) = .true.
+    end if
+    if (present(no_printing) .or. present(print_level)) then
+        if (err%has_been_set(2) .and. .not.force_init) then
+            call err%set(ERROR_DEV_LVL, &
+                         'error instance already parametrized', &
+                         details='`print_min_level` already set.', &
+                         source='internal')
+            return
+        end if
+        err%has_been_set(2) = .true.
+    end if
+    if (present(no_printing)) then
+        err%print_min_level = 100
+    else if (present(print_level)) then
+        select case(locase(trim(print_level)))
+        case ('warn', 'warning')
+            err%print_min_level = WARN_LVL
+        case ('error')
+            err%print_min_level = ERROR_LVL
+        case ('any error', 'anyerror')
+            err%print_min_level = ERROR_LOW_LVL
+        case default
+            call err%set(ERROR_DEV_LVL, 'unrecognized error level')
+            err%has_been_set(2) = .false.
+            return
+        end select
+    end if
 
-    call err%finish(no_exit)
-
-end subroutine error_raise_error
+end subroutine error_init
 
 ! ======================================================================
 
-subroutine error_raise_warn(err, cat, op, cause, details, extra, source)
-    !! Raise error of a level "warning".
+subroutine error_print(err)
+    !! Print error message.
     !!
-    !! Sets parameters, messages and behavior for an error of level
-    !! "WARNING".
-    class(error_handle), intent(inout) :: err
-        !! Instance of `error_base`.
-    character(len=*), intent(in) :: cat
-        !! (Main) category of the error, in singular (except data):
-        !! allocate file, keyword, data/quantity, value
-        !! Unknown category are assumed to "generic".
-    character(len=*), intent(in) :: op
-        !! Type of operation attempted: opening, reading, conversion...
-        !! The error type may be kept empty (generic)
-    character(len=*), intent(in) :: cause
-        !! Cause of the error.
-    character(len=*), intent(in), optional :: details
-        !! Details on the error.
-    character(len=*), intent(in), optional :: extra
-        !! Extra information.
-    character(len=*), intent(in), optional :: source
-    !! Source of the error: procedure, unit, method...
+    !! Print an error message based on the stored parameters
+    !!
+    !! @note
+    !! This function bypasses the test on the minimum level for printing
+    !! and will always print.
+    !! @endnote
+    class(ErrorHandle), intent(inout) :: err
+    !! Instance of `error_base`.
 
-    integer :: cat_code
+    character(len=3) :: err_code
+    character(len=:), allocatable :: err_cat
+    logical :: has_details, has_extra, has_source
 
-    cat_code = get_error_code(cat, op)
+    if (err%level == ERROR_DEV_LVL) then
+        err_code = 'dev'
+        err_cat = 'n/a'
+    else if (err%category/10 > 0) then
+        err_code = 'cat'
+        select case (err%category/10)
+            case(1)
+                err_cat = 'Memory'
+            case(2)
+                err_cat = 'File'
+            case(3)
+                err_cat = 'Keyword-related'
+            case(4)
+                err_cat = 'Data processing'
+            case(5)
+                err_cat = 'Value operations'
+            case(6)
+                err_cat = 'Calculations'
+            case(7)
+                err_cat = 'User options'
+            case default
+                err_cat = 'Unspecified'
+        end select
+    else
+        err_code = 'gen'
+        err_cat = 'n/a'
+    end if
 
-    call err%set(1, cause, details, extra, cat_code, source)
+    has_details = allocated(err%details)
+    has_extra = allocated(err%extra)
+    has_source = allocated(err%source)
+    if (has_details .and. has_extra .and. has_source) then
+        call write_err(err_code, err%cause, err%details, err%extra, &
+                       err%source, label=err_cat)
+    else if (has_details .and. has_extra) then
+        call write_err(err_code, err%cause, details=err%details, &
+                       extra=err%extra, label=err_cat)
+    else if (has_details .and. has_source) then
+        call write_err(err_code, err%cause, details=err%details, &
+                       source=err%source, label=err_cat)
+    else if (has_extra .and. has_source) then
+        call write_err(err_code, err%cause, extra=err%extra, &
+                       source=err%source, label=err_cat)
+    else if (has_details) then
+        call write_err(err_code, err%cause, details=err%details, &
+                       label=err_cat)
+    else if (has_extra) then
+        call write_err(err_code, err%cause, extra=err%extra, &
+                       label=err_cat)
+    else if (has_source) then
+        call write_err(err_code, err%cause, source=err%source, &
+                       label=err_cat)
+    else
+        call write_err(err_code, err%cause, label=err_cat)
+    end if
 
-    call err%finish()
+    err%has_printed = .true.
 
-end subroutine error_raise_warn
+end subroutine error_print
 
 ! ======================================================================
 
-function error_query_ok(err) result(query)
-    !! Check if no error has been set.
-    class(error_handle), intent(in) :: err
+function error_query_category(err) result(cat)
+    !! Return error category.
+    class(ErrorHandle), intent(in) :: err
         !! Instance of `error_base`.
-    logical :: query
-        !! Result of the query
-    query = .not.err%error_set .or. err%level == 0
+    integer :: cat
+        !! Category of error.
 
-end function error_query_ok
+    cat = err%category
+
+end function error_query_category
 
 ! ======================================================================
 
 function error_query_error(err) result(query)
     !! Check if the error level is: error
-    class(error_handle), intent(in) :: err
+    class(ErrorHandle), intent(in) :: err
         !! Instance of `error_base`.
     logical :: query
         !! Result of the query
@@ -444,41 +463,28 @@ end function error_query_error
 
 ! ======================================================================
 
-function error_query_warn(err) result(query)
-    !! Check if the error level is: warning
-    class(error_handle), intent(in) :: err
-        !! Instance of `error_base`.
-    logical :: query
-        !! Result of the query
-
-    query = err%level == 1
-
-end function error_query_warn
-
-! ======================================================================
-
-subroutine error_get(err, cause, details, extra, source, msg_as_format, &
-                     msg_multiline)
+subroutine error_query_info(err, cause, details, extra, source, &
+                            msg_as_format, msg_multiline)
     !! Return error information.
     !!
     !! Returns information on error.
     !! `msg_as_format`, if present, contains the full message as Fortran
     !! format
     !! `msg_multiline` contains the message with C-style new line.
-    class(error_handle), intent(in) :: err
-    !! Instance of `error_base`.
+    class(ErrorHandle), intent(in) :: err
+        !! Instance of `error_base`.
     character(len=:), allocatable, intent(out), optional :: cause
-    !! Cause of the error.
+        !! Cause of the error.
     character(len=:), allocatable, intent(out), optional :: details
-    !! Details on the error.
+        !! Details on the error.
     character(len=:), allocatable, intent(out), optional :: extra
-    !! Extra information on the error.
+        !! Extra information on the error.
     character(len=:), allocatable, intent(out), optional :: source
-    !! Source of the error.
+        !! Source of the error.
     character(len=:), allocatable, intent(out), optional :: msg_as_format
-    !! Full message as a Fortran compatible fortran.
+        !! Full message as a Fortran compatible format.
     character(len=:), allocatable, intent(out), optional :: msg_multiline
-    !! Full message as a string, using C-like newline characters.
+        !! Full message as a string, using C-like newline characters.
 
     integer :: lstr
     character(len=10000) :: line
@@ -534,82 +540,421 @@ subroutine error_get(err, cause, details, extra, source, msg_as_format, &
         msg_multiline = line(:lstr)
     end if
 
-end subroutine error_get
+end subroutine error_query_info
 
 ! ======================================================================
 
-subroutine error_print(err)
-    !! Print error message.
-    !!
-    !! Print an error message based on the stored parameters
-    !!
-    !! @note
-    !! This function bypasses the test on the minimum level for printing
-    !! and will always print.
-    !! @endnote
-    class(error_handle), intent(inout) :: err
-    !! Instance of `error_base`.
+function error_query_level(err) result(level)
+    !! Return error level.
+    class(ErrorHandle), intent(in) :: err
+        !! Instance of `error_base`.
+    integer :: level
+        !! Level of error
 
-    character(len=3) :: err_code
-    character(len=:), allocatable :: err_cat
-    logical :: has_details, has_extra, has_source
+    level = err%level
 
-    if (err%level == -1) then
-        err_code = 'dev'
-        err_cat = 'n/a'
-    else if (err%category/10 > 0) then
-        err_code = 'cat'
-        select case (err%category/10)
-            case(1)
-                err_cat = 'Memory'
-            case(2)
-                err_cat = 'File'
-            case(3)
-                err_cat = 'Keyword-related'
-            case(4)
-                err_cat = 'Data processing'
-            case(5)
-                err_cat = 'Value operations'
-            case default
-                err_cat = 'Unspecified'
-        end select
+end function error_query_level
+
+! ======================================================================
+
+function error_query_ok(err) result(query)
+    !! Check if no error has been set.
+    class(ErrorHandle), intent(in) :: err
+        !! Instance of `error_base`.
+    logical :: query
+        !! Result of the query
+    query = .not.err%error_set .or. err%level == 0
+
+end function error_query_ok
+
+! ======================================================================
+
+function error_query_raised(err) result(query)
+    !! Check if any level of error has been raised
+    class(ErrorHandle), intent(in) :: err
+        !! Instance of `error_base`.
+    logical :: query
+        !! Result of the query
+
+    query = err%level > 0
+
+end function error_query_raised
+
+! ======================================================================
+
+function error_query_type(err) result(query)
+    !! Return error category.
+    class(ErrorHandle), intent(in) :: err
+        !! Instance of `error_base`.
+    character(len=:), allocatable :: query
+        !! Type of error.
+
+    select case (err%category/10)
+        case (1)
+            query = 'mem'
+        case (2)
+            query = 'file'
+        case (3)
+            query = 'key'
+        case (4)
+            query = 'data'
+        case (5)
+            query = 'value'
+        case (6)
+            query = 'calc'
+        case (7)
+            query = 'opt'
+        case (-1)
+            query = 'dev'
+        case (-2)
+            query = 'arg'
+        case default
+            query = 'gen'
+    end select
+
+end function error_query_type
+
+! ======================================================================
+
+function error_query_warn(err) result(query)
+    !! Check if the error level is: warning
+    class(ErrorHandle), intent(in) :: err
+        !! Instance of `error_base`.
+    logical :: query
+        !! Result of the query
+
+    query = err%level == 1
+
+end function error_query_warn
+
+! ======================================================================
+
+subroutine error_raise_argerror(err, op, cause, details, extra, source)
+    !! Raise development-related error on input arguments.
+    !!
+    !! Sets parameters, messages and behavior for an error of level
+    !! "DEVERROR", specific to call arguments.
+    class(ErrorHandle), intent(inout) :: err
+        !! Instance of `error_base`.
+    character(len=*), intent(in) :: op
+        !! Type of operation attempted: opening, reading, conversion...
+        !! The error type may be kept empty (generic)
+    character(len=*), intent(in) :: cause
+        !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+        !! Details on the error.
+    character(len=*), intent(in), optional :: extra
+        !! Extra information.
+    character(len=*), intent(in), optional :: source
+        !! Source of the error: name of the procedure, unit, method...
+
+    integer :: cat_code
+
+    cat_code = get_error_code('arg', op)
+
+    call err%set(-2, cause, details, extra, cat_code, source)
+
+    call err%finish()
+
+end subroutine error_raise_argerror
+
+! ======================================================================
+
+subroutine error_raise_deverror(err, op, cause, details, extra, source)
+    !! Raise development-related error.
+    !!
+    !! Sets parameters, messages and behavior for an error of level
+    !! "DEVERROR".
+    class(ErrorHandle), intent(inout) :: err
+        !! Instance of `error_base`.
+    character(len=*), intent(in) :: op
+        !! Type of operation attempted: opening, reading, conversion...
+        !! The error type may be kept empty (generic)
+    character(len=*), intent(in) :: cause
+        !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+        !! Details on the error.
+    character(len=*), intent(in), optional :: extra
+        !! Extra information.
+    character(len=*), intent(in), optional :: source
+        !! Source of the error: name of the procedure, unit, method...
+
+    integer :: cat_code
+
+    cat_code = get_error_code('dev', op)
+
+    call err%set(ERROR_DEV_LVL, cause, details, extra, cat_code, source)
+
+    call err%finish()
+
+end subroutine error_raise_deverror
+
+! ======================================================================
+
+subroutine error_raise_generror(err, cause, details, extra, source)
+    !! Raise a generic, uncategorized error.
+    !!
+    !! Sets parameters, messages and behavior for a generic error with no
+    !! specific category.
+    class(ErrorHandle), intent(inout) :: err
+        !! Instance of `error_base`.
+    character(len=*), intent(in) :: cause
+        !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+        !! Details on the error.
+    character(len=*), intent(in), optional :: extra
+        !! Extra information.
+    character(len=*), intent(in), optional :: source
+        !! Source of the error: name of the procedure, unit, method...
+
+    integer :: cat_code
+
+    cat_code = get_error_code('gen', 'gen')
+
+    call err%set(ERROR_LVL, cause, details, extra, cat_code, source)
+
+    call err%finish()
+
+end subroutine error_raise_generror
+
+! ======================================================================
+
+subroutine error_raise_error(err, cat, op, cause, details, extra, source, &
+                             low_err, no_exit)
+    !! Raise error of level "error".
+    !!
+    !! Sets parameters, messages and behavior for an error of level
+    !! "ERROR".
+    !! If `low_risk` is true, the error is likely recoverable and the
+    !! job may still proceed.
+    class(ErrorHandle), intent(inout) :: err
+        !! Instance of `error_base`.
+    character(len=*), intent(in) :: cat
+        !! (Main) category of the error, in singular (except data):
+        !! allocate file, keyword, data/quantity, value
+        !! Unknown category are assumed to "generic".
+    character(len=*), intent(in) :: op
+        !! Type of operation attempted: opening, reading, conversion...
+        !! The error type may be kept empty (generic)
+    character(len=*), intent(in) :: cause
+        !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+        !! Details on the error.
+    character(len=*), intent(in), optional :: extra
+        !! Extra information.
+    character(len=*), intent(in), optional :: source
+        !! Source of the error: name of the procedure, unit, method...
+    logical, intent(in), optional :: low_err
+        !! The error appears recoverable, and is not critical.
+    logical, intent(in), optional :: no_exit
+        !! Do not exit on error, the default is set based on error level and
+        !! the initial setup of the error.
+
+    integer :: cat_code, level
+
+    cat_code = get_error_code(cat, op)
+
+    if (present(low_err)) then
+        if (low_err) then
+            level = 2
+        else
+            level = 3
+        end if
     else
-        err_code = 'gen'
-        err_cat = 'n/a'
+        level = 3
     end if
 
-    has_details = allocated(err%details)
-    has_extra = allocated(err%extra)
-    has_source = allocated(err%source)
-    if (has_details .and. has_extra .and. has_source) then
-        call write_err(err_code, err%cause, err%details, err%extra, &
-                       err%source, label=err_cat)
-    else if (has_details .and. has_extra) then
-        call write_err(err_code, err%cause, details=err%details, &
-                       extra=err%extra, label=err_cat)
-    else if (has_details .and. has_source) then
-        call write_err(err_code, err%cause, details=err%details, &
-                       source=err%source, label=err_cat)
-    else if (has_extra .and. has_source) then
-        call write_err(err_code, err%cause, extra=err%extra, &
-                       source=err%source, label=err_cat)
-    else if (has_details) then
-        call write_err(err_code, err%cause, details=err%details, &
-                       label=err_cat)
-    else if (has_extra) then
-        call write_err(err_code, err%cause, extra=err%extra, &
-                       label=err_cat)
-    else if (has_source) then
-        call write_err(err_code, err%cause, source=err%source, &
-                       label=err_cat)
-    else
-        call write_err(err_code, err%cause, label=err_cat)
+    call err%set(level, cause, details, extra, cat_code, source)
+
+    call err%finish(no_exit)
+
+end subroutine error_raise_error
+
+! ======================================================================
+
+subroutine error_raise_warn(err, cat, op, cause, details, extra, source)
+    !! Raise error of a level "warning".
+    !!
+    !! Sets parameters, messages and behavior for an error of level
+    !! "WARNING".
+    class(ErrorHandle), intent(inout) :: err
+        !! Instance of `error_base`.
+    character(len=*), intent(in) :: cat
+        !! (Main) category of the error, in singular (except data):
+        !! allocate file, keyword, data/quantity, value
+        !! Unknown category are assumed to "generic".
+    character(len=*), intent(in) :: op
+        !! Type of operation attempted: opening, reading, conversion...
+        !! The error type may be kept empty (generic)
+    character(len=*), intent(in) :: cause
+        !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+        !! Details on the error.
+    character(len=*), intent(in), optional :: extra
+        !! Extra information.
+    character(len=*), intent(in), optional :: source
+    !! Source of the error: procedure, unit, method...
+
+    integer :: cat_code
+
+    cat_code = get_error_code(cat, op)
+
+    call err%set(1, cause, details, extra, cat_code, source)
+
+    call err%finish()
+
+end subroutine error_raise_warn
+
+! ======================================================================
+
+subroutine error_reset(err)
+    !! Reset the error status.
+    !!
+    !! Resets the attributes of the error instance.
+    class(ErrorHandle), intent(inout) :: err
+        !! Instance of `error_base`.
+
+    if (err%error_set) then
+        err%error_set = .false.
+        err%level = 0
+        err%category = 0
+        if (allocated(err%source)) deallocate(err%source)
+        if (allocated(err%cause)) deallocate(err%cause)
+        if (allocated(err%details)) deallocate(err%details)
+        if (allocated(err%extra)) deallocate(err%extra)
     end if
 
-    err%has_printed = .true.
+end subroutine error_reset
 
-end subroutine error_print
+! ======================================================================
 
+subroutine error_set(err, lvl, cause, details, extra, cat, source)
+    !! Set error parameters.
+    !!
+    !! General routine to set error parameters.
+    !! This is a low-level routine, not intended to be called directly.
+    class(ErrorHandle), intent(inout) :: err
+        !! Instance of `error_base`.
+    integer, intent(in) :: lvl
+        !! Level of error.
+    character(len=*), intent(in) :: cause
+        !! Cause of the error.
+    character(len=*), intent(in), optional :: details
+        !! Details on the error.
+    character(len=*), intent(in), optional :: extra
+        !! Extra information.
+    integer, intent(in), optional :: cat
+        !! Category of the error.
+    character(len=*), intent(in), optional :: source
+        !! Source of the error: procedure, unit, method...
+
+    call err%reset()
+    err%level = lvl
+    err%cause = trim(cause)
+    if (present(details)) err%details = trim(details)
+    if (present(extra)) err%extra = trim(extra)
+    if (present(source)) err%source = trim(source)
+    if (present(cat)) then
+        err%category = cat
+    else
+        err%category = 0
+    end if
+    err%error_set = .true.
+
+end subroutine error_set
+
+! ======================================================================
+
+subroutine run_check_error(this_run, err, msg)
+    !! Check error status and exit if error met.
+    !!
+    !! Checks an error instance given in input and exits the program if
+    !! an error has been met.
+    class(ExecHandle), intent(inout) :: this_run
+        !! ExecHandler instance.
+    class(ErrorHandle), intent(inout), optional :: err
+        !! Error instance to check.
+    character(len=*), intent(in), optional :: msg
+        !! Lead message to print before the error.
+
+    character(len=:), allocatable :: fixed_msg
+
+    1000 format(/,A,/,'# Details:')
+    1001 format(/,'=> ',A)
+
+    if (present(msg)) then
+        fixed_msg = trim(msg)
+        if (fixed_msg(len(fixed_msg):len(fixed_msg)) == '.') &
+            fixed_msg = fixed_msg(:len(fixed_msg)-1)
+    end if
+
+    if (present(err)) then
+        if (err%has_error()) then
+            if (.not.err%has_printed) then
+                if (present(msg)) then
+                    write(iu_out, 1000) fixed_msg
+                    call err%print()
+                end if
+            else if (present(msg)) then
+                write(iu_out, 1001) fixed_msg
+            end if
+            stop err%level
+        end if
+    else
+        if (this_run%error%has_error()) then
+            if (.not.this_run%error%has_printed) then
+                if (present(msg)) then
+                    write(iu_out, 1000) fixed_msg
+                    call this_run%error%print()
+                end if
+            else if (present(msg)) then
+                write(iu_out, 1001) fixed_msg
+            end if
+            stop this_run%error%level
+        end if
+    end if
+
+end subroutine run_check_error
+
+! ======================================================================
+
+subroutine run_set_params(this_run, unit_output, verbosity_level, &
+                          print_level, exit_on_error)
+    !! Set parameters to run a program.
+    !!
+    !! Sets core runtime parameters for a program execution.
+    class(ExecHandle), intent(inout) :: this_run
+        !! ExecHandle instance.
+    integer, intent(in), optional :: unit_output
+        !! Fortran unit for the general output.
+    integer, intent(in), optional :: verbosity_level
+        !! Verbosity level.
+    integer, intent(in), optional :: print_level
+        !! Level of printing for notes (0), warning (1), error (>= 2).
+    logical, intent(in), optional :: exit_on_error
+        !! Errors instance should force exit on full errors.
+
+    if (present(unit_output)) then
+        iu_out = unit_output
+        this_run%is_set = ibset(this_run%is_set, 0)
+    end if
+    if (present(verbosity_level)) then
+        verbosity = verbosity_level
+        this_run%is_set = ibset(this_run%is_set, 1)
+    end if
+    if (present(print_level)) then
+        def_print_level = print_level
+        this_run%is_set = ibset(this_run%is_set, 2)
+    end if
+    if (present(exit_on_error)) then
+        def_exit_error = exit_on_error
+        this_run%is_set = ibset(this_run%is_set, 3)
+    end if
+
+end subroutine run_set_params
+
+! ======================================================================
+! MODULE PROCEDURES
 ! ======================================================================
 
 function get_error_code(cat, op) result (code)
@@ -630,6 +975,8 @@ function get_error_code(cat, op) result (code)
     select case (locase(trim(cat)))
         case ('dev')
             cat_main = -1
+        case ('arg')
+            cat_main = -2
         case ('mem', 'alloc')
             cat_main = 1
         case ('file')
@@ -640,6 +987,10 @@ function get_error_code(cat, op) result (code)
             cat_main = 4
         case ('val', 'value')
             cat_main = 5
+        case ('calc', 'math')
+            cat_main = 6
+        case ('opt', 'option')
+            cat_main = 7
         case default
             cat_main = 0
     end select
@@ -654,6 +1005,23 @@ function get_error_code(cat, op) result (code)
                     cat_sub = -2
                 case ('version')
                     cat_sub = -3
+                case ('nyi', 'notimplemented', 'notyet')
+                    cat_sub = -4
+                case ('lim', 'limit')
+                    cat_sub = -5
+            end select
+        case (-2)  ! call arguments
+            select case(locase(trim(op)))
+                case ('val', 'value')
+                    cat_sub = -1
+                case ('type')
+                    cat_sub = -2
+                case ('empty')
+                    cat_sub = -3
+                case ('missing')
+                    cat_sub = -4
+                case ('number', 'size')
+                    cat_sub = -5
             end select
         case (1)  ! memory
             select case(locase(trim(op)))
@@ -683,6 +1051,8 @@ function get_error_code(cat, op) result (code)
             select case(locase(trim(op)))
                 case ('not found', 'missing')
                     cat_sub = 1
+                case ('args', 'arguments', 'input')
+                    cat_sub = 2
             end select
         case (4)  ! data
             select case(locase(trim(op)))
@@ -693,80 +1063,45 @@ function get_error_code(cat, op) result (code)
                     cat_sub = 2
                 case ('excess', 'too many')
                     cat_sub = 3
+                case ('struct', 'structure', 'unknown')
+                    cat_sub = 4
             end select
         case (5)  ! value
             select case(locase(trim(op)))
                 case ('conv', 'convert', 'conversion')
                     cat_sub = 1
+                case ('incompatible', 'struct', 'structure')
+                    cat_sub = 2
+                case ('unset', 'not set')
+                    cat_sub = 3
+                case ('type')
+                    cat_sub = 4
+                case ('wrong')
+                    cat_sub = 5
+            end select
+        case (6)  ! calculations/computations
+            select case(locase(trim(op)))
+                case ('nan', 'invalid')
+                    cat_sub = 1
+                case ('singularity', 'divergence')
+                    cat_sub = 2
+                case ('inconsistency')
+                    cat_sub = 3
+            end select
+        case (7)  ! user-options
+            select case(locase(trim(op)))
+                case ('unknown', 'incorrect')
+                    cat_sub = 1
+                case ('value')
+                    cat_sub = 2
+                case ('conflict', 'conflicting')
+                    cat_sub = 3
             end select
     end select
 
     code = cat_main*10 + cat_sub
 
 end function get_error_code
-
-! ======================================================================
-
-subroutine run_check_error(this_run, err)
-    !! Check error status and exit if error met.
-    !!
-    !! Checks an error instance given in input and exits the program if
-    !! an error has been met.
-    class(run_handle), intent(inout) :: this_run
-        !! run_handler instance.
-    class(error_handle), intent(inout), optional :: err
-        !! Error instance to check.
-
-    if (present(err)) then
-        if (err%has_error()) then
-            if (.not.err%has_printed) call err%print()
-            stop err%level
-        end if
-    else
-        if (this_run%error%has_error()) then
-            if (.not.this_run%error%has_printed) call this_run%error%print()
-            stop this_run%error%level
-        end if
-    end if
-
-end subroutine run_check_error
-
-! ======================================================================
-
-subroutine run_set_params(this_run, unit_output, verbosity_level, &
-                          print_level, exit_on_error)
-    !! Set parameters to run a program.
-    !!
-    !! Sets core runtime parameters for a program execution.
-    class(run_handle), intent(inout) :: this_run
-        !! this_run_handler instance.
-    integer, intent(in), optional :: unit_output
-        !! Fortran unit for the general output.
-    integer, intent(in), optional :: verbosity_level
-        !! Verbosity level.
-    integer, intent(in), optional :: print_level
-        !! Level of printing for notes (0), warning (1), error (>= 2).
-    logical, intent(in), optional :: exit_on_error
-        !! Errors instance should force exit on full errors.
-
-    if (present(unit_output)) then
-        iu_out = unit_output
-        this_run%is_set = ibset(this_run%is_set, 0)
-    end if
-    if (present(verbosity_level)) then
-        verbosity = verbosity_level
-        this_run%is_set = ibset(this_run%is_set, 1)
-    end if
-    if (present(print_level)) then
-        def_print_level = print_level
-        this_run%is_set = ibset(this_run%is_set, 2)
-    end if
-    if (present(exit_on_error)) then
-        def_exit_error = exit_on_error
-        this_run%is_set = ibset(this_run%is_set, 3)
-    end if
-    
-end subroutine run_set_params
 
 ! ======================================================================
 
@@ -819,7 +1154,7 @@ subroutine write_err(nature, cause, details, extra, source, label)
             end if
             if (present(details)) write(iu_out, 1010) trim(details)
             if (present(extra)) write(iu_out, 1020) trim(extra)
-        case ('deverr', 'dev')
+        case ('deverr', 'dev', 'arg')
             if (present(source)) then
                 write(iu_out, 1001) trim(source), trim(cause)
             else

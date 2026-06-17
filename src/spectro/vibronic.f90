@@ -3,7 +3,7 @@ module vibronic
     use numeric, only: f0, f1, realwp
     use datatypes, only: MoleculeDB, VibrationsDB
     use physics, only: phys_conv
-    use exception, only: runstat
+    use run_env, only: run
 
     implicit none
 
@@ -162,18 +162,18 @@ function extrapolate_geom_arr(coord_ref, at_mass, L_mat, dusch_vec) &
     n_atoms = size(at_mass)
     n_vib = size(dusch_vec)
     if (size(coord_ref, 2) /= n_atoms) then
-        call runstat%raise_error( &
-            'Unable to build extrapolated geometry', &
-            details='Inconsistent size between coordinates and masses', &
-            source='extrapolate_geom_arr', cat='dev')
+        call run%error%raise_argerror('size', &
+            'unable to build extrapolated geometry', &
+            details='inconsistent size between coordinates and masses', &
+            source='extrapolate_geom_arr')
         return
     end if
 
     if (size(L_mat, 2) /= n_vib .and. size(L_mat, 1) /= 3*n_atoms) then
-        call runstat%raise_error( &
-            'Unable to build extrapolated geometry', &
-            details='Inconsistent size between Lmat and coords/shift vec', &
-            source='extrapolate_geom_arr', cat='dev')
+        call run%error%raise_argerror('size', &
+            'unable to build extrapolated geometry', &
+            details='inconsistent size between Lmat and coords/shift vec', &
+            source='extrapolate_geom_arr')
         return
     end if
 
@@ -196,26 +196,26 @@ function extrapolate_geom_db(molDB, vibDB, dusch_vec) result(coord)
         !! Extrapolated coordinates, in au.
 
     if (.not.molDB%loaded) then
-        call runstat%raise_error( &
-            'Unable to build extrapolated geometry', &
-            details='Molecular database is not loaded', &
-            source='extrapolate_geom_db', cat='dev')
+        call run%error%raise_argerror('missing', &
+            'unable to build extrapolated geometry', &
+            details='molecular database is not loaded', &
+            source='extrapolate_geom_db')
         return
     end if
 
     if (.not.vibDB%loaded .or. .not.allocated(vibDB%L_mat)) then
-        call runstat%raise_error( &
-            'Unable to build extrapolated geometry', &
-            details='Missing Hessian eigenvectors matrix', &
-            source='extrapolate_geom_db', cat='dev')
+        call run%error%raise_argerror('missing', &
+            'unable to build extrapolated geometry', &
+            details='missing Hessian eigenvectors matrix', &
+            source='extrapolate_geom_db')
         return
     end if
 
     if (size(vibDB%L_mat, 2) /= size(dusch_vec)) then
-        call runstat%raise_error( &
-            'Unable to build extrapolated geometry', &
-            details='Inconsistent size between Lmat and shift vec', &
-            source='extrapolate_geom_db', cat='dev')
+        call run%error%raise_argerror('size', &
+            'unable to build extrapolated geometry', &
+            details='inconsistent size between Lmat and shift vec', &
+            source='extrapolate_geom_db')
         return
     end if
 

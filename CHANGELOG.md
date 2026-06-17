@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.26.06
+
+### Added
+* ***fchk_io***: New module to handle I/O operations on Gaussian formatted checkpoint files.
+* ***run_env***: Extensive rewriting of the module.
+* ***run_env***: New object `run` to handle runtime errors.  It can be set up to choose the behavior in case or warning/errors.
+* ***run_env***: New derived type `ErrorHandle` to handle error at runtime.
+* ***run_env***: New derived type `CoreExecObject` to create basic objects in ELEMENTS.  The derived type for now includes an `error` component to process errors during runtime.
+
+### Changed
+* Internal routines have been updated with new `run_env` module.
+* ***gen_py_atomdb***: Updated generated code to latest changes in ESTAMPES.
+
+### Removed
+* ***parse_fchk***: The module is replaced by `fchk_io`.
+
+### Deprecated
+* ***exception***: The module is now obsolete but will be kept for backward compatibility for some time. It will not be further maintained and will be dropped in the future.  Its use is discouraged.
+
+
 ## 0.25.12
 
 ### Added

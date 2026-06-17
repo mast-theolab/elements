@@ -2,8 +2,8 @@ module vibrational_PT2
     !! Module dedicated to vibrational perturbation theory at 2nd order.
 
     use arrays, only: ij2lin => ij2lin_lt
-    use exception, only: runstat
     use numeric, only: f0, f1, f2, realwp
+    use run_env, only: run
 
     interface calc_en_vib
         !! Calculate the VPT2 vibrational energy
@@ -45,8 +45,9 @@ function calc_en_vib_arr_lt(nq_index, nq_value, freq, anh_X_mat, e_zpve) &
     integer :: lnq, nvib
 
     if (size(nq_index) /= size(nq_value)) then
-        call runstat%raise_error('inconsistency in definition of the state', &
-                                 cat='dev', source='calc_en_vib_arr_lt')
+        call run%error%raise_argerror('size', &
+            'inconsistency in definition of the state', &
+            source='calc_en_vib_arr_lt')
         return
     end if
 
@@ -54,9 +55,9 @@ function calc_en_vib_arr_lt(nq_index, nq_value, freq, anh_X_mat, e_zpve) &
 
     nvib = size(freq)
     if (size(anh_X_mat) /= nvib*(nvib+1)/2) then
-        call runstat%raise_error( &
+        call run%error%raise_argerror('size', &
             'inconsistency between sizes of freq and anh. X matrix', &
-            cat='dev', source='calc_en_vib_arr_lt')
+            source='calc_en_vib_arr_lt')
         return
     end if
 
@@ -92,8 +93,9 @@ function calc_en_vib_dim_lt(n_vib, n_modes, nq_index, nq_value, freq, &
     real(realwp) :: x
 
     if (any(nq_index == 0) .or. any(nq_value == 0)) then
-        call runstat%raise_error('state specification contains null data', &
-                                 cat='dev', source='calc_en_vib_dim_lt')
+        call run%error%raise_argerror('value', &
+           'state specification contains null data', &
+           source='calc_en_vib_dim_lt')
         return
     end if
 
@@ -197,8 +199,9 @@ function calc_en_vib_arr_sq(nq_index, nq_value, freq, anh_X_mat, e_zpve) &
     integer :: lnq, nvib
 
     if (size(nq_index) /= size(nq_value)) then
-        call runstat%raise_error('inconsistency in definition of the state', &
-                                 cat='dev', source='calc_en_vib_arr_sq')
+        call run%error%raise_argerror('size', &
+            'inconsistency in definition of the state', &
+             source='calc_en_vib_arr_sq')
         return
     end if
 
@@ -206,9 +209,9 @@ function calc_en_vib_arr_sq(nq_index, nq_value, freq, anh_X_mat, e_zpve) &
 
     nvib = size(freq)
     if (size(anh_X_mat) /= nvib**2) then
-        call runstat%raise_error( &
+        call run%error%raise_argerror('size', &
             'inconsistency between sizes of freq and anh. X matrix', &
-            cat='dev', source='calc_en_vib_arr_sq')
+            source='calc_en_vib_arr_sq')
         return
     end if
 
@@ -244,8 +247,9 @@ function calc_en_vib_dim_sq(n_vib, n_modes, nq_index, nq_value, freq, &
     real(realwp) :: x
 
     if (any(nq_index == 0) .or. any(nq_value == 0)) then
-        call runstat%raise_error('state specification contains null data', &
-                                 cat='dev', source='calc_en_vib_dim_lt')
+        call run%error%raise_argerror('value', &
+            'state specification contains null data', &
+            source='calc_en_vib_dim_lt')
         return
     end if
 

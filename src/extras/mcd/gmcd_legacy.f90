@@ -4,11 +4,11 @@ module gmcd_legacy
     !! New or "modernized" procedures, used to preserve some of the
     !!   original behavior and facilitate the migration.
     use numeric, only: realwp
-    use exception, only: ArgumentError, BaseException, InitError, RaiseError
     use output, only: iu_out
     use electronic, only: convert_AO2MO
     use datatypes, only: MoleculeDB, BasisSetDB, OrbitalsDB
     use physics, only: PhysFact
+    use run_env, only: ErrorHandle
     use gmcd_output, only: shell_lmxyz
 
     implicit none
@@ -146,7 +146,7 @@ subroutine write_control(iout, moldb, bsetdb, orbdb, err)
     !! Basis set specifications database.
     class(OrbitalsDB), intent(in) :: orbdb
     !! Molecular orbitals database.
-    class(BaseException), allocatable, intent(out) :: err
+    type(ErrorHandle) :: err
     !! Error instance
 
     integer :: ix, N, nc, ncols
@@ -155,17 +155,16 @@ subroutine write_control(iout, moldb, bsetdb, orbdb, err)
     character(len=:), dimension(:), allocatable :: fcomp
     character(len=10), dimension(:), allocatable :: fcoords
     type(PhysFact) :: phys
-    class(BaseException), allocatable :: suberr
-
-    err = InitError()
+    type(ErrorHandle) :: suberr
 
     ! compute the number of doubly occupied orbitals
     ! number of singly occupied orbitals = (multip-1)
     n_mo_1e = moldb%multip - 1
     n_mo_2e = (moldb%n_el - n_mo_1e)/2
     if (n_mo_2e*2 + n_mo_1e /= moldb%n_el) then
-        call RaiseError(err, &
-                        'Error in defining the number of occupied orbitals')
+        call err%raise_error( &
+            'data', 'inconsistency', &
+            'Unable to define the number of occupied orbitals')
         return
     end if
     write(iout, *)  'ROAAI control output'
@@ -203,15 +202,14 @@ subroutine write_control(iout, moldb, bsetdb, orbdb, err)
                 if(allocated(fcomp)) deallocate(fcomp)
                 fcomp = shell_lmxyz(bs%shelltype, bs%pure, suberr)
                 if (suberr%raised()) then
-                    select type(suberr)
-                        class is (ArgumentError)
-                            call RaiseError(err, 'Unsupported shell type')
-                            return
-                        class default
-                            call RaiseError(err, &
-                                            'Unknown error from shell_lmxyz')
-                            return
-                    end select
+                    if (suberr%has_type('dev')) then
+                        call err%raise_deverror('case', &
+                            'unsupported shell type')
+                    else
+                        call err%raise_deverror('gen', &
+                            'unknown error from shell_lmxyz')
+                    end if
+                    return
                 end if
                 N = size(fcomp)
                 fcoords(iao:iao+N-1) = fcomp

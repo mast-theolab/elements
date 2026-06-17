@@ -35,6 +35,7 @@ target("test_blas_ops")
 
 target("test_get_data")
     set_default(false)
+    add_packages("openmp")
     set_rundir("$(projectdir)/tests")
     add_deps("datalib")
     add_deps("corelib")

@@ -6,10 +6,10 @@ program autoclave
     !! The script uses an ad hoc parser since some quantities like the
     !! anharmonic X matrix are not easily available otherwise.
     use arrays, only: ij2lin => ij2lin_lt
-    use exception, only: BaseException, runstat
     use numeric, only: f0, f1, realwp
     use output, only: iu_out, sec_header
-    use parse_cmdline, only: CmdArgDB
+    use parse_cmdline, only: CmdLineArgsDB
+    use run_env, only: run
     use string, only: locase
     use vibrational_PT2, only: calc_en_vib
 
@@ -61,14 +61,16 @@ program autoclave
     ! Check if file exists
     inquire(file=opts%file_log, exist=exists)
     if (.not.exists) &
-        call runstat%raise_error('Logfile does not exist.  Aborting.')
+        call run%error%raise_error('file', 'not found', &
+                                   'Logfile does not exist.  Aborting.')
 
     call sec_header(1, 'Reading input data')
 
     open(newunit=iu_in, file=opts%file_log)
     read(iu_in, '(a)') line
     if (index(line, 'Entering Gaussian System') == 0) then
-        call runstat%raise_error( &
+        call run%error%raise_error( &
+            'file', 'type', &
             'Logfile does not seem to be a Gaussian file.  Aborting.')
     else
         call parse_glog(iu_in, n_vib, h_freq, a_Xmat)
@@ -98,18 +100,20 @@ program autoclave
             n_mode = n_mode + 1  ! We increase by 1 to check if odd number.
             read(line, *, iostat=istat) state(:n_mode)
         end do
-        ! We check if n_mode is even since we have overshot the number by 1
-        ! So, the true number found is n_mode + 1.
+        ! We check that n_mode is odd since we have overshot the number by 1
+        ! and so we should have n_mode-1 even (mode + quanta for each excited
+        ! mode).
         if (mod(n_mode, 2) == 0) then
-            call runstat%raise_error('Wrong state specification')
+            call run%error%raise_error('data', 'structure', &
+                                       'Wrong state specification')
         end if
-        n_mode = (n_mode - 1)/2  ! correct number since we went overboard
+        n_mode = (n_mode - 1)/2  ! correct to true number of excited mode
         read(line, *, iostat=istat) (nq_i(mode), nq_n(mode), mode=1, n_mode)
         if (istat /= 0) then
-            call runstat%raise_error( &
-                'Integers expected as state specification')
+            call run%error%raise_error( &
+                'value', 'type', 'Integers expected as state specification')
         else if(any(nq_i(:n_mode) <= 0) .or. any(nq_n(:n_mode) <= 0)) then
-            call runstat%raise_error( &
+            call run%error%raise_error('value', 'wrong', &
                 'Only excited modes should be listed, with positive quanta')
         end if
 1100 format('("state: "',i0,'(i0,"(",i0,") ")," Energy: ",f0.6," cm^-1")')
@@ -156,7 +160,7 @@ subroutine parse_glog(iu, nvib, freq, Xmat)
     do while (index(line, 'Frequencies -- ') == 0)
         read(iu, '(a)', iostat=ios) line
         if (ios /= 0) then
-            call runstat%raise_error( &
+            call run%error%raise_error('data', 'missing', &
                 'end-of-file reached while looking for harmonic frequencies')
         end if
     end do
@@ -172,13 +176,14 @@ subroutine parse_glog(iu, nvib, freq, Xmat)
         end if
         read(iu, '(a)', iostat=ios) line
         if (ios /= 0) then
-            call runstat%raise_error( &
+            call run%error%raise_error('data', 'missing', &
                 'end-of-file reached while looking for anharmonic block')
         end if
     end do
 
     if (nvib == 0) then
-        call runstat%raise_error('Failed to read the number of modes')
+        call run%error%raise_error('data', 'missing', &
+                                   'Failed to read the number of modes')
     end if
 
     ! allocate arrays
@@ -193,7 +198,7 @@ subroutine parse_glog(iu, nvib, freq, Xmat)
     do while (index(line, 'Vibro-Rotational Analysis Based on Symmetry') == 0)
         read(iu, '(a)', iostat=ios) line
         if (ios /= 0) then
-            call runstat%raise_error( &
+            call run%error%raise_error('data', 'missing', &
                 'end-of-file reached while looking for equivalency table')
         end if
     end do
@@ -216,7 +221,7 @@ subroutine parse_glog(iu, nvib, freq, Xmat)
         end if
         read(iu, '(a)', iostat=ios) line
         if (ios /= 0) then
-            call runstat%raise_error( &
+            call run%error%raise_error('data', 'structure', &
                 'end-of-file reached while parsing equivalency table')
         end if
     end do
@@ -231,7 +236,7 @@ subroutine parse_glog(iu, nvib, freq, Xmat)
     do while (index(line, 'QUADRATIC FORCE CONSTANTS IN NORMAL MODES') == 0)
         read(iu, '(a)', iostat=ios) line
         if (ios /= 0) then
-            call runstat%raise_error( &
+            call run%error%raise_error('data', 'missing', &
                 'end-of-file reached while looking for harmonic freq.')
         end if
     end do
@@ -243,7 +248,7 @@ subroutine parse_glog(iu, nvib, freq, Xmat)
         end if
         read(iu, '(a)', iostat=ios) line
         if (ios /= 0) then
-            call runstat%raise_error( &
+            call run%error%raise_error('data', 'structure', &
                 'end-of-file reached while parsing harmonic freq.')
         end if
     end do
@@ -252,7 +257,7 @@ subroutine parse_glog(iu, nvib, freq, Xmat)
     do while (index(line, 'Total Anharmonic X Matrix') == 0)
         read(iu, '(a)', iostat=ios) line
         if (ios /= 0) then
-            call runstat%raise_error( &
+            call run%error%raise_error('data', 'missing', &
                 'end-of-file reached while looking for anh. X matrix.')
         end if
     end do
@@ -283,17 +288,12 @@ subroutine parse_options(opts_db)
     type(Params), intent(out) :: opts_db
 
     character(len=1024) :: argval
-    class(BaseException), allocatable :: err
-    type(CmdArgDB) :: parser
+    type(CmdLineArgsDB) :: parser
 
     ! Build option parser for commandline
-    parser = CmdArgDB(progname=locase(PROGNAME))
-    if (parser%has_error()) then
-        err = parser%exception()
-        call runstat%raise_error( &
-            'Unable to initialize the commandline parser', &
-            err%msg())
-    end if
+    parser = CmdLineArgsDB(progname=locase(PROGNAME))
+    call run%check(parser%error, 'Unable to initialize the commandline parser')
+
     call parser%add_arg_char( &
         'string', label='logfile', &
         help='Logfile with anharmonic data.')
@@ -302,12 +302,7 @@ subroutine parse_options(opts_db)
         help='Output filename.')
 
     call parser%parse_args()
-    if (parser%has_error()) then
-        err = parser%exception()
-        call runstat%raise_error( &
-            'Failure to parse commandline options', &
-            err%msg())
-    end if
+    call run%check(parser%error, 'Failure to parse commandline options')
 
     ! Check commandline arguments and set information
     call parser%get_value('logfile', argval)
@@ -366,7 +361,8 @@ subroutine parse_blocs(cstring, n_offset, max_data, label, n_data, blocks)
             if (n == n_offset) then
                 write(msg2, '("Failed to parse line: ",a)') trim(cstring)
                 write(msg1, '("Failed to parse ",a," block")') trim(label)
-                call runstat%raise_error(trim(msg1), details=trim(msg2))
+                call run%error%raise_error('data', 'struct', &
+                                           trim(msg1), details=trim(msg2))
             end if
         else
             exit

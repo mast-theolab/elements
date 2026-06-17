@@ -1,7 +1,6 @@
 module propinfo
     !! Module providing basic information on supported quantities
     use datatypes, only: PropertyDB
-    use exception, only: BaseException, ArgumentError
 
     implicit none
 
@@ -21,14 +20,18 @@ subroutine load_propinfo_from_id(property, identifier)
     !! Loads basic property information related to the identifier
     !! provided as integer in input.
     !!
-    !! NOTE: Information contained on property are overwritten.
+    !! @note
+    !! Information contained on property are overwritten.
+    !! @endnote
     !!
-    !! CAUTION: If the identifier is not found, empty information is
-    !! provided.  This should be checked carefully by calling routine.
+    !! @warning
+    !! If the identifier is not found, empty information is provided.
+    !! This should be checked carefully by calling routine.
+    !! #endwarning
     class(PropertyDB), intent(inout) :: property
-    !! Property database.
+        !! Property database.
     integer, intent(in) :: identifier
-    !! Identifier of the property of interest.
+        !! Identifier of the property of interest.
 
     select case(identifier)
     case(1)
@@ -93,16 +96,20 @@ subroutine load_propinfo_from_tag(property, name, tag)
     !! or a group.  In the latter case, a `tag` name should be
     !! provided to fully characterize the property of interest.
     !!
-    !! NOTE: Information contained on property are overwritten.
+    !! @note
+    !! Information contained on property are overwritten.
+    !! @endnote
     !!
-    !! CAUTION: If the identifier is not found, empty information is
-    !! provided.  This should be checked carefully by calling routine.
+    !! @warning
+    !! If the identifier is not found, empty information is provided.
+    !! This should be checked carefully by calling routine.
+    !! @endwarning
     class(PropertyDB), intent(inout) :: property
-    !! Property database.
+        !! Property database.
     character(len=*), intent(in) :: name
-    !! Name/group name of the property of interest.
+        !! Name/group name of the property of interest.
     character(len=*), intent(in), optional :: tag
-    !! Tag of the property of interest within group.
+        !! Tag of the property of interest within group.
 
     select case(name)
     case default
@@ -111,10 +118,9 @@ subroutine load_propinfo_from_tag(property, name, tag)
         property%unit = 'N/A'
         property%pdim = [1]
     end select
-    
+
 end subroutine load_propinfo_from_tag
 
 ! ======================================================================
 
-    
 end module propinfo

@@ -1,14 +1,13 @@
 program test_getdata
     use iso_fortran_env, only: output_unit
-    use exception, only: AllocateError, ArgumentError, Error, ValueError
-    use input, only: DataFile
-    use parse_cmdline, only: CmdArgDB
-    use output, only: iu_out, prt_mat, write_err, sec_header
     use datatypes, only: PropertyDB
+    use input, only: DataFile
+    use output, only: iu_out, prt_mat, write_err, sec_header
+    use parse_cmdline, only: CmdLineArgsDB
+    use run_env, only: run
 
     integer :: i, iprp, ider, LP
     integer, parameter :: MAXFILES = 1
-    real :: rval
     logical :: auto, do_g2e
     character(len=:), dimension(:), allocatable :: files
     character(len=256) :: outfile, string, fmt
@@ -16,23 +15,11 @@ program test_getdata
         ordinal = ['1st', '2nd', '3rd', '4th']
     type(DataFile) :: dfile
     class(PropertyDB), allocatable :: prop
-    class(CmdArgDB), allocatable :: opts
+    class(CmdLineArgsDB), allocatable :: opts
 
-    opts = CmdArgDB(progname='test_read_vib')
-    if (opts%has_error()) then
-        write(*, '(a)') 'Failed to initialize the command-line parser'
-        select type (err => opts%exception())
-            class is (AllocateError)
-                write(*, '(a)') trim(err%msg())
-            class is (ArgumentError)
-                write(*, '(a)') trim(err%msg())
-            class is (Error)
-                write(*, '(a)') trim(err%msg())
-            class default
-                write(*, '(a)') 'Unknown error.'
-        end select
-        stop
-    end if
+    opts = CmdLineArgsDB(progname='test_read_vib')
+    call run%check(opts%error, 'Failed to initialize the command-line parser')
+
     call opts%add_arg_int( &
         'scalar', label='derord', shortname='-d', &
         longname='--derorder', &
@@ -51,17 +38,7 @@ program test_getdata
         help='Property id to read (as integer)')
 
     call opts%parse_args()
-    if (opts%has_error()) then
-        select type (err => opts%exception())
-            class is (ValueError)
-                write(*, '(a)') trim(opts%get_error())
-            class is (Error)
-                write(*, '(a)') trim(opts%get_error())
-            class default
-                write(*, '(a)') 'Unknown error while parsing options'
-        end select
-        stop
-    end if
+    call run%check(opts%error, 'Failed to parse command-line arguments')
     if (opts%is_user_set('output')) then
         call opts%get_value('output', string)
         outfile = trim(string)
@@ -92,16 +69,12 @@ program test_getdata
     end if
 
     dfile = DataFile(files(1))
-    if (dfile%has_error()) then
-        call write_err('std', 'Error found while initializing data file', &
-                       dfile%get_error())
-        stop 1
-    end if
+    call run%check(dfile%error, 'Error found while initializing data file')
 
     call sec_header(0, 'Test Program for DataFile%GetData')
 
-    write(iu_out, '(/," Filename: ",a)') trim(dfile%get_name())
-    
+    write(iu_out, '(/," Filename: ",a)') trim(dfile%get_filename())
+
     if (.not.auto) then
         if (iprp > 0) then
             fmt = '("Reading property num. ",i0,:," (",a," derivative)")'

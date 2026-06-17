@@ -1,7 +1,7 @@
 module datatypes
     use numeric, only: realwp, f0
     use string, only: locase
-    use exception, only: BaseException, InitError, RaiseArgError
+    use run_env, only: ErrorHandle
 
     implicit none
     private
@@ -343,17 +343,15 @@ function get_atom_rcov(this, what, err) result(rcov)
     !!       the function simply returns 0.0 to not block operations
     !!       during execution.
     class(AtomDB), intent(in) :: this
-    !! Instance of the AtomDB type.
+        !! AtomDB instance.
     character(len=*), intent(in), optional :: what
-    !! Which type of covalent radius to return
-    class(BaseException), intent(out), allocatable, optional :: err
-    !! Error instance
+        !! Type of covalent radius to return.
+    type(ErrorHandle), intent(inout), optional :: err
+        !! Error instance.
     real(realwp) :: rcov
-    !! Resulting covalent radius.
+        !! Resulting covalent radius.
 
     character(len=:), allocatable :: key
-
-    if (present(err)) err = InitError()
 
     if (present(what)) then
         key = locase(trim(what))
@@ -372,7 +370,8 @@ function get_atom_rcov(this, what, err) result(rcov)
         rcov = this%rcovG
     case default
         if (present(err)) then
-            call RaiseArgError(err, 'Unrecognized category of covalent bond')
+            call err%raise_deverror('argval', &
+                'unrecognized category of covalent bond')
         else
             rcov = 0.0_realwp
         end if
@@ -417,17 +416,15 @@ function get_atom_rvdw(this, db, err) result(rvdw)
     !!       the function simply returns 0.0 to not block operations
     !!       during execution.
     class(AtomDB), intent(in) :: this
-    !! Instance of the AtomDB type.
+        !! AtomDB instance.
     character(len=*), intent(in), optional :: db
-    !! Which type of covalent radius to return
-    class(BaseException), intent(out), allocatable, optional :: err
-    !! Error instance
+        !! Database to use for the definition of van der Waals radii.
+    type(ErrorHandle), intent(inout), optional :: err
+        !! Error instance.
     real(realwp) :: rvdw
-    !! Resulting van der Waals radius.
+        !! Resulting van der Waals radius.
 
     character(len=:), allocatable :: key
-
-    if (present(err)) err = InitError()
 
     if (present(db)) then
         key = locase(trim(db))
@@ -452,7 +449,8 @@ function get_atom_rvdw(this, db, err) result(rvdw)
         rvdw = this%rvdw(4)
     case default
         if (present(err)) then
-            call RaiseArgError(err, 'Unrecognized source for vdW radii')
+            call err%raise_deverror('argval', &
+                'unrecognized database for vdW radii')
         else
             rvdw = 0.0_realwp
         end if
@@ -467,6 +465,7 @@ logical function is_bsetDB_pure(bsetDB)
     !!
     !! Use a few simple heuristics to establish if basis set is pure.
     class(BasisSetDB), intent(in) :: bsetDB
+        !! BasisSetDB instance.
 
     select case (abs(bsetDB%L_max))
     case(0,1)
@@ -487,6 +486,7 @@ logical function is_bsetDB_cart(bsetDB)
     !! Use a few simple heuristics to establish if basis set is
     !! Cartesian.
     class(BasisSetDB), intent(in) :: bsetDB
+        !! BasisSetDB instance.
 
     select case (abs(bsetDB%L_max))
     case(0,1)

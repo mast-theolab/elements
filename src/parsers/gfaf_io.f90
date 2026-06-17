@@ -5,18 +5,18 @@ module gfaf_io
     !! Fortran array files (FAF).
 
     use iso_fortran_env, only: int32, int64, real64
-    use run_env, only: base_obj
+    use run_env, only: CoreExecObject
     use numeric, only: intwp
     use string, only: upcase
     use gauopen_drv, only: AOInts, DAOInts, LenArr, Rd_2EN, Rd_CBuf, Rd_ChBuf, &
         Rd_IBuf, Rd_RBuf, Rd_RInd, Rd_SpA, Rd_SpAC, Rd_Labl
 
     private
-    public :: init_gfaf_parser
+    public :: gfaf_data, gfaf_parser
 
     integer, parameter :: MAXLENLAB = 64
 
-    type, public :: gfaf_data
+    type :: gfaf_data
         character(len=:), allocatable :: key
         character(len=1) :: dtype
             !! Data type, as string.  Possible values are:
@@ -44,7 +44,7 @@ module gfaf_io
         integer, dimension(:), allocatable :: map
     end type gfaf_data
 
-    type, private, extends (base_obj) :: gfaf_obj
+    type, extends (CoreExecObject) :: gfaf_obj
         !! Basic class to handle Gaussian Fortran Array Files.
         !!
         !! @note
@@ -82,7 +82,7 @@ module gfaf_io
 
     end type gfaf_obj
 
-    type, public, extends(gfaf_obj) :: gfaf_parser
+    type, extends(gfaf_obj) :: gfaf_parser
         private
         integer :: n_at = -1
             !! Number of atoms.
@@ -109,11 +109,11 @@ module gfaf_io
     contains
         procedure, private :: gfaf_read_item, gfaf_read_items
         procedure, private :: read_data => gfaf_read_data
-        procedure :: get_head_pars => gfaf_get_head
-        procedure :: get_head_data => gfaf_get_hdata
+        procedure :: head_pars => gfaf_get_head
+        procedure :: head_data => gfaf_get_hdata
         procedure :: skip => gfaf_skip_records
-        procedure :: read_keys => gfaf_read_keys
-        generic :: get_data => gfaf_read_item, gfaf_read_items
+        procedure :: keys => gfaf_read_keys
+        generic :: get => gfaf_read_item, gfaf_read_items
     end type gfaf_parser
 
     !type, public :: gfafbuilder
@@ -127,7 +127,8 @@ contains
 
 ! ======================================================================
 
-function init_gfaf_parser(fname, int_size, fix_int_size, preload) result(gfaf)
+function init_gfaf_parser(fname, int_size, fix_int_size, preload, &
+                          exit_on_error, silent) result(gfaf)
     !! Constructor-like function to create a FAF parser instance.
     !!
     !! `int_size` should correspond to the labels size used to generate the
@@ -144,6 +145,10 @@ function init_gfaf_parser(fname, int_size, fix_int_size, preload) result(gfaf)
         !! Default: true.
     logical, intent(in), optional :: preload
         !! Preload keys and their positions for faster searches.
+    logical, intent(in), optional :: exit_on_error
+        !! Exit if an error is encountered.  By default, `.true.`
+    logical, intent(in), optional :: silent
+        !! Do not print messages.  By default, `.false.`.
     type(gfaf_parser) :: gfaf
         !! Gaussian FAF parser instance.
 
@@ -151,10 +156,26 @@ function init_gfaf_parser(fname, int_size, fix_int_size, preload) result(gfaf)
     integer :: ios, ival, len_rec
     integer(int32) :: idata32(max_reclen), ivers32, nlab32
     integer(int64) :: idata64(max_reclen), ivers64, nlab64
-    logical :: change_ok, preload_keys, exists
+    logical :: change_ok, exit_ok, no_print, preload_keys, exists
     character(len=len_lab) :: label
     character(len=256) :: msg
+    
+    ! Set error handling policy.
+    if (present(exit_on_error)) then
+        exit_ok = exit_on_error
+    else
+        exit_ok = .true.
+    end if
 
+    if (present(silent)) then
+        no_print = silent
+    else
+        no_print = .false.
+    end if
+
+    call gfaf%error%init(exit_on_error=exit_ok, no_printing=no_print)
+
+    ! File operations
     if (present(fix_int_size)) then
         change_ok = fix_int_size
     else
@@ -164,7 +185,7 @@ function init_gfaf_parser(fname, int_size, fix_int_size, preload) result(gfaf)
     if (present(preload)) then
         preload_keys = preload
     else
-        preload_keys = .true.
+        preload_keys = .false.
     end if
 
     inquire(file=fname, exist=exists)
@@ -299,7 +320,7 @@ function init_gfaf_parser(fname, int_size, fix_int_size, preload) result(gfaf)
     end if
 
     if (preload_keys) then
-        call gfaf%read_keys()
+        call gfaf%keys()
     end if
 
 end function init_gfaf_parser

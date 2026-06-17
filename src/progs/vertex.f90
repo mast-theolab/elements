@@ -5,12 +5,12 @@ program vertex
     !! vertical position in a vertical excitation.
 
     use datatypes, only: MoleculeDB, PropertyDB, VibrationsDB
-    use exception, only: BaseException, runstat
     use geometry, only: Eckart_orient, superpose
     use input, only: DataFile
     use numeric, only: f0, f1, realwp
-    use output, only: iu_out, prt_coord, prt_mat, sec_header
-    use parse_cmdline, only: CmdArgDB
+    use output, only: iu_out, prt_coord, prt_mat, prt_vec, sec_header
+    use parse_cmdline, only: CmdLineArgsDB
+    use run_env, only: run
     use string, only: locase, upcase
     use vibrational, only: build_modes, set_orientation
     use vibronic, only: Duschinsky_matrix, Duschinsky_shift, extrapolate_geom
@@ -55,26 +55,15 @@ program vertex
     call sec_header(2, 'State at equilibrium')
 
     dfile = DataFile(opts%file_eq)
-    if (dfile%has_error()) then
-        call runstat%raise_error( &
-            'Failed to initialize data file', dfile%get_error())
-    end if
+    call run%check(dfile%error, 'Failed to initialize data file')
 
     write(iu_out, '(/,"1. Reading molecular data")')
     mol_eq = dfile%get_mol_data()
-    if (dfile%has_error()) then
-        call runstat%raise_error( &
-            'Unable to parse molecular data, check file.', &
-            dfile%get_error())
-    end if
+    call run%check(dfile%error, 'Unable to parse molecular data, check file')
 
     write(iu_out, '("2. Reading vibrational data")')
     vib_eq = dfile%get_vib_data()
-    if (dfile%has_error()) then
-        call runstat%raise_error( &
-            'Unable to parse vibrational data, check file.', &
-            dfile%get_error())
-    end if
+    call run%check(dfile%error, 'Unable to parse vibrational data, check file')
 
     write(iu_out, '("3. Construction of normal modes")')
     prop = dfile%get_data(1, derorder=2)
@@ -83,31 +72,21 @@ program vertex
     call sec_header(2, 'State in vertical region')
 
     dfile = DataFile(opts%file_ve)
-    if (dfile%has_error()) then
-        call runstat%raise_error( &
-            'Failed to initialize data file', dfile%get_error())
-    end if
+    call run%check(dfile%error, 'Failed to initialize data file')
 
     write(iu_out, '(/,"1. Reading molecular data")')
     mol_ve = dfile%get_mol_data()
-    if (dfile%has_error()) then
-        call runstat%raise_error( &
-            'Unable to parse molecular data, check file.', &
-            dfile%get_error())
-    end if
+    call run%check(dfile%error, 'Unable to parse molecular data, check file')
 
     write(iu_out, '("2. Reading vibrational data")')
     vib_ve = dfile%get_vib_data()
-    if (dfile%has_error()) then
-        call runstat%raise_error( &
-            'Unable to parse vibrational data, check file.', &
-            dfile%get_error())
-    end if
+    call run%check(dfile%error, &
+        'Unable to parse vibrational data, check file.')
 
     write(iu_out, '("3. Construction of normal modes")')
     prop = dfile%get_data(1, derorder=2)
     call build_modes(prop%data, mol_ve, vib_ve)
-    print *, vib_ve%freq
+    call prt_vec(vib_ve%freq, vib_ve%n_vib)
 
     ! Extract gradient
     write(iu_out, '("4. Extraction of energy gradient")')
@@ -166,17 +145,12 @@ subroutine parse_options(opts_db)
     type(Params), intent(out) :: opts_db
 
     character(len=1024) :: argval, msg
-    class(BaseException), allocatable :: err
-    type(CmdArgDB) :: parser
+    type(CmdLineArgsDB) :: parser
 
     ! Build option parser for commandline
-    parser = CmdArgDB(progname=locase(PROGNAME))
-    if (parser%has_error()) then
-        err = parser%exception()
-        call runstat%raise_error( &
-            'Unable to initialize the commandline parser', &
-            err%msg())
-    end if
+    parser = CmdLineArgsDB(progname=locase(PROGNAME))
+    call run%check(parser%error, &
+                   'Unable to initialize the commandline parser')
     call parser%add_arg_char( &
         'string', label='file_eq', &
         help='Gaussian formatted checkpoint file containing the description &
@@ -195,12 +169,8 @@ subroutine parse_options(opts_db)
         help='Output filename.')
 
     call parser%parse_args()
-    if (parser%has_error()) then
-        err = parser%exception()
-        call runstat%raise_error( &
-            'Failure to parse commandline options', &
-            err%msg())
-    end if
+    call run%check(parser%error, &
+        'failure to parse commandline options')
 
     ! Check commandline arguments and set information
     call parser%get_value('file_eq', argval)
@@ -222,7 +192,7 @@ subroutine parse_options(opts_db)
                 opts_db%do_VG = .false.
             case default
                 write(msg, '("Unrecognized method: ",a)') trim(argval)
-                call runstat%raise_error(trim(msg))
+                call run%error%raise_error('opt', 'value', trim(msg))
         end select
     end if
 

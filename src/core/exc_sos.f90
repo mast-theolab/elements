@@ -12,8 +12,6 @@ module exc_sos
     !! @endnote
     !!
     use numeric, only: realwp, f0, f1, f2
-    use exception, only: ArgumentError, BaseException, InitError, &
-        RaiseArgError, RaiseError
 
     implicit none
 

@@ -9,6 +9,7 @@ module output
     use iso_fortran_env, only: real32, real64, int32, int64, output_unit
     use string, only: locase
     use physics, only: phys => phys_conv
+    use run_env, only: run
 
     implicit none
 
@@ -68,15 +69,15 @@ subroutine prt_coord_r32(n_at, at_lab, at_crd, at_mass, iunit)
     !! Prints the atomic coordinates as a table, optionally with the
     !! atomic masses included.
     integer, intent(in) :: n_at
-    !! Number of atoms
+        !! Number of atoms.
     character(len=*), dimension(n_at), intent(in) :: at_lab
-    !! Atomic labels
+        !! Atomic labels.
     real(real32), dimension(3, n_at), intent(in) :: at_crd
-    !! Atomic coordinates (in au)
+        !! Atomic coordinates (in au).
     real(real32), dimension(n_at), intent(in), optional :: at_mass
-    !! Atomic masses (in u)
+        !! Atomic masses (in u).
     integer, intent(in), optional :: iunit
-    !! Output unit
+        !! Output unit.
 
     integer :: ia, iu
 
@@ -121,15 +122,15 @@ subroutine prt_coord_r64(n_at, at_lab, at_crd, at_mass, iunit)
     !! Prints the atomic coordinates as a table, optionally with the
     !! atomic masses included.
     integer, intent(in) :: n_at
-    !! Number of atoms
+        !! Number of atoms.
     character(len=*), dimension(n_at), intent(in) :: at_lab
-    !! Atomic labels
+        !! Atomic labels.
     real(real64), dimension(3, n_at), intent(in) :: at_crd
-    !! Atomic coordinates (in au)
+        !! Atomic coordinates (in au).
     real(real64), dimension(n_at), intent(in), optional :: at_mass
-    !! Atomic masses (in u)
+        !! Atomic masses (in u).
     integer, intent(in), optional :: iunit
-    !! Output unit
+        !! Output unit.
 
     integer :: ia, iu
 
@@ -177,19 +178,20 @@ subroutine prt_mat_r32(mat, n_row, n_col, iunit, ncol_by_blk, prec, thresh)
     !!
     !! Prints the elements of a real matrix with precision real32.
     real(real32), dimension(:,:), intent(in) :: mat
-    !! Matrix to display
+        !! Matrix to display.
     integer, intent(in) :: n_row
-    !! Number of rows to display
+        !! Number of rows to display.
     integer, intent(in) :: n_col
-    !! Number of columns to display
+        !! Number of columns to display.
     integer, intent(in), optional :: iunit
-    !! Output unit
+        !! Output unit.
     integer, intent(in), optional :: ncol_by_blk
-    !! Number of columns per block
+        !! Number of columns per block.
     integer, intent(in), optional :: prec
-    !! Number of digits for precision (<0 for fixed-point notation)
+        !! Number of digits for precision (<0 for fixed-point notation).
     real(real32), intent(in), optional :: thresh
-    !! If set, elements below thresh are not printed.
+        !! If set, elements below thresh are not printed.
+
     integer :: icol, icol0, irow, iu, len_num, n, ncols
     integer, parameter :: len_id = 8
     real(real32), dimension(:), allocatable :: vec
@@ -261,19 +263,20 @@ subroutine prt_mat_r64(mat, n_row, n_col, iunit, ncol_by_blk, prec, thresh)
     !!
     !! Prints the elements of a real matrix with precision real64.
     real(real64), dimension(:,:), intent(in) :: mat
-    !! Matrix to display
+        !! Matrix to display.
     integer, intent(in) :: n_row
-    !! Number of rows to display
+        !! Number of rows to display.
     integer, intent(in) :: n_col
-    !! Number of columns to display
+        !! Number of columns to display.
     integer, intent(in), optional :: iunit
-    !! Output unit
+        !! Output unit.
     integer, intent(in), optional :: ncol_by_blk
-    !! Number of columns per block
+        !! Number of columns per block.
     integer, intent(in), optional :: prec
-    !! Number of digits for precision (<0 for fixed-point notation)
+        !! Number of digits for precision (<0 for fixed-point notation).
     real(real64), intent(in), optional :: thresh
-    !! If set, elements below thresh are not printed.
+        !! If set, elements below thresh are not printed.
+
     integer :: icol, icol0, irow, iu, len_num, n, ncols
     integer, parameter :: len_id = 8
     real(real64), dimension(:), allocatable :: vec
@@ -342,15 +345,15 @@ subroutine prt_vec_r32(vec, n, iunit, prec, thresh)
     !!
     !! Prints the elements of a real vector with precision real32.
     real(real32), dimension(:), intent(in) :: vec
-    !! Vector to display.
+        !! Vector to display.
     integer, intent(in) :: n
-    !! Number of elements to print.
+        !! Number of elements to print.
    integer, intent(in), optional :: iunit
-    !! Output unit
+        !! Output unit.
     integer, intent(in), optional :: prec
-    !! Number of digits for precision (<0 for fixed-point notation)
+        !! Number of digits for precision (<0 for fixed-point notation).
     real(real32), intent(in), optional :: thresh
-    !! If set, elements below thresh are not printed.
+        !! If set, elements below thresh are not printed.
 
     integer :: i, iu, len_num
     real(real32) :: x
@@ -404,15 +407,15 @@ subroutine prt_vec_r64(vec, n, iunit, prec, thresh)
     !!
     !! Prints the elements of a real vector with precision real64.
     real(real64), dimension(:), intent(in) :: vec
-    !! Vector to display.
+        !! Vector to display.
     integer, intent(in) :: n
-    !! Number of elements to print.
+        !! Number of elements to print.
    integer, intent(in), optional :: iunit
-    !! Output unit
+        !! Output unit.
     integer, intent(in), optional :: prec
-    !! Number of digits for precision (<0 for fixed-point notation)
+        !! Number of digits for precision (<0 for fixed-point notation).
     real(real64), intent(in), optional :: thresh
-    !! If set, elements below thresh are not printed.
+        !! If set, elements below thresh are not printed.
 
     integer :: i, iu, len_num
     real(real64) :: x
@@ -474,11 +477,11 @@ subroutine sec_header(level, title, lead_spaces)
     !!  3. Subsubsection / Header3
     !!  4. Paragraph / Header4
     integer, intent(in) :: level
-    !! Header level.
+        !! Header level.
     character(len=*), intent(in) :: title
-    !! Header title.
+        !! Header title.
     integer, intent(in), optional :: lead_spaces
-    !! Number of leading spaces.
+        !! Number of leading spaces.
 
     integer :: lblc, lshft, ltitle, llead
     character(len=256) :: fmt
@@ -534,9 +537,8 @@ subroutine sec_header(level, title, lead_spaces)
         write(fmt, 1050) llead
         write(iu_out, fmt) trim(title)
     case default
-        print *, 'Unknown header level.  Stopping.'
-        stop
-
+        call run%error%raise_deverror('argval', 'unknown header level')
+        return
     end select
 
 end subroutine sec_header

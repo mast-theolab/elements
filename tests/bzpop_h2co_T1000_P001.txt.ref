@@ -72,4 +72,6 @@ Vibrational ground state
 Final result
 ============
 > Total number of states : 40
-> Total population : 1.78374223E+00
+> Computed population : 1.78374223E+00
+> Analytical population : 1.80981168E+00
+> Recovered percentage : 98.559549%

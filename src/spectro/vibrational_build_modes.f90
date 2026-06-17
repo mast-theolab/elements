@@ -17,8 +17,8 @@ module procedure build_modes_arr_lt
     n_at3 = 3*n_at
     n_at3tt = n_at3*(n_at3+1)/2
     if (size(F_cart) /= n_at3tt .or. size(at_mass) /= n_at) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', source='build_modes')
         return
     end if
 
@@ -68,8 +68,8 @@ module procedure build_modes_arr_sq
     n_at = size(at_crd, 2)
     n_at3 = 3*n_at
     if (size(F_mweigh, 1) /= n_at3 .or. size(at_mass, 1) /= n_at) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', source='build_modes')
         return
     end if
 
@@ -111,8 +111,8 @@ module procedure build_modes_db_lt
     n_at3 = 3*molDB%n_at
     n_at3tt = n_at3*(n_at3+1)/2
     if (size(F_cart) /= n_at3tt) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', source='build_modes')
         return
     end if
 
@@ -244,7 +244,7 @@ module procedure build_modes_db_lt
             remove_rottrans, n_vib=nvib, red_mass=vibDB%red_mass)
     end if
     deallocate(F_mweigh)
-    if (runstat%is_ok()) then
+    if (run%error%is_ok()) then
         if (do_Lmat) vibDB%L_mat = vibDB%L_mat(:n_at3,:nvib)
         if (do_freq) then
             vibDB%freq = vibDB%freq(:nvib)
@@ -269,8 +269,8 @@ module procedure build_modes_db_sq
 
     n_at3 = 3*molDB%n_at
     if (size(F_cart, 1) /= n_at3) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', source='build_modes')
         return
     end if
 
@@ -394,7 +394,7 @@ module procedure build_modes_db_sq
             remove_rottrans, n_vib=nvib, red_mass=vibDB%red_mass)
     end if
     deallocate(F_mweigh)
-    if (runstat%is_ok()) then
+    if (run%error%is_ok()) then
         if (do_Lmat) vibDB%L_mat = vibDB%L_mat(:n_at3,:nvib)
         if (do_freq) then
             vibDB%freq = vibDB%freq(:nvib)
@@ -421,8 +421,8 @@ module procedure build_modes_dim_lt
     n_at3tt = n_at3*(n_at3+1)/2
     if (size(F_cart) /= n_at3tt .or. size(at_mass, 1) /= n_at .or. &
             size(at_crd, 2) /= n_at) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', source='build_modes')
         return
     end if
 
@@ -472,8 +472,8 @@ module procedure build_modes_dim_sq
     n_at3 = 3*n_at
     if (size(F_cart, 1) /= n_at3 .or. size(at_mass, 1) /= n_at .or. &
             size(at_crd, 2) /= n_at) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', source='build_modes')
         return
     end if
 
@@ -515,8 +515,8 @@ module procedure build_modes_moldb_lt
     n_at3 = 3*molDB%n_at
     n_at3tt = n_at3*(n_at3+1)/2
     if (size(F_cart) /= n_at3tt) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', source='build_modes')
         return
     end if
 
@@ -566,8 +566,8 @@ module procedure build_modes_moldb_sq
 
     n_at3 = 3*molDB%n_at
     if (size(F_cart, 1) /= n_at3) then
-        call runstat%raise_error('inconsistency in input arrays', cat='dev', &
-                                 source='build_modes')
+        call run%error%raise_argerror('size', &
+            'inconsistency in input arrays', source='build_modes')
         return
     end if
 
@@ -664,10 +664,10 @@ subroutine build_modes_algo(n_at, F_mweigh, at_crd, at_mass, remove_rottrans, &
     allocate(eval(n_at3))
     call xsyev('V', 'L', n_at3, evec, n_at3, eval, eval, -1, info)
     if (info /= 0) then
-        write(msg, '("Error code INFO=",i0)') info
-        call runstat%raise_error( &
-            'Failed to build normal modes', &
-            details='Failed to get optimal work size from xsyev', &
+        write(msg, '("error code INFO=",i0)') info
+        call run%error%raise_error('calc', 'gen', &
+            'failed to build normal modes', &
+            details='failed to get optimal work size from xsyev', &
             extra=trim(msg))
         return
     end if
@@ -676,10 +676,10 @@ subroutine build_modes_algo(n_at, F_mweigh, at_crd, at_mass, remove_rottrans, &
     allocate(work(lwork))
     call xsyev('V', 'L', n_at3, evec, n_at3, eval, work, lwork, info)
     if (info /= 0) then
-        write(msg, '("Error code INFO=",i0)') info
-        call runstat%raise_error( &
-            'Failed to build normal modes', &
-            details='Failed to diagonalize mass-weighted force constants &
+        write(msg, '("error code INFO=",i0)') info
+        call run%error%raise_error('calc', 'singularity', &
+            'failed to build normal modes', &
+            details='failed to diagonalize mass-weighted force constants &
                 &matrix', &
             extra=trim(msg))
         return
@@ -719,17 +719,17 @@ subroutine build_modes_algo(n_at, F_mweigh, at_crd, at_mass, remove_rottrans, &
     trro_norm = sum(evec_new(:,:6)**2, dim=1)
     n_trro = count(trro_norm > 1.0e-9_realwp)
     if (n_trro < 5) then
-        call runstat%raise_error( &
-            'Failed to build normal modes', &
-            details='Unable to identify rotations/translations')
+        call run%error%raise_error('calc', 'gen', &
+            'failed to build normal modes', &
+            details='unable to identify rotations/translations')
         return
     end if
     n_vib1 = n_at3 - n_trro
     if (present(n_vib)) then
         if (n_vib > 0 .and. n_vib1 /= n_vib) then
-            call runstat%raise_error( &
-                'Failed to build normal modes', &
-                details='Mismatch between computed and input number of modes')
+            call run%error%raise_error('calc', 'gen', &
+                'failed to build normal modes', &
+                details='mismatch between computed and input number of modes')
             return
         end if
         if (n_vib <= 0) n_vib = n_vib1
@@ -755,10 +755,10 @@ subroutine build_modes_algo(n_at, F_mweigh, at_crd, at_mass, remove_rottrans, &
     work2 = work(:n_at3)
     call xlasrt('D', n_at3, work2, info)
     if (info /= 0) then
-        write(msg, '("Error code from sorting INFO=",i0)') info
-        call runstat%raise_error( &
-            'Failed to build normal modes', &
-            details='Unable to identify the rotations/translations', &
+        write(msg, '("error code from sorting INFO=",i0)') info
+        call run%error%raise_error('calc', 'gen', &
+            'failed to build normal modes', &
+            details='unable to identify the rotations/translations', &
             extra=trim(msg))
         return
     end if
@@ -782,10 +782,11 @@ subroutine build_modes_algo(n_at, F_mweigh, at_crd, at_mass, remove_rottrans, &
         ! Gram-Schmidt orthogonalization through QR factorization
         call xgeqrf(n_at3, n_at3, evec_new, n_at3, work2, work, lwork, info)
         if (info /= 0) then
-            write(msg, '("Error code from mode orthogonalization INFO=",i0)') info
-            call runstat%raise_error( &
-                'Failed to build normal modes', &
-                details='Failed to orthogonalize the normal modes', &
+            write(msg, '("error code from mode orthogonalization INFO=",i0)') &
+                info
+            call run%error%raise_error('calc', 'gen', &
+                'failed to build normal modes', &
+                details='failed to orthogonalize the normal modes', &
                 extra=trim(msg))
             return
         end if
@@ -793,10 +794,10 @@ subroutine build_modes_algo(n_at, F_mweigh, at_crd, at_mass, remove_rottrans, &
                     info)
         if (info /= 0) then
             write(msg, &
-                 '("Error code when building orthgonal modes INFO=",i0)') info
-            call runstat%raise_error( &
-                'Failed to build normal modes', &
-                details='Failed to orthogonalize the normal modes', &
+                 '("error code when building orthgonal modes INFO=",i0)') info
+            call run%error%raise_error('calc', 'gen', &
+                'failed to build normal modes', &
+                details='failed to orthogonalize the normal modes', &
                 extra=trim(msg))
             return
         end if

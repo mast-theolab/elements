@@ -89,7 +89,7 @@ target("userdoc")
     -- adding ASCIIDOC files to build
     add_files("doc/*.adoc")
 
--- Rules for specific compilations
+-- Specific targets
 -- * library system
 includes("xmake_libs.lua")
 -- * tests

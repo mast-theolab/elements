@@ -4,12 +4,10 @@ submodule (input:input_data) input_data_fchk
     use numeric, only: realwp, f2, to_int
     use physics, only: phys_conv
     use arrays, only: symm_tri_array
-    use parsefchk, only: fchkdata, fchkparser
+    use fchk_io, only: fchk_data, fchk_parser, LHEAD
     use basisset, only: build_bset_DB
     use atominfo, only: atdata
     use propinfo, only: load_property_info
-    use exception, only: BaseException, Error, InitError, &
-        RaiseError, RaiseFileError, RaiseQuantityError
 
     implicit none
 
@@ -26,7 +24,7 @@ module procedure build_mol_data_fchk
     !! molecular specification data.
     !! An instance of MoleculeDB is returned.
 
-    character(len=42), dimension(12), parameter :: fchk_keys = [ &
+    character(len=LHEAD), dimension(12), parameter :: fchk_keys = [ &
         'Number of atoms                           ', &  !  1
         'Number of electrons                       ', &  !  2
         'Charge                                    ', &  !  3
@@ -44,17 +42,27 @@ module procedure build_mol_data_fchk
     integer :: ia, n_ab, n_basis
     real(realwp), dimension(:), allocatable :: tmparr
     logical :: ok
-    type(fchkparser) :: dfchk
-    type(fchkdata), dimension(:), allocatable :: dbase
+    character(len=:), allocatable :: err_cause, err_details, err_extra
+    type(fchk_parser) :: dfchk
+    type(fchk_data), dimension(:), allocatable :: dbase
 
-    dfile%error = InitError()
-
-    dfchk = fchkparser(dfile%name)
-    dbase = dfchk%read(fchk_keys)
+    dfchk = fchk_parser(dfile%name)
+    dbase = dfchk%get(fchk_keys)
+    if (dfchk%error%has_error()) then
+        call dfchk%error%info(err_cause, err_details, err_extra)
+        if (allocated(err_details)) then
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build molecular data', err_cause, err_details)
+        else
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build molecular data', err_cause)
+        end if
+        return
+    end if
 
     ok = dfchk%close()
-    if (.not. ok) then
-        call RaiseFileError(dfile%error, dfile%name, 'closing')
+    if (dfchk%error%has_error()) then
+        call dfile%error%from(dfchk%error)
         return
     end if
 
@@ -91,8 +99,11 @@ module procedure build_mol_data_fchk
             end if
             n_basis = to_int(dbase(10)%idata(1))
             ! Check that the dimensions make sense. This should never fail.
-            if (n_basis*(n_basis+1)/2 /= size(dbase(11)%rdata)) &
-                stop 'Inconsistency in SCF density size'
+            if (n_basis*(n_basis+1)/2 /= size(dbase(11)%rdata)) then
+                call run%error%raise_error('data', 'inconsistency', &
+                    'inconsistency in SCF density size')
+                return
+            end if
             allocate(mol%el_dens(n_basis,n_basis,n_ab))
             call symm_tri_array(n_basis, dbase(11)%rdata, linear=.true., &
                 lower=.true., anti_symm=.false., arr_new=mol%el_dens(:,:,1))
@@ -121,7 +132,7 @@ module procedure build_bset_data_fchk
     !! set information data.
     !! An instance of BasisSetDB is returned.
 
-    character(len=42), dimension(12), parameter :: fchk_keys = [ &
+    character(len=LHEAD), dimension(12), parameter :: fchk_keys = [ &
         'Number of atoms                           ', &  !  1
         'Number of basis functions                 ', &  !  2
         'Number of independent functions           ', &  !  3
@@ -146,19 +157,28 @@ module procedure build_bset_data_fchk
         coef_contrSP, &  ! contraction coefficients (P(S=P))
         prim_exp         ! primitives exponents
     logical :: ok
-    character(len=512) :: errmsg
-    type(fchkparser) :: dfchk
-    type(fchkdata), dimension(:), allocatable :: dbase
-    class(BaseException), allocatable :: suberr
+    character(len=:), allocatable :: err_cause, err_details, err_extra
+    type(fchk_parser) :: dfchk
+    type(fchk_data), dimension(:), allocatable :: dbase
+    type(ErrorHandle) :: err
 
-    dfile%error = InitError()
-
-    dfchk = fchkparser(dfile%name)
-    dbase = dfchk%read(fchk_keys)
+    dfchk = fchk_parser(dfile%name)
+    dbase = dfchk%get(fchk_keys)
+    if (dfchk%error%has_error()) then
+        call dfchk%error%info(err_cause, err_details, err_extra)
+        if (allocated(err_details)) then
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build basis-set data', err_cause, err_details)
+        else
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build basis-set data', err_cause)
+        end if
+        return
+    end if
 
     ok = dfchk%close()
-    if (.not. ok) then
-        call RaiseFileError(dfile%error, dfile%name, 'closing')
+    if (dfchk%error%has_error()) then
+        call dfile%error%from(dfchk%error)
         return
     end if
 
@@ -188,19 +208,18 @@ module procedure build_bset_data_fchk
     call build_bset_DB(n_at, bset%n_shells, bset%pureD, bset%pureF, &
                        shell_types, prim_per_sh, shell_to_at, coef_contr, &
                        coef_contrSP, prim_exp, bset%nprim_per_at, bset%info, &
-                       bset%L_max, suberr)
-    if (suberr%raised()) then
-        select type(suberr)
-            class is (Error)
-                write(errmsg, '(a,a,"Original error:", a)') &
-                    'Error when parsing the basis set', new_line(' '), &
-                    trim(suberr%msg())
-                call RaiseError(dfile%error, errmsg)
-                return
-            class default
-                call RaiseError(dfile%error, 'Generic error')
-                return
-        end select
+                       bset%L_max, err)
+    if (err%raised()) then
+        call err%info(err_cause, err_details, err_extra)
+        if (allocated(err_details)) then
+            call dfile%error%raise_error('data', 'structure', &
+                'unable to parse the basis set structure', err_cause, &
+                err_details)
+        else
+            call dfile%error%raise_error('data', 'structure', &
+                'unable to parse the basis set structure', err_cause)
+        end if
+        return
     end if
     bset%loaded = .true.
 
@@ -217,7 +236,7 @@ module procedure build_orb_data_fchk
     !! molecular specification data.
     !! An instance of OrbitalsDB is returned.
 
-    character(len=42), dimension(7), parameter :: fchk_keys = [ &
+    character(len=LHEAD), dimension(7), parameter :: fchk_keys = [ &
         'Number of alpha electrons                 ', &  ! 1
         'Number of beta electrons                  ', &  ! 2
         'Number of basis functions                 ', &  ! 3
@@ -229,17 +248,27 @@ module procedure build_orb_data_fchk
 
     integer :: i, ij, j
     logical :: ok
-    type(fchkparser) :: dfchk
-    type(fchkdata), dimension(:), allocatable :: dbase
+    character(len=:), allocatable :: err_cause, err_details, err_extra
+    type(fchk_parser) :: dfchk
+    type(fchk_data), dimension(:), allocatable :: dbase
 
-    dfile%error = InitError()
-
-    dfchk = fchkparser(dfile%name)
-    dbase = dfchk%read(fchk_keys)
+    dfchk = fchk_parser(dfile%name)
+    dbase = dfchk%get(fchk_keys)
+    if (dfchk%error%has_error()) then
+        call dfchk%error%info(err_cause, err_details, err_extra)
+        if (allocated(err_details)) then
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build orbitals data', err_cause, err_details)
+        else
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build orbitals data', err_cause)
+        end if
+        return
+    end if
 
     ok = dfchk%close()
-    if (.not. ok) then
-        call RaiseFileError(dfile%error, dfile%name, 'closing')
+    if (dfchk%error%has_error()) then
+        call dfile%error%from(dfchk%error)
         return
     end if
 
@@ -250,11 +279,11 @@ module procedure build_orb_data_fchk
     ! -- Number of atomic orbitals
     orb%n_ao = to_int(dbase(3)%idata(1))
 
-    orb%n_mos(1) = to_int(dbase(6)%len)
+    orb%n_mos(1) = to_int(dbase(6)%size)
     if (dbase(7)%dtype /= '0') then
         orb%n_ab = 2
         orb%openshell = .true.
-        orb%n_mos(2) = to_int(dbase(7)%len)
+        orb%n_mos(2) = to_int(dbase(7)%size)
     else
         orb%n_ab = 1
         orb%openshell = .false.
@@ -304,8 +333,15 @@ module procedure build_exc_data_fchk
     !! relevant information on electronic excited-state data and
     !! transition data.
     !! An instance of ExcitationDB is returned.
+    !!
+    !! @warning
+    !! The routine assumes that if the major version is missing, it is
+    !! an old version of Gaussian, since the label was not present in
+    !! the formatted checkpoint file generated by earlier versions of
+    !! Gaussian.
+    !! @endwarning
 
-    character(len=42), dimension(12), parameter :: fchk_keys = [ &
+    character(len=LHEAD), dimension(12), parameter :: fchk_keys = [ &
         'Number of basis functions                 ', &  !  1.
         'Beta Orbital Energies                     ', &  !  2.
         'Total CI Density                          ', &  !  3.
@@ -325,25 +361,36 @@ module procedure build_exc_data_fchk
         lblock_ETran, &  ! Length of a data block for a given state
         NLR              ! indicate if left and right trans. matrix data stored
     logical :: ok
-    type(fchkparser) :: dfchk
-    type(fchkdata), dimension(:), allocatable :: dbase
+    character(len=:), allocatable :: err_cause, err_details, err_extra
+    type(fchk_parser) :: dfchk
+    type(fchk_data), dimension(:), allocatable :: dbase
 
-    dfile%error = InitError()
-
-    dfchk = fchkparser(dfile%name)
-    dbase = dfchk%read(fchk_keys)
+    dfchk = fchk_parser(dfile%name)
+    dbase = dfchk%get(fchk_keys)
+    if (dfchk%error%has_error()) then
+        call dfchk%error%info(err_cause, err_details, err_extra)
+        if (allocated(err_details)) then
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build electronic excitation data', err_cause, &
+                err_details)
+        else
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build electronic excitation data', err_cause)
+        end if
+        return
+    end if
 
     ok = dfchk%close()
-    if (.not. ok) then
-        call RaiseFileError(dfile%error, dfile%name, 'closing')
+    if (dfchk%error%has_error()) then
+        call dfile%error%from(dfchk%error)
         return
     end if
 
     ! Check if excited-states properties available
     ! First check that this exists, since a fchk may be missing it.
     if (dbase(4)%dtype == '0') then
-        call RaiseQuantityError(dfile%error, &
-            msg='Missing excited-states data in file.')
+        call dfile%error%raise_error('data', 'missing', &
+            'missing excited-states data in file.')
         return
     end if
 
@@ -363,7 +410,8 @@ module procedure build_exc_data_fchk
         NLR = to_int(dbase(4)%idata(3))
     end if
     if (NLR > 1) then
-        call RaiseError(dfile%error, 'NLR /= 1 not yet supported.  Sorry.')
+        call dfile%error%raise_deverror('nyi', &
+            'NLR /= 1 not yet supported')
         return
     end if
 
@@ -400,7 +448,9 @@ module procedure build_exc_data_fchk
             ! We need to do the inverse operation to get the correct
             ! coefficients.
             if (dbase(10)%dtype /= '0') then
-                if (dfile%check_version(major='G16')) then
+                if (dfile%check_version(major='G16') &
+                    .or. dfile%check_version(major='G09') &
+                    .or. dfile%check_version(major='NA')) then
                     exc%g2e_dens = &
                         reshape(dbase(10)%rdata, &
                                 [n_basis,n_basis,2,exc%n_states]) &
@@ -451,7 +501,7 @@ module procedure build_vib_data_fchk
     !!
     !! See [[build_vib_data(proc)]] for details.
 
-    character(len=42), dimension(4), parameter :: fchk_keys = [ &
+    character(len=LHEAD), dimension(4), parameter :: fchk_keys = [ &
         'Number of Normal Modes               ', &  !  1.
         'Vib-AtMass                           ', &  !  2.
         'Vib-E2                               ', &  !  3.
@@ -461,10 +511,9 @@ module procedure build_vib_data_fchk
     integer :: i, ia, n_at3
     real(realwp), dimension(:,:), allocatable :: evec
     logical :: build_Lmat, build_Lmweig, ok
-    type(fchkparser) :: dfchk
-    type(fchkdata), dimension(:), allocatable :: dbase
-
-    dfile%error = InitError()
+    character(len=:), allocatable :: err_cause, err_details, err_extra
+    type(fchk_parser) :: dfchk
+    type(fchk_data), dimension(:), allocatable :: dbase
 
     if (present(get_Lmat)) then
         build_Lmat = get_Lmat
@@ -478,19 +527,30 @@ module procedure build_vib_data_fchk
         build_Lmweig = .true.
     end if
 
-    dfchk = fchkparser(dfile%name)
-    dbase = dfchk%read(fchk_keys)
+    dfchk = fchk_parser(dfile%name)
+    dbase = dfchk%get(fchk_keys)
+    if (dfchk%error%has_error()) then
+        call dfchk%error%info(err_cause, err_details, err_extra)
+        if (allocated(err_details)) then
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build vibrational data', err_cause, err_details)
+        else
+            call dfchk%error%raise_error('data', 'missing', &
+                'unable to build vibrational data', err_cause)
+        end if
+        return
+    end if
 
     ok = dfchk%close()
-    if (.not. ok) then
-        call RaiseFileError(dfile%error, dfile%name, 'closing')
+    if (dfchk%error%has_error()) then
+        call dfile%error%from(dfchk%error)
         return
     end if
 
     ! First check that this exists, since a fchk may be missing it.
     if (dbase(1)%dtype == '0') then
-        call RaiseQuantityError(dfile%error, &
-            msg='Missing vibrational data in file.')
+        call dfile%error%raise_error('data', 'missing', &
+            'missing vibrational data in file.')
         return
     end if
 
@@ -535,9 +595,9 @@ module procedure get_data_from_id_fchk
     integer :: der_ord, i, ioff, LP
     real(realwp), dimension(:), allocatable :: tmpvec
     logical :: ok
-    character(len=42), dimension(:), allocatable :: fchk_keys
-    type(fchkparser) :: dfchk
-    type(fchkdata), dimension(:), allocatable :: dbase
+    character(len=LHEAD), dimension(:), allocatable :: fchk_keys
+    type(fchk_parser) :: dfchk
+    type(fchk_data), dimension(:), allocatable :: dbase
 
     ! Check if reference/starting state makes sense and set it in DB
     if (present(start_state)) then
@@ -583,7 +643,7 @@ module procedure get_data_from_id_fchk
     call load_property_info(prop, identifier)
 
     ! Load parsing capabilities
-    dfchk = fchkparser(dfile%name)
+    dfchk = fchk_parser(dfile%name)
 
     ! Now extract information
     select case(identifier)
@@ -598,7 +658,7 @@ module procedure get_data_from_id_fchk
                     'ETran scalars                        ', &  !  2.
                     'Number of atoms                      '  &  !  3.
                 ]
-                dbase = dfchk%read(fchk_keys)
+                dbase = dfchk%get(fchk_keys)
                 if (dbase(2)%dtype == '0') then
                     prop%istat = 2
                     return
@@ -663,7 +723,7 @@ module procedure get_data_from_id_fchk
                 fchk_keys = [ &
                     'Total Energy                         '  &  !  1.
                 ]
-                dbase = dfchk%read(fchk_keys)
+                dbase = dfchk%get(fchk_keys)
                 if (dbase(1)%dtype == '0') then
                     prop%istat = 2
                     return
@@ -678,7 +738,7 @@ module procedure get_data_from_id_fchk
                     'Cartesian Gradient                   ', &  !  1.
                     'Number of atoms                      '  &  !  2.
                 ]
-                dbase = dfchk%read(fchk_keys)
+                dbase = dfchk%get(fchk_keys)
                 if (dbase(1)%dtype == '0') then
                     prop%istat = 2
                     return
@@ -697,7 +757,7 @@ module procedure get_data_from_id_fchk
                     'Cartesian Force Constants            ', &  !  1.
                     'Number of atoms                      '  &  !  2.
                 ]
-                dbase = dfchk%read(fchk_keys)
+                dbase = dfchk%get(fchk_keys)
                 if (dbase(1)%dtype == '0') then
                     prop%istat = 2
                     return
@@ -725,7 +785,7 @@ module procedure get_data_from_id_fchk
                 'ETran scalars                        ', &  !  2.
                 'Number of atoms                      '  &  !  3.
             ]
-            dbase = dfchk%read(fchk_keys)
+            dbase = dfchk%get(fchk_keys)
             if (dbase(2)%dtype == '0') then
                 prop%istat = 2
                 return
@@ -766,7 +826,7 @@ module procedure get_data_from_id_fchk
                     'ETran scalars                        ', &  !  2.
                     'Number of atoms                      '  &  !  3.
                 ]
-                dbase = dfchk%read(fchk_keys)
+                dbase = dfchk%get(fchk_keys)
                 if (dbase(2)%dtype == '0') then
                     prop%istat = 2
                     return
@@ -831,7 +891,9 @@ module procedure get_data_from_id_fchk
             end if
         else
             ! Reference state
-            stop 'El. dipole NYI'
+            call dfile%error%raise_deverror('nyi', &
+                'electric dipole not yet supported')
+            return
         end if
     case(111)
         prop%order = der_ord
@@ -843,7 +905,7 @@ module procedure get_data_from_id_fchk
                     'ETran scalars                        ', &  !  2.
                     'Number of atoms                      '  &  !  3.
                 ]
-                dbase = dfchk%read(fchk_keys)
+                dbase = dfchk%get(fchk_keys)
                 if (dbase(2)%dtype == '0') then
                     prop%istat = 2
                     return
@@ -908,7 +970,9 @@ module procedure get_data_from_id_fchk
             end if
         else
             ! Reference state
-            stop 'El. dipole (vel.) NYI'
+            call dfile%error%raise_deverror('nyi', &
+                'electric dipole (velocity) not yet supported')
+            return
         end if
     case(102)
         prop%order = der_ord
@@ -920,7 +984,7 @@ module procedure get_data_from_id_fchk
                     'ETran scalars                        ', &  !  2.
                     'Number of atoms                      '  &  !  3.
                 ]
-                dbase = dfchk%read(fchk_keys)
+                dbase = dfchk%get(fchk_keys)
                 if (dbase(2)%dtype == '0') then
                     prop%istat = 2
                     return
@@ -985,7 +1049,9 @@ module procedure get_data_from_id_fchk
             end if
         else
             ! Reference state
-            stop 'Mag. dipole NYI'
+            call dfile%error%raise_deverror('nyi', &
+                'magnetic dipole not yet supported')
+            return
         end if
     case(107)
         prop%order = der_ord
@@ -997,7 +1063,7 @@ module procedure get_data_from_id_fchk
                     'ETran scalars                        ', &  !  2.
                     'Number of atoms                      '  &  !  3.
                 ]
-                dbase = dfchk%read(fchk_keys)
+                dbase = dfchk%get(fchk_keys)
                 if (dbase(2)%dtype == '0') then
                     prop%istat = 2
                     return
@@ -1066,14 +1132,18 @@ module procedure get_data_from_id_fchk
             end if
         else
             ! Reference state
-            stop 'El. quadrupole NYI'
+            call dfile%error%raise_deverror('nyi', &
+                'electric quadrupole not yet supported')
+            return
         end if
     case default
-        stop 'Unsupported property'
+        call dfile%error%raise_deverror('nyi', &
+            'property not yet supported')
+        return
     end select
     ok = dfchk%close()
-    if (.not. ok) then
-        call RaiseFileError(dfile%error, dfile%name, 'closing')
+    if (dfchk%error%has_error()) then
+        call dfile%error%from(dfchk%error)
         return
     end if
 
@@ -1090,9 +1160,9 @@ module procedure get_data_from_tag_fchk
     integer :: der_ord
     ! real(realwp), dimension(:), allocatable :: tmpvec
     logical :: ok
-    ! character(len=42), dimension(:), allocatable :: fchk_keys
-    type(fchkparser) :: dfchk
-    ! type(fchkdata), dimension(:), allocatable :: dbase
+    ! character(len=LHEAD), dimension(:), allocatable :: fchk_keys
+    type(fchk_parser) :: dfchk
+    ! type(fchk_data), dimension(:), allocatable :: dbase
 
     ! Check if reference/starting state makes sense and set it in DB
     if (present(start_state)) then
@@ -1138,21 +1208,25 @@ module procedure get_data_from_tag_fchk
     call load_property_info(prop, name, tag)
 
     ! Load parsing capabilities
-    dfchk = fchkparser(dfile%name)
+    dfchk = fchk_parser(dfile%name)
 
     ! Now extract information
     select case(name)
     case default
-        stop 'Unsupported property'
+        call dfile%error%raise_deverror('nyi', &
+            'property not yet supported')
+        return
     end select
     ok = dfchk%close()
-    if (.not. ok) then
-        call RaiseFileError(dfile%error, dfile%name, 'closing')
+    if (dfchk%error%has_error()) then
+        call dfile%error%from(dfchk%error)
         return
     end if
 
 end procedure get_data_from_tag_fchk
 
+! ======================================================================
+! SUBMODULE PROCEDURES
 ! ======================================================================
 
 function elquad_LT_to_2D(equad_LT) result(equad_2D)

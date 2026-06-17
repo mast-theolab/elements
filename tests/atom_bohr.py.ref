@@ -1,4 +1,4 @@
-def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
+def atomic_data(*atoms: AtLabType) -> AtDatType:
     """Generates atomic data.
 
     Generates a dictionary containing atomic data for each atom given in
@@ -66,10 +66,10 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
     """
     at_data = {}
     for atom in set(atoms):
-        try:
+        if isinstance(atom, str):
             at_symb = atom.title()
             at_idx = at_symb
-        except AttributeError:
+        else:
             at_symb = ELEMENTS[atom]
             at_idx = atom
         if at_symb == 'H':
@@ -84,7 +84,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.1000,
                     'alvarez13': 1.2000,
                     'truhlar_ext': 1.1000,
-                }
+                },
                 'rvis': 0.2000,
                 'rgb': (255, 255, 255),
             }
@@ -100,7 +100,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.4000,
                     'alvarez13': 1.4300,
                     'truhlar_ext': 1.4000,
-                }
+                },
                 'rvis': 0.2860,
                 'rgb': (217, 255, 255),
             }
@@ -116,7 +116,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.8100,
                     'alvarez13': 2.1200,
                     'truhlar_ext': 1.8100,
-                }
+                },
                 'rvis': 0.3400,
                 'rgb': (204, 128, 255),
             }
@@ -132,7 +132,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.5300,
                     'alvarez13': 1.9800,
                     'truhlar_ext': 1.5300,
-                }
+                },
                 'rvis': 0.5890,
                 'rgb': (194, 255, 0),
             }
@@ -148,7 +148,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.9200,
                     'alvarez13': 1.9100,
                     'truhlar_ext': 1.9200,
-                }
+                },
                 'rvis': 0.4150,
                 'rgb': (255, 181, 181),
             }
@@ -164,7 +164,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.7000,
                     'alvarez13': 1.7700,
                     'truhlar_ext': 1.7000,
-                }
+                },
                 'rvis': 0.4000,
                 'rgb': (144, 144, 144),
             }
@@ -180,7 +180,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.5500,
                     'alvarez13': 1.6600,
                     'truhlar_ext': 1.5500,
-                }
+                },
                 'rvis': 0.4000,
                 'rgb': (48, 80, 248),
             }
@@ -196,7 +196,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.5200,
                     'alvarez13': 1.5000,
                     'truhlar_ext': 1.5200,
-                }
+                },
                 'rvis': 0.4000,
                 'rgb': (255, 13, 13),
             }
@@ -212,7 +212,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.4700,
                     'alvarez13': 1.4600,
                     'truhlar_ext': 1.4700,
-                }
+                },
                 'rvis': 0.3200,
                 'rgb': (144, 224, 80),
             }
@@ -228,7 +228,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.5400,
                     'alvarez13': 1.5800,
                     'truhlar_ext': 1.5400,
-                }
+                },
                 'rvis': 0.4230,
                 'rgb': (179, 227, 245),
             }
@@ -244,7 +244,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.2700,
                     'alvarez13': 2.5000,
                     'truhlar_ext': 2.2700,
-                }
+                },
                 'rvis': 0.4850,
                 'rgb': (171, 92, 242),
             }
@@ -260,7 +260,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.7300,
                     'alvarez13': 2.5100,
                     'truhlar_ext': 1.7300,
-                }
+                },
                 'rvis': 0.5500,
                 'rgb': (138, 255, 0),
             }
@@ -276,7 +276,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.8400,
                     'alvarez13': 2.2500,
                     'truhlar_ext': 1.8400,
-                }
+                },
                 'rvis': 0.6750,
                 'rgb': (191, 166, 166),
             }
@@ -292,7 +292,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.1000,
                     'alvarez13': 2.1900,
                     'truhlar_ext': 2.1000,
-                }
+                },
                 'rvis': 0.6000,
                 'rgb': (240, 200, 160),
             }
@@ -308,7 +308,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.8000,
                     'alvarez13': 1.9000,
                     'truhlar_ext': 1.8000,
-                }
+                },
                 'rvis': 0.5250,
                 'rgb': (255, 128, 0),
             }
@@ -324,7 +324,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.8000,
                     'alvarez13': 1.8900,
                     'truhlar_ext': 1.8000,
-                }
+                },
                 'rvis': 0.5100,
                 'rgb': (255, 255, 48),
             }
@@ -340,7 +340,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.7500,
                     'alvarez13': 1.8200,
                     'truhlar_ext': 1.7500,
-                }
+                },
                 'rvis': 0.4950,
                 'rgb': (31, 240, 31),
             }
@@ -356,7 +356,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.8800,
                     'alvarez13': 1.8300,
                     'truhlar_ext': 1.8800,
-                }
+                },
                 'rvis': 0.5080,
                 'rgb': (128, 209, 227),
             }
@@ -372,7 +372,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.7500,
                     'alvarez13': 2.7300,
                     'truhlar_ext': 2.7500,
-                }
+                },
                 'rvis': 0.6650,
                 'rgb': (143, 64, 212),
             }
@@ -388,7 +388,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.3100,
                     'alvarez13': 2.6200,
                     'truhlar_ext': 2.3100,
-                }
+                },
                 'rvis': 0.4950,
                 'rgb': (61, 255, 0),
             }
@@ -404,7 +404,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.5800,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7350,
                 'rgb': (230, 230, 230),
             }
@@ -420,7 +420,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4600,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7200,
                 'rgb': (191, 194, 199),
             }
@@ -436,7 +436,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4200,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6650,
                 'rgb': (166, 166, 171),
             }
@@ -452,7 +452,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4500,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6750,
                 'rgb': (138, 153, 199),
             }
@@ -468,7 +468,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4500,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6750,
                 'rgb': (156, 122, 199),
             }
@@ -484,7 +484,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4400,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6700,
                 'rgb': (224, 102, 51),
             }
@@ -500,7 +500,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4000,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6150,
                 'rgb': (240, 144, 160),
             }
@@ -516,7 +516,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4000,
                     'truhlar_ext': 1.6300,
-                }
+                },
                 'rvis': 0.7500,
                 'rgb': (80, 208, 80),
             }
@@ -532,7 +532,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.3800,
                     'truhlar_ext': 1.4000,
-                }
+                },
                 'rvis': 0.7600,
                 'rgb': (200, 128, 51),
             }
@@ -548,7 +548,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.3900,
                     'truhlar_ext': 1.3900,
-                }
+                },
                 'rvis': 0.7250,
                 'rgb': (125, 128, 176),
             }
@@ -564,7 +564,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.8700,
                     'alvarez13': 2.3200,
                     'truhlar_ext': 1.8700,
-                }
+                },
                 'rvis': 0.6100,
                 'rgb': (194, 143, 143),
             }
@@ -580,7 +580,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.1100,
                     'alvarez13': 2.2900,
                     'truhlar_ext': 2.1100,
-                }
+                },
                 'rvis': 0.5850,
                 'rgb': (102, 143, 143),
             }
@@ -596,7 +596,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.8500,
                     'alvarez13': 1.8800,
                     'truhlar_ext': 1.8500,
-                }
+                },
                 'rvis': 0.6050,
                 'rgb': (189, 128, 227),
             }
@@ -612,7 +612,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.9000,
                     'alvarez13': 1.8200,
                     'truhlar_ext': 1.9000,
-                }
+                },
                 'rvis': 0.6100,
                 'rgb': (255, 161, 0),
             }
@@ -628,7 +628,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.8300,
                     'alvarez13': 1.8600,
                     'truhlar_ext': 1.8300,
-                }
+                },
                 'rvis': 0.6050,
                 'rgb': (166, 41, 41),
             }
@@ -644,7 +644,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.0200,
                     'alvarez13': 2.2500,
                     'truhlar_ext': 2.0200,
-                }
+                },
                 'rvis': 0.5240,
                 'rgb': (92, 184, 209),
             }
@@ -660,7 +660,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 3.0300,
                     'alvarez13': 3.2100,
                     'truhlar_ext': 3.0300,
-                }
+                },
                 'rvis': 0.7350,
                 'rgb': (112, 46, 176),
             }
@@ -676,7 +676,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.4900,
                     'alvarez13': 2.8400,
                     'truhlar_ext': 2.4900,
-                }
+                },
                 'rvis': 0.5600,
                 'rgb': (0, 255, 0),
             }
@@ -692,7 +692,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.7500,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8900,
                 'rgb': (148, 255, 255),
             }
@@ -708,7 +708,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.5200,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7800,
                 'rgb': (148, 224, 224),
             }
@@ -724,7 +724,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.5600,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7400,
                 'rgb': (115, 194, 201),
             }
@@ -740,7 +740,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4500,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7350,
                 'rgb': (84, 181, 181),
             }
@@ -756,7 +756,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4400,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6750,
                 'rgb': (59, 158, 158),
             }
@@ -772,7 +772,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4600,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7000,
                 'rgb': (36, 143, 143),
             }
@@ -788,7 +788,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4400,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7250,
                 'rgb': (10, 125, 140),
             }
@@ -804,7 +804,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.1500,
                     'truhlar_ext': 1.6300,
-                }
+                },
                 'rvis': 0.7500,
                 'rgb': (0, 105, 133),
             }
@@ -820,7 +820,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.5300,
                     'truhlar_ext': 1.7200,
-                }
+                },
                 'rvis': 0.7950,
                 'rgb': (192, 192, 192),
             }
@@ -836,7 +836,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4900,
                     'truhlar_ext': 1.5800,
-                }
+                },
                 'rvis': 0.8450,
                 'rgb': (255, 217, 143),
             }
@@ -852,7 +852,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.9300,
                     'alvarez13': 2.4300,
                     'truhlar_ext': 1.9300,
-                }
+                },
                 'rvis': 0.8150,
                 'rgb': (166, 117, 115),
             }
@@ -868,7 +868,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.1700,
                     'alvarez13': 2.4200,
                     'truhlar_ext': 2.1700,
-                }
+                },
                 'rvis': 0.7300,
                 'rgb': (102, 128, 128),
             }
@@ -884,7 +884,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.0600,
                     'alvarez13': 2.4700,
                     'truhlar_ext': 2.0600,
-                }
+                },
                 'rvis': 0.7300,
                 'rgb': (158, 99, 181),
             }
@@ -900,7 +900,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.0600,
                     'alvarez13': 1.9900,
                     'truhlar_ext': 2.0600,
-                }
+                },
                 'rvis': 0.7350,
                 'rgb': (212, 122, 0),
             }
@@ -916,7 +916,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.9800,
                     'alvarez13': 2.0400,
                     'truhlar_ext': 1.9800,
-                }
+                },
                 'rvis': 0.7000,
                 'rgb': (148, 0, 148),
             }
@@ -932,7 +932,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.1600,
                     'alvarez13': 2.0600,
                     'truhlar_ext': 2.1600,
-                }
+                },
                 'rvis': 0.5770,
                 'rgb': (66, 158, 176),
             }
@@ -948,7 +948,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 3.4300,
                     'alvarez13': 3.4800,
                     'truhlar_ext': 3.4300,
-                }
+                },
                 'rvis': 0.8350,
                 'rgb': (87, 23, 143),
             }
@@ -964,7 +964,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.6800,
                     'alvarez13': 3.0300,
                     'truhlar_ext': 2.6800,
-                }
+                },
                 'rvis': 0.6700,
                 'rgb': (0, 201, 0),
             }
@@ -980,7 +980,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.9800,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9350,
                 'rgb': (112, 212, 255),
             }
@@ -996,7 +996,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8800,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9150,
                 'rgb': (255, 255, 199),
             }
@@ -1012,7 +1012,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.9200,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9100,
                 'rgb': (217, 255, 199),
             }
@@ -1028,7 +1028,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.9500,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9050,
                 'rgb': (199, 255, 199),
             }
@@ -1044,7 +1044,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.9000,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9000,
                 'rgb': (163, 255, 199),
             }
@@ -1060,7 +1060,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.9000,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9000,
                 'rgb': (143, 255, 199),
             }
@@ -1076,7 +1076,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8700,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9950,
                 'rgb': (97, 255, 199),
             }
@@ -1092,7 +1092,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8300,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8950,
                 'rgb': (69, 255, 199),
             }
@@ -1108,7 +1108,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.7900,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8800,
                 'rgb': (48, 255, 199),
             }
@@ -1124,7 +1124,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8700,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8750,
                 'rgb': (31, 255, 199),
             }
@@ -1140,7 +1140,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8100,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8700,
                 'rgb': (0, 255, 156),
             }
@@ -1156,7 +1156,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8300,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8650,
                 'rgb': (0, 230, 117),
             }
@@ -1172,7 +1172,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.7900,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8600,
                 'rgb': (0, 212, 82),
             }
@@ -1188,7 +1188,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8000,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9700,
                 'rgb': (0, 191, 56),
             }
@@ -1204,7 +1204,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.7400,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8600,
                 'rgb': (0, 171, 36),
             }
@@ -1220,7 +1220,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.6300,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7850,
                 'rgb': (77, 194, 255),
             }
@@ -1236,7 +1236,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.5300,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7150,
                 'rgb': (77, 166, 255),
             }
@@ -1252,7 +1252,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.5700,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6850,
                 'rgb': (33, 148, 214),
             }
@@ -1268,7 +1268,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4900,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6750,
                 'rgb': (38, 125, 171),
             }
@@ -1284,7 +1284,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4800,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6850,
                 'rgb': (38, 102, 150),
             }
@@ -1300,7 +1300,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4100,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.6600,
                 'rgb': (23, 84, 135),
             }
@@ -1316,7 +1316,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.2900,
                     'truhlar_ext': 1.7200,
-                }
+                },
                 'rvis': 0.7500,
                 'rgb': (208, 208, 224),
             }
@@ -1332,7 +1332,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.3200,
                     'truhlar_ext': 1.6600,
-                }
+                },
                 'rvis': 0.7500,
                 'rgb': (255, 209, 35),
             }
@@ -1348,7 +1348,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.4500,
                     'truhlar_ext': 1.7000,
-                }
+                },
                 'rvis': 0.8500,
                 'rgb': (184, 184, 208),
             }
@@ -1364,7 +1364,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.9600,
                     'alvarez13': 2.4700,
                     'truhlar_ext': 1.9600,
-                }
+                },
                 'rvis': 0.7750,
                 'rgb': (166, 84, 77),
             }
@@ -1380,7 +1380,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.0200,
                     'alvarez13': 2.6000,
                     'truhlar_ext': 2.0200,
-                }
+                },
                 'rvis': 0.7700,
                 'rgb': (87, 89, 97),
             }
@@ -1396,7 +1396,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.0700,
                     'alvarez13': 2.5400,
                     'truhlar_ext': 2.0700,
-                }
+                },
                 'rvis': 0.7700,
                 'rgb': (158, 79, 181),
             }
@@ -1412,7 +1412,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 1.9700,
                     'alvarez13': None,
                     'truhlar_ext': 1.9700,
-                }
+                },
                 'rvis': 0.8400,
                 'rgb': (171, 92, 0),
             }
@@ -1428,7 +1428,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.0200,
                     'alvarez13': None,
                     'truhlar_ext': 2.0200,
-                }
+                },
                 'rvis': 1.0000,
                 'rgb': (117, 79, 69),
             }
@@ -1444,7 +1444,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.2000,
                     'alvarez13': None,
                     'truhlar_ext': 2.2000,
-                }
+                },
                 'rvis': 1.0000,
                 'rgb': (66, 130, 150),
             }
@@ -1460,7 +1460,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 3.4800,
                     'alvarez13': None,
                     'truhlar_ext': 3.4800,
-                }
+                },
                 'rvis': 1.0000,
                 'rgb': (66, 0, 102),
             }
@@ -1476,7 +1476,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': 2.8300,
                     'alvarez13': None,
                     'truhlar_ext': 2.8300,
-                }
+                },
                 'rvis': 0.9500,
                 'rgb': (0, 125, 0),
             }
@@ -1492,7 +1492,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8000,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9400,
                 'rgb': (112, 171, 250),
             }
@@ -1508,7 +1508,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.9300,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8950,
                 'rgb': (0, 186, 255),
             }
@@ -1524,7 +1524,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8800,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.8050,
                 'rgb': (0, 161, 255),
             }
@@ -1540,7 +1540,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.7100,
                     'truhlar_ext': 1.8600,
-                }
+                },
                 'rvis': 0.7900,
                 'rgb': (0, 143, 255),
             }
@@ -1556,7 +1556,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8200,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7750,
                 'rgb': (0, 128, 255),
             }
@@ -1572,7 +1572,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8100,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 1.0000,
                 'rgb': (0, 107, 255),
             }
@@ -1588,7 +1588,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.8300,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7550,
                 'rgb': (84, 92, 242),
             }
@@ -1604,7 +1604,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 3.0500,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 1.0000,
                 'rgb': (120, 92, 227),
             }
@@ -1620,7 +1620,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 3.4000,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 1.0000,
                 'rgb': (138, 79, 227),
             }
@@ -1636,7 +1636,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 3.0500,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.7650,
                 'rgb': (161, 54, 212),
             }
@@ -1652,7 +1652,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': 2.7000,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.1000,
                 'rgb': (179, 31, 212),
             }
@@ -1668,7 +1668,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': 0.9000,
                 'rgb': (179, 31, 186),
             }
@@ -1684,7 +1684,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': (179, 13, 166),
             }
@@ -1700,7 +1700,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': (189, 13, 135),
             }
@@ -1716,7 +1716,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': (199, 0, 102),
             }
@@ -1732,7 +1732,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': (204, 0, 89),
             }
@@ -1748,7 +1748,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': (209, 0, 79),
             }
@@ -1764,7 +1764,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': (217, 0, 69),
             }
@@ -1780,7 +1780,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': (224, 0, 56),
             }
@@ -1796,7 +1796,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': (230, 0, 46),
             }
@@ -1812,7 +1812,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': (235, 0, 38),
             }
@@ -1828,7 +1828,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': None,
             }
@@ -1844,7 +1844,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': None,
             }
@@ -1860,7 +1860,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': None,
             }
@@ -1876,7 +1876,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': None,
             }
@@ -1892,7 +1892,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': None,
             }
@@ -1908,7 +1908,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': None,
             }
@@ -1924,7 +1924,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': None,
             }
@@ -1940,7 +1940,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': None,
             }
@@ -1956,7 +1956,7 @@ def atomic_data(*atoms: TypeAtLab) -> TypeAtData:
                     'truhlar09': None,
                     'alvarez13': None,
                     'truhlar_ext': None,
-                }
+                },
                 'rvis': None,
                 'rgb': None,
             }

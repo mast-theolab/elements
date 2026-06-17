@@ -299,9 +299,7 @@ module procedure fix_norm_AOs_bsetBF
         c2p_H, c2p_I
     real(realwp), dimension(:,:), pointer :: c2pi, c2pj
     logical :: dbg_print = .false.
-    class(BaseException), allocatable :: suberr
-
-    err = InitError()
+    type(ErrorHandle) :: suberr
 
     if (present(debug)) dbg_print = debug
 
@@ -332,15 +330,14 @@ module procedure fix_norm_AOs_bsetBF
             ai = bsetBF(ia,iprim)%alpha
             call set_primC_comp(bsetBF(ia,iprim), ndi, ldi, ci, suberr)
             if (suberr%raised()) then
-                select type(suberr)
-                    class is (ArgumentError)
-                        call RaiseError(err, &
-                                        'Unrecognized shell type for iprim')
-                        return
-                    class default
-                        call RaiseError(err, 'Generic error')
-                        return
-                end select
+                if (suberr%has_type('dev')) then
+                    call err%raise_deverror('case', &
+                        'unrecognized shell type for iprim')
+                else
+                    call err%raise_deverror('gen', &
+                        'unknown error encountered in "fix_norm_AOs_bsetBF"')
+                end if
+                return
             end if
             if (bsetBF(ia,iprim)%pure) then
                 select case (bsetBF(ia,iprim)%shelltype)
@@ -378,15 +375,15 @@ module procedure fix_norm_AOs_bsetBF
                     aj = bsetBF(ja,jprim)%alpha
                     call set_primC_comp(bsetBF(ja,jprim), ndj, ldj, cj, suberr)
                     if (suberr%raised()) then
-                        select type(suberr)
-                            class is (ArgumentError)
-                                call RaiseError(&
-                                    err, 'Unrecognized shell type for jprim')
-                                return
-                            class default
-                                call RaiseError(err, 'Generic error')
-                                return
-                        end select
+                        if (suberr%has_type('dev')) then
+                            call err%raise_deverror('case', &
+                                'unrecognized shell type for jprim')
+                        else
+                            call err%raise_deverror('gen', &
+                                'unknown error encountered in &
+                                &"fix_norm_AOs_bsetBF"')
+                        end if
+                        return
                     end if
                     if (bsetBF(ja,jprim)%pure) then
                         select case (bsetBF(ja,jprim)%shelltype)
@@ -515,9 +512,7 @@ module procedure fix_norm_AOs_bsetDB
         c2p_H, c2p_I
     real(realwp), dimension(:,:), pointer :: c2pi, c2pj
     logical :: dbg_print = .false.
-    class(BaseException), allocatable :: suberr
-
-    err = InitError()
+    type(ErrorHandle) :: suberr
 
     if (present(debug)) dbg_print = debug
 
@@ -548,15 +543,14 @@ module procedure fix_norm_AOs_bsetDB
             ai = bsetDB%info(ia,iprim)%alpha
             call set_primC_comp(bsetDB%info(ia,iprim), ndi, ldi, ci, suberr)
             if (suberr%raised()) then
-                select type(suberr)
-                    class is (ArgumentError)
-                        call RaiseError(err, &
-                                        'Unrecognized shell type for iprim')
-                        return
-                    class default
-                        call RaiseError(err, 'Generic error')
-                        return
-                end select
+                if (suberr%has_type('dev')) then
+                    call err%raise_deverror('case', &
+                        'unrecognized shell type for iprim')
+                else
+                    call err%raise_deverror('gen', &
+                        'unknown error encountered in "fix_norm_AOs_bsetDB"')
+                end if
+                return
             end if
             if (bsetDB%info(ia,iprim)%pure) then
                 select case (bsetDB%info(ia,iprim)%shelltype)
@@ -595,15 +589,15 @@ module procedure fix_norm_AOs_bsetDB
                     call set_primC_comp(bsetDB%info(ja,jprim), ndj, ldj, cj, &
                         suberr)
                     if (suberr%raised()) then
-                        select type(suberr)
-                            class is (ArgumentError)
-                                call RaiseError(&
-                                    err, 'Unrecognized shell type for jprim')
-                                return
-                            class default
-                                call RaiseError(err, 'Generic error')
-                                return
-                        end select
+                        if (suberr%has_type('dev')) then
+                            call err%raise_deverror('case', &
+                                'unrecognized shell type for jprim')
+                        else
+                            call err%raise_deverror('gen', &
+                                'unknown error encountered in &
+                                &"fix_norm_AOs_bsetDB"')
+                        end if
+                        return
                     end if
                     if (bsetDB%info(ja,jprim)%pure) then
                         select case (bsetDB%info(ja,jprim)%shelltype)

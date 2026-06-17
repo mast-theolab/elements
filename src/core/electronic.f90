@@ -9,10 +9,9 @@ module electronic
     use basisset, only: max_nxyz, set_primC_comp, transfo_cart2pure
     use numeric, only: realwp, f0, f1, f2, fhalf, pi
     use datatypes, only: PrimitiveFunction
-    use exception, only: ArgumentError, BaseException, InitError, &
-        RaiseArgError, RaiseError, runstat
     use math, only: build_PascalTriangle, cross, itri_pa, phii_xn_phij
     use orbital, only: convert_AO2MO
+    use run_env, only: ErrorHandle, run
 
     implicit none
 
@@ -63,27 +62,27 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     !! * < i | Ri x r | j >  (GIAO-like form)
     !! * < i | Rj x r | j >  (GIAO-like form)
     integer, intent(in) :: iout
-    !! Unit for output
+        !! Unit for output.
     integer, intent(in) :: n_at
-    !! Number of atoms
+        !! Number of atoms.
     integer, intent(in) :: n_ao
-    !! Number of atomic orbitals
+        !! Number of atomic orbitals.
     integer, intent(in) :: qty_flag
-    !! Quantity flag, as bits array (see below)
+        !! Quantity flag, as bits array (see below).
     logical, intent(in) :: ondisk
-    !! If True, the integrals are stored in dedicated binary files.
+        !! If True, the integrals are stored in dedicated binary files.
     logical, intent(in) :: inmem
-    !! If True, the work arrays are stored in `ovij`
+        !! If True, the work arrays are stored in `ovij`.
     real(realwp), dimension(:,:), intent(in) :: at_crd
-    !! Atomic coordinates (in au)
+        !! Atomic coordinates (in au).
     integer, dimension(:), intent(in) :: nprim_per_at
-    !! Number of basis primitives per atom
+        !! Number of basis primitives per atom.
     class(PrimitiveFunction), dimension(:,:), intent(in) :: bsetDB
-    !! Basis set DB
+        !! Basis set database.
     class(ovij_1e), allocatable, intent(out) :: ovij
-    !! Array used to store overlap integrals.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
+        !! Array used to store overlap integrals.
+    type(ErrorHandle), intent(out) :: err
+        !! Error instance.
 
     logical :: do_ij, do_p, do_r, do_r2, do_rixr, do_rjxr, do_rrijxp, &
         do_rrjxp, do_rxp
@@ -116,9 +115,7 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     real(realwp), dimension(:,:), allocatable, target :: c2p_D, c2p_F, c2p_G, &
         c2p_H, c2p_I
     real(realwp), dimension(:,:), pointer :: c2pi, c2pj
-    class(BaseException), allocatable :: suberr
-
-    err = InitError()
+    type(ErrorHandle) :: suberr
 
     ident_mat = f0
     do i = 1, max_nxyz
@@ -126,7 +123,7 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     end do
 
     if (n_ao > MAXAO) then
-        call RaiseError(err, 'Too many atomic orbitals')
+        call err%raise_deverror('limit', 'too many atomic orbitals')
         return
     end if
 
@@ -146,7 +143,7 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     ! analyse qty_flag to find which quantity to retrieve
     ! if null, nothing to do
     if (qty_flag == 0) then
-        call RaiseError(err, 'Empty qty_flag, nothing to do.')
+        call err%raise_argerror('value', 'empty qty_flag, nothing to do.')
         return
     end if
     do_ij     = btest(qty_flag, 0)
@@ -219,15 +216,14 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
             ai = bsetDB(ia,iprim)%alpha
             call set_primC_comp(bsetDB(ia,iprim), ndi, ldi, ci, suberr)
             if (suberr%raised()) then
-                select type(suberr)
-                    class is (ArgumentError)
-                        call RaiseError(err, &
-                                        'Unrecognized shell type for iprim')
-                        return
-                    class default
-                        call RaiseError(err, 'Generic error')
-                        return
-                end select
+                if (suberr%has_type('dev')) then
+                    call err%raise_deverror('case', &
+                        'unrecognized shell type for iprim')
+                else
+                    call err%raise_deverror('gen', &
+                        'unknown error encountered in "overlap_ao_1e"')
+                end if
+                return
             end if
             if (bsetDB(ia,iprim)%pure) then
                 select case (bsetDB(ia,iprim)%shelltype)
@@ -265,15 +261,14 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
                     aj = bsetDB(ja,jprim)%alpha
                     call set_primC_comp(bsetDB(ja,jprim), ndj, ldj, cj, suberr)
                     if (suberr%raised()) then
-                        select type(suberr)
-                            class is (ArgumentError)
-                                call RaiseError(&
-                                    err, 'Unrecognized shell type for jprim')
-                                return
-                            class default
-                                call RaiseError(err, 'Generic error')
-                                return
-                        end select
+                        if (suberr%has_type('dev')) then
+                            call err%raise_deverror('case', &
+                                'unrecognized shell type for jprim')
+                        else
+                            call err%raise_deverror('gen', &
+                                'unknown error encountered in "overlap_ao_1e"')
+                        end if
+                        return
                     end if
                     if (bsetDB(ja,jprim)%pure) then
                         select case (bsetDB(ja,jprim)%shelltype)
@@ -674,9 +669,9 @@ function eltrans_amp(n_ab, n_ao, n_mos, ovlp_ao, trans_el_dens, tmp_arr, &
 
         if (to_MO) then
             if (.not.present(coefs_ia)) then
-                call runstat%raise_error(&
+                call run%error%raise_argerror('missing', &
                     'Missing c_ia for the conversion from AO to MO', &
-                    cat='dev', source='eltrans_amp')
+                    source='eltrans_amp')
                 return
             end if
             call convert_AO2MO(n_ao, n_mos(iab), coefs_ia(:,:,iab), &

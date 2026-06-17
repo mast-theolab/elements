@@ -6,9 +6,8 @@ module basisset
     use math, only: build_PascalTriangle, double_factorial, factorial, int_xn_e2ax2, &
         itri_pa, phii_xn_phij
     use numeric, only: realwp, f0, f1, f2, f3, f3quart, f4, f5, f10, fhalf, pi
-    use exception, only: BaseException, ArgumentError, InitError, RaiseError, &
-        RaiseArgError
     use output, only: iu_out, len_int
+    use run_env, only: ErrorHandle, run
     use datatypes, only: BasisSetDB, PrimitiveFunction
 
     implicit none
@@ -136,23 +135,22 @@ module basisset
             !! the coefficients to ensure the normalization.
             !!
             !! This version expects basis set information as separate arguments.
-
             integer, intent(in) :: iout
-            !! Unit for output.
+                !! Unit for output.
             integer, intent(in) :: n_at
-            !! Number of atoms.
+                !! Number of atoms.
             integer, intent(in) :: n_ao
-            !! Number of atomic orbitals.
+                !! Number of atomic orbitals.
             real(realwp), dimension(:,:), intent(in) :: at_crd
-            !! Atomic coordinates (in au).
+                !! Atomic coordinates (in au).
             integer, dimension(:), intent(in) :: nprim_per_at
-            !! Number of basis primitives per atom.
+                !! Number of basis primitives per atom.
             type(PrimitiveFunction), dimension(:,:), intent(inout) :: bsetBF
-            !! Basis set's basis function information.
-            class(BaseException), allocatable, intent(out) :: err
-            !! Error instance.
+                !! Basis set's basis function information.
+            type(ErrorHandle), intent(out) :: err
+                !! Error instance.
             logical, intent(in), optional :: debug
-            !! Enable debugging printing.
+                !! Enable debugging printing.
 
         end subroutine fix_norm_AOs_bsetBF
 
@@ -164,22 +162,20 @@ module basisset
             !! the coefficients to ensure the normalization.
             !!
             !! This version expects a basis set database as argument.
-
-            ! Arguments
             integer, intent(in) :: iout
-            !! Unit for output.
+                !! Unit for output.
             integer, intent(in) :: n_at
-            !! Number of atoms.
+                !! Number of atoms.
             integer, intent(in) :: n_ao
-            !! Number of atomic orbitals.
+                !! Number of atomic orbitals.
             real(realwp), dimension(:,:), intent(in) :: at_crd
-            !! Atomic coordinates (in au).
+                !! Atomic coordinates (in au).
             type(BasisSetDB), intent(inout) :: bsetDB
-            !! Basis set's basis function information.
-            class(BaseException), allocatable, intent(out) :: err
-            !! Error instance.
+                !! Basis set's basis function information.
+            type(ErrorHandle), intent(out) :: err
+                !! Error instance.
             logical, intent(in), optional :: debug
-            !! Enable debugging printing.
+                !! Enable debugging printing.
 
         end subroutine fix_norm_AOs_bsetDB
 
@@ -198,17 +194,16 @@ module basisset
             !! input.
             !!
             !! This version expects basis set information as separate arguments.
-
             type(PrimitiveFunction), dimension(:), intent(in) :: bsetBF
-            !! Basis set's basis function information.
+                !! Basis set's basis function information.
             integer, dimension(:), intent(in) :: nprim_per_atom
-            !! Number of basis primitives per atom.
+                !! Number of basis primitives per atom.
             integer, intent(in) :: num_shells
-            !! Number of shells
+                !! Number of shells
             integer, intent(in) :: ia
-            !! Atom index.
+                !! Atom index.
             integer, dimension(num_shells) :: len_shells
-            !! Size of each shell on atom `ia`.
+                !! Size of each shell on atom `ia`.
 
         end function len_shells_on_atom_bsetBF
 
@@ -220,15 +215,14 @@ module basisset
             !! input.
             !!
             !! This version expects a basis set database as argument.
-
             type(BasisSetDB), intent(in) :: bsetDB
-            !! Basis set database.
+                !! Basis set database.
             integer, intent(in) :: num_shells
-            !! Number of shells
+                !! Number of shells
             integer, intent(in) :: ia
-            !! Atom index.
+                !! Atom index.
             integer, dimension(num_shells) :: len_shells
-            !! Size of each shell on atom `ia`.
+                !! Size of each shell on atom `ia`.
 
         end function len_shells_on_atom_bsetDB
     end interface len_shells_on_atom
@@ -283,13 +277,13 @@ module basisset
             !! This version expects basis set information as separate arguments.
 
             type(PrimitiveFunction), dimension(:), intent(in) :: bsetBF
-            !! Basis set's basis function information.
+                !! Basis set's basis function information.
             integer, dimension(:), intent(in) :: nprim_per_atom
-            !! Number of basis primitives per atom.
+                !! Number of basis primitives per atom.
             integer, intent(in) :: ia
-            !! Atom index.
+                !! Atom index.
             integer :: num_shells
-            !! Number of shells on atom of interest.
+                !! Number of shells on atom of interest.
 
         end function num_shells_on_atom_bsetBF
 
@@ -300,13 +294,12 @@ module basisset
             !! Calculates the number of shells centered on atom given in input.
             !!
             !! This version expects a basis set database as argument.
-
             type(BasisSetDB), intent(in) :: bsetDB
-            !! Basis set database.
+                !! Basis set database.
             integer, intent(in) :: ia
-            !! Atom index.
+                !! Atom index.
             integer :: num_shells
-            !! Number of shells on atom of interest.
+                !! Number of shells on atom of interest.
 
         end function num_shells_on_atom_bsetDB
     end interface num_shells_on_atom
@@ -349,7 +342,7 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
         !! Basis set database.
     integer, intent(out) :: L_max
         !! Highest angular moment in the basis set.
-    class(BaseException), allocatable, intent(out) :: err
+    type(ErrorHandle), intent(out) :: err
         !! Error instance.
 
     ! Local
@@ -359,9 +352,6 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
     real(realwp) :: c1, c2
     logical :: purefunc
     character(len=2) :: shtype
-    class(BaseException), allocatable :: suberr
-
-    err = InitError()
 
     ! first find the maximum number of primitives / atom
     allocate(nprim_per_at(n_at), shell_per_at(n_at))
@@ -447,7 +437,7 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
                     purefunc = .False.
                 end if
             case default
-                call RaiseError(err, 'Unrecognized shell type')
+                call err%raise_deverror('case', 'unrecognized shell type')
                 return
         end select
         if (abs(L_ang) > abs(L_max)) L_max = L_ang
@@ -473,17 +463,7 @@ subroutine build_bset_DB(n_at, n_shells, pureD, pureF, shell_types, &
                 c2 = f0
             end if
             call coefs_norm_sh(shtype, c1, bset(ia,ippa)%alpha, c2, &
-                               bset(ia,ippa)%coeff, bset(ia,ippa)%lxyz, suberr)
-            if (suberr%raised()) then
-                select type(suberr)
-                    class is (ArgumentError)
-                        call RaiseError(err, 'Unrecognized shell type')
-                        return
-                    class default
-                        call RaiseError(err, 'Generic error')
-                        return
-                end select
-            end if
+                               bset(ia,ippa)%coeff, bset(ia,ippa)%lxyz, err)
         end do
     end do
 
@@ -643,29 +623,24 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
     !!
     !! Computes and returned the unique normalized coefficients relevant
     !! for a given primitive shell.
-
-    ! Arguments
     character(len=*), intent(in) :: shtype
-    !! Shell type
+        !! Shell type.
     real(realwp), intent(in) :: coef
-    !! Contracted coefficient
+        !! Contracted coefficient.
     real(realwp), intent(in) :: alpha
-    !! Primitive exponent alpha
+        !! Primitive exponent alpha.
     real(realwp), intent(in) :: coef2
-    !! Secondary contracted coefficient, for instance for S=P shell
+        !! Secondary contracted coefficient, for instance for S=P shell.
     real(realwp), dimension(:), allocatable, intent(out) :: new_coefs
-    !! New, normalized coefficients
+        !! New, normalized coefficients.
     integer, dimension(:,:), allocatable, intent(out) :: indexes
-    !! Indexes corresponding to each coefficients
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
+        !! Indexes corresponding to each coefficients.
+    type(ErrorHandle), intent(out) :: err
+        !! Error instance.
 
-    ! Local
     real(realwp), parameter :: sq2pi = sqrt(f2*pi)
     integer :: i, L, Lx, Ly, Lz
     real(realwp) :: cnorm, f2sqal
-
-    err = InitError()
 
     f2sqal = f2*sqrt(alpha)
     select case(shtype(1:1))
@@ -785,7 +760,7 @@ subroutine coefs_norm_sh(shtype, coef, alpha, coef2, new_coefs, indexes, err)
                 end do
             end do
         case default
-            call RaiseArgError(err, 'shtype', 'Unsupported shell type')
+            call err%raise_deverror('argval', 'unsupported shell type')
             return
     end select
 
@@ -1134,7 +1109,9 @@ function list_L_powers(L_ang, n_powers) result(powers)
         powers(:,9) = [0,1,2]
         powers(:,10) = [1,1,1]
     case default
-        error stop 'Unsupported L_ang in [list_L_powers]'
+        call run%error%raise_deverror('nyi', &
+            'unsupported L_ang in [list_L_powers]', &
+            source='list_L_powers')
     end select
 
 end function list_L_powers
@@ -1147,20 +1124,16 @@ subroutine set_primC_comp(bfunc, ndimC, lxyz, coefs, err)
     !! Builds the list of Cartesian components and the associated
     !! coefficients for a primitive function based on the information
     !! in `bfunc`.
-
-    ! Arguments
     type(PrimitiveFunction), intent(in) :: bfunc
-    !! Basis set function.
+        !! Basis set function.
     integer, intent(out) :: ndimC
-    !! True number of dimension.
+        !! True number of dimension.
     integer, dimension(:,:), allocatable, intent(out) :: lxyz
-    !! Number of occurrence of each x,y,z coordinate for each dimension.
+        !! Number of occurrence of each x,y,z coordinate for each dimension.
     real(realwp), dimension(:), allocatable, intent(out) :: coefs
-    !! Contraction coefficient for each dimension.
-    class(BaseException), allocatable, intent(out) :: err
-    !! Error instance
-
-    err = InitError()
+        !! Contraction coefficient for each dimension.
+    type(ErrorHandle), intent(out) :: err
+        !! Error instance.
 
     select case (bfunc%shelltype)
         case ('S')
@@ -1227,8 +1200,8 @@ subroutine set_primC_comp(bfunc, ndimC, lxyz, coefs, err)
             lxyz = bfunc%lxyz
             coefs = bfunc%coeff(1:)
         case default
-            call RaiseArgError(err, 'bfunc%shelltype', &
-                               'Unsupported shell type')
+            call err%raise_deverror('case', 'unsupported shell type', &
+                source='set_primC_comp')
             return
     end select
 end subroutine set_primC_comp
@@ -1305,6 +1278,7 @@ function transfo_cart2pure(L_ang) result(convmat)
         sq10=sqrt(f10)
     real(realwp) :: s1, s2, s3, s4, s5, s6, s7
     real(realwp), dimension(max_nxyz,max_nxyz) :: tempmat
+    character(len=50) :: msg
 
     select case (L_ang)
         case (0)
@@ -1373,8 +1347,10 @@ function transfo_cart2pure(L_ang) result(convmat)
             allocate(convmat(npure,ncart))
             call coef_transfo_P2C(L_ang, ncart, npure, convmat, tempmat)
         case default
-            write(iu_out, '("Unsupported angular momentum: ",i0)') L_ang
-            error stop 1
+            write(msg, '("unsupported angular momentum: ",i0)') L_ang
+            call run%error%raise_deverror('argval', msg, &
+                source='transfor_cart2pure')
+            return
     end select
 
 end function transfo_cart2pure

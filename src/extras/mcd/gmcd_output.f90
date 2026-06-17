@@ -3,8 +3,7 @@ module gmcd_output
     !!
     !! Different output/printing constants and procedures for GenTensor
     use string, only: locase
-    use exception, only: BaseException, ArgumentError, InitError, RaiseError, &
-        RaiseArgError
+    use run_env, only: ErrorHandle
 
     implicit none
 
@@ -21,7 +20,7 @@ function shell_lmxyz(shelltype, spherical, err) result(comps)
     !! Type of shell
     logical, intent(in) :: spherical
     !! True for pure (spherical harmonic functions), False for Cart.
-    class(BaseException), allocatable, intent(out) :: err
+    type(ErrorHandle), intent(out) :: err
     !! Error instance
     character(len=:), dimension(:), allocatable :: comps
 
@@ -29,8 +28,6 @@ function shell_lmxyz(shelltype, spherical, err) result(comps)
     character(len=1) :: lang
     character(len=60) :: fmt
     character(len=2), parameter :: pm_sign = '+-'
-
-    err = InitError()
 
     select case (shelltype)
         case ('S')
@@ -120,7 +117,7 @@ function shell_lmxyz(shelltype, spherical, err) result(comps)
                 end do
             end if
         case default
-            call RaiseArgError(err, 'shelltype', 'Unsupported shell type')
+            call err%raise_deverror('case', 'unsupported shell type')
             return
     end select
 

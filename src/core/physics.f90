@@ -20,35 +20,35 @@ module physics
 
     real(real64), parameter, public :: &
         planck = 6.62606896e-34_real64, &
-        !! Planck constant (J.s)
+            !! Planck constant (J.s)
         avogadro = 6.02214179e23_real64, &
-        !! Avogadro number (mol^-1)
+            !! Avogadro number (mol^-1)
         slight = 2.99792458e10_real64, &
-        !! Speed of light (cm/s)
+            !! Speed of light (cm/s)
         boltzmann = 1.3806504e-23_real64, &
-        !! Boltzmann (J/K)
+            !! Boltzmann (J/K)
         fine_struct = 1._real64/137.035999679_real64, &
-        !! Fine structure (no unit)
+            !! Fine structure (no unit)
         mol_vol = 22.413996e-3_real64, &
-        !! Molar volume of ideal gas (m^3@273.15K)
+            !! Molar volume of ideal gas (m^3@273.15K)
         e_mag_mom = -928.476377e-26_real64, &
-        !! Electron Magnetic Moment (J/Tesla)
+            !! Electron Magnetic Moment (J/Tesla)
         p_rest_mass = 1.672621637e-27_real64, &
-        !! Proton rest mass (kg)
+            !! Proton rest mass (kg)
         g_factor = 2.0023193043622_real64, &
-        !! Free electron g-factor (no unit)
+            !! Free electron g-factor (no unit)
         bohr_radius = 0.52917720859_real64, &
-        ! bohr radius in Ang
+            !! bohr radius in Ang
         u_at_mass = 1.660538782e-27_real64, &
-        !! u in kg
+            !! u in kg
         e_charge = 1.602176487e-19_real64, &
-        !! electron charge in coulomb
+            !! electron charge in coulomb
         calorie = 4.184_real64, &
-        !! 1 calorie in joule
+            !! 1 calorie in joule
         E_hartree = 4.35974394e-18_real64, &
-        !! 1 hartree in joule
+            !! 1 hartree in joule
         e_mass = E_hartree*1.0e4_real64/(slight*fine_struct)**2
-        !! electron mass (atomic units of mass)
+            !! electron mass (atomic units of mass)
 
     real(real64), parameter, private :: &
         pi = 4.0_real64*atan(1.0_real64), &

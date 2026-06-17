@@ -1,15 +1,16 @@
 module parse_cmdline
 
     use iso_fortran_env, only: int32, int64, real32, real64
-    use exception, only: ArgumentError, BaseException, Error, InitError, &
-        RaiseAllocateError, RaiseArgError, RaiseError, RaiseTermination, &
-        RaiseValueError, ValueError
+    use run_env, only: CoreExecObject, ErrorHandle, run
     use string, only: findstr, locase, upcase
 
     implicit none
 
     integer, parameter, private :: &
-        MAX_ARGS = 400, &
+        ! High number of arguments (e.g. 400) risks raising a warning message
+        ! from GFortran about a potential problem of stack allocation, 200
+        ! should be enough already.
+        MAX_ARGS = 200, &
         MAX_ARGLEN = 256
 
     ! character(len=*), dimension(*), parameter :: &
@@ -17,7 +18,7 @@ module parse_cmdline
     !     prefixes_short = [(prefixes(i), i=1,size(prefixes))], &
     !     prefixes_long = [(prefixes(i)//prefixes(i), i=1,size(prefixes))]
 
-    type, private, abstract :: ArgObj
+    type, extends(CoreExecObject), private, abstract :: arg_obj
         !! Basic argument object
         character(len=:), allocatable :: short_name
         character(len=:), allocatable :: long_name
@@ -33,116 +34,116 @@ module parse_cmdline
         procedure(set_arg_value1), deferred, private :: set_arg_scalar
         procedure(set_arg_valueN), deferred, private :: set_arg_array
         generic :: set_value => set_arg_scalar, set_arg_array
-        procedure :: set_arg => set_arg_names
-        procedure :: set_help => set_arg_helpmsg
-    end type ArgObj
+        procedure :: set_arg => argobj_set_names
+        procedure :: set_help => argobj_set_helpmsg
+    end type arg_obj
 
     abstract interface
-        function set_arg_value1(this, string, sep) result(err)
-            import ArgObj, BaseException
-            class(ArgObj), intent(inout) :: this
-            character(len=*), intent(in), optional :: string
+        function set_arg_value1(arg, argval, sep) result(done)
+            import arg_obj, ErrorHandle
+            class(arg_obj), intent(inout) :: arg
+            character(len=*), intent(in), optional :: argval
             character(len=*), intent(in), optional :: sep
-            class(BaseException), allocatable :: err
+            logical :: done
         end function set_arg_value1
     end interface
 
     abstract interface
-        function set_arg_valueN(this, strings) result(err)
-            import ArgObj, BaseException
-            class(ArgObj), intent(inout) :: this
-            character(len=*), dimension(:), intent(in) :: strings
-            class(BaseException), allocatable :: err
+        function set_arg_valueN(arg, argvals) result(done)
+            import arg_obj, ErrorHandle
+            class(arg_obj), intent(inout) :: arg
+            character(len=*), dimension(:), intent(in) :: argvals
+            logical :: done
         end function set_arg_valueN
     end interface
 
-    type, private, extends(ArgObj) :: ArgInt
+    type, private, extends(arg_obj) :: arg_int
         integer(int64) :: value
         ! For some reason, GFortran assumes HUGE(value) is real.
         ! To bypass the problem, we pass a constant value.
         integer(int64) :: min_ok = -huge(1_int64)
         integer(int64) :: max_ok = +huge(1_int64)
         integer(int64) :: const
-        logical :: add_value = .False.
+        logical :: add_value = .false.
     contains
-        procedure :: set_arg_scalar => upd_argint_value
-        procedure :: set_arg_array => upd_noarrayI
-    end type ArgInt
+        procedure :: set_arg_scalar => argint_from_str
+        procedure :: set_arg_array => argint_from_list_no
+    end type arg_int
 
-    type, private, extends(ArgObj) :: ArgIntList
+    type, private, extends(arg_obj) :: arg_ints
         integer(int64), dimension(:), allocatable :: values
         integer(int64) :: min_ok = -huge(1_int64)
         integer(int64) :: max_ok = +huge(1_int64)
-        logical :: append = .False.
+        logical :: append = .false.
         !! if append is True, the argument can be called multiple time.
         !!   each time, the new value is appended.  In this case,
         !!   character-separated values cannot be used.
     contains
-        procedure :: set_arg_scalar => set_argint_list_str
-        procedure :: set_arg_array => set_argint_list_arr
-    end type ArgIntList
+        procedure :: set_arg_scalar => argints_from_str
+        procedure :: set_arg_array => argints_from_list
+    end type arg_ints
 
-    type, private, extends(ArgObj) :: ArgReal
+    type, private, extends(arg_obj) :: arg_real
         real(real64) :: value
         real(real64) :: min_ok = -huge(1.0_real64)
         real(real64) :: max_ok = +huge(1.0_real64)
         real(real64) :: const
-        logical :: add_value = .False.
+        logical :: add_value = .false.
     contains
-        procedure :: set_arg_scalar => upd_argreal_value
-        procedure :: set_arg_array => upd_noarrayR
-    end type ArgReal
+        procedure :: set_arg_scalar => argreal_from_str
+        procedure :: set_arg_array => argreal_from_list_no
+    end type arg_real
 
-    type, private, extends(ArgObj) :: ArgRealList
+    type, private, extends(arg_obj) :: arg_reals
         real(real64), dimension(:), allocatable :: values
         real(real64) :: min_ok = -huge(1.0_real64)
         real(real64) :: max_ok = +huge(1.0_real64)
-        logical :: append = .False.
+        logical :: append = .false.
         !! if append is True, the argument can be called multiple time.
         !!   each time, the new value is appended.  In this case,
         !!   character-separated values cannot be used.
     contains
-        procedure :: set_arg_scalar => set_argreal_list_str
-        procedure :: set_arg_array => set_argreal_list_arr
-    end type ArgRealList
+        procedure :: set_arg_scalar => argreals_from_str
+        procedure :: set_arg_array => argreals_from_list
+    end type arg_reals
 
-    type, private, extends(ArgObj) :: ArgBool
+    type, private, extends(arg_obj) :: arg_bool
         logical :: value
         logical :: const
     contains
-        procedure :: set_arg_scalar => upd_argbool_value
-        procedure :: set_arg_array => upd_noarrayB
-    end type ArgBool
+        procedure :: set_arg_scalar => argbool_from_str
+        procedure :: set_arg_array => argbool_from_list_no
+    end type arg_bool
 
-    type, private, extends(ArgObj) :: ArgChar
+    type, private, extends(arg_obj) :: arg_char
         character(len=:), allocatable :: value
     contains
-        procedure :: set_arg_scalar => upd_argchar_value
-        procedure :: set_arg_array => upd_noarrayC
-    end type ArgChar
+        procedure :: set_arg_scalar => argchar_from_str
+        procedure :: set_arg_array => argchar_from_list_no
+    end type arg_char
 
-    type, private, extends(ArgObj) :: ArgCharList
+    type, private, extends(arg_obj) :: arg_chars
         character(len=:), dimension(:), allocatable :: values
-        logical :: append = .False.
+        logical :: append = .false.
         !! if append is True, the argument can be called multiple time.
         !!   each time, the new value is appended.  In this case,
         !!   character-separated values cannot be used.
     contains
-        procedure :: set_arg_scalar => set_argchar_list_str
-        procedure :: set_arg_array => set_argchar_list_arr
-    end type ArgCharList
+        procedure :: set_arg_scalar => argchars_from_str
+        procedure :: set_arg_array => argchars_from_list
+    end type arg_chars
 
-    type, extends(ArgObj), private :: GenArg
+    type, extends(arg_obj), private :: arg_gen
         !! A dummy container to build list of different arguments
-        class(ArgObj), allocatable :: arg
+        class(arg_obj), allocatable :: arg
     contains
-        procedure :: set_arg_scalar => upd_noscalar
-        procedure :: set_arg_array => upd_noarray
-    end type GenArg
+        procedure :: set_arg_scalar => arggen_from_str_no
+        procedure :: set_arg_array => arggen_from_list_no
+    end type arg_gen
 
-    type, public :: CmdArgDB
+    type, public, extends(CoreExecObject) :: CmdLineArgsDB
         private
-        type(GenArg), dimension(MAX_ARGS) :: args
+        type(arg_gen), dimension(MAX_ARGS) :: args
         integer, dimension(3,MAX_ARGS) :: iargs_pos
         character(len=1), dimension(:), allocatable :: prefixes
         character(len=1), dimension(:), allocatable :: prefix_short
@@ -151,522 +152,525 @@ module parse_cmdline
         integer :: iarg_help = 0
         !! Stores indexes of positional arguments. <0 for arbitrary number
         integer :: nargs = 0, nargs_pos = 0
-        ! Stores error status, that can be updated if needed
-        ! The first time, contains the initialization status
-        class(BaseException), allocatable :: error
     contains
-        procedure, private :: get_value_int32val, get_value_int64val, &
-            get_value_int32arr, get_value_int64arr, &
-            get_value_real32val, get_value_real64val, &
-            get_value_real32arr, get_value_real64arr, &
-            get_value_boolval, &
-            get_value_charval, get_value_chararr
+        procedure, private :: argsdb_getval_int32, argsdb_getval_int64, &
+            argsdb_getvals_int32, argsdb_getvals_int64, &
+            argsdb_getval_real32, argsdb_getval_real64, &
+            argsdb_getvals_real32, argsdb_getvals_real64, &
+            argsdb_getval_bool, &
+            argsdb_getval_char, argsdb_getvals_char
         procedure, private :: get_argname_id
         procedure :: chk_name_overlap => chk_argname_overlap
-        procedure :: add_arg_int => add_argument_int
-        procedure :: add_arg_real => add_argument_real
-        procedure :: add_arg_bool => add_argument_bool
-        procedure :: add_arg_char => add_argument_char
-        procedure :: is_user_set => argval_set_by_user
-        generic :: get_value => get_value_int32val, get_value_int64val, &
-            get_value_int32arr, get_value_int64arr, &
-            get_value_real32val, get_value_real64val, &
-            get_value_real32arr, get_value_real64arr, &
-            get_value_boolval, &
-            get_value_charval, get_value_chararr
-        procedure :: parse_args => parse_args_list
+        procedure :: add_arg_int => argsdb_add_int
+        procedure :: add_arg_real => argsdb_add_real
+        procedure :: add_arg_bool => argsdb_add_bool
+        procedure :: add_arg_char => argsdb_add_char
+        procedure :: is_user_set => argsdb_val_is_userset
+        generic :: get_value => argsdb_getval_int32, argsdb_getval_int64, &
+            argsdb_getvals_int32, argsdb_getvals_int64, &
+            argsdb_getval_real32, argsdb_getval_real64, &
+            argsdb_getvals_real32, argsdb_getvals_real64, &
+            argsdb_getval_bool, &
+            argsdb_getval_char, argsdb_getvals_char
+        procedure :: parse_args => argsdb_parse_args
         procedure :: print_help => print_help
-        procedure :: has_error => check_argDB_error_status
-        procedure :: get_error => get_argDB_error_msg
-        procedure :: exception => get_argDB_error
-    end type CmdArgDB
+    end type CmdLineArgsDB
 
-    interface CmdArgDB
+    interface CmdLineArgsDB
         module procedure init_args_db
-    end interface CmdArgDB
+    end interface CmdLineArgsDB
 
 interface
 
 ! ----------------------------------------------------------------------
-
-module subroutine parse_args_list(this, arglist)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), dimension(:), intent(in), optional :: arglist
-end subroutine parse_args_list
-
+! TYPE-BOUND PROCEDURES (INTERFACES) - CMDLINEARGSDB
 ! ----------------------------------------------------------------------
 
-module subroutine add_argument_int(this, argtype, shortname, longname, label, &
-    help, required, def_value, min_value, max_value, const_value, add_value, &
-    min_nvals, max_nvals)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object
+module subroutine argsdb_add_bool(argsDB, argtype, shortname, longname, &
+                                  label, help, required, def_value)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
     character(len=*), intent(in) :: argtype
-    !! Type of argument.
+        !! Type of argument.
     character(len=*), intent(in), optional :: shortname
-    !! Short argument name (as `-o`).
+        !! Short argument name (as `-o`).
     character(len=*), intent(in), optional :: longname
-    !! Long argument name (as `--option`).
+        !! Long argument name (as `--option`).
     character(len=*), intent(in), optional :: label
-    !! Internal argument name, which may be used for help.
+        !! Internal argument name, which may be used for help.
     character(len=*), intent(in), optional :: help
-    !! Help message to be displayed in the help
+        !! Help message to be displayed in the help
     logical, intent(in), optional :: required
-    !! Argument must be given. By default, based on presence of prefix(es).
-    class(*), intent(in), optional :: def_value
-    !! Default value, to use if not set by user.
-    class(*), intent(in), optional :: min_value
-    !! Minimum accepted value
-    class(*), intent(in), optional :: max_value
-    !! Maximum accepted value
-    class(*), intent(in), optional :: const_value
-    !! Constant value, to use whenever the option is given (no value expected)
-    logical, intent(in), optional :: add_value
-    !! Increment value associated to argument each time it is encountered.
-    class(*), intent(in), optional :: min_nvals
-    !! For lists of values, minimum size of the list
-    class(*), intent(in), optional :: max_nvals
-    !! For lists of values, maixmum size of the list.
-end subroutine add_argument_int
-
-! ----------------------------------------------------------------------
-
-module subroutine add_argument_real(this, argtype, shortname, longname, &
-    label, help, required, def_value, min_value, max_value, const_value, &
-    add_value, min_nvals, max_nvals)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object
-    character(len=*), intent(in) :: argtype
-    !! Type of argument.
-    character(len=*), intent(in), optional :: shortname
-    !! Short argument name (as `-o`).
-    character(len=*), intent(in), optional :: longname
-    !! Long argument name (as `--option`).
-    character(len=*), intent(in), optional :: label
-    !! Internal argument name, which may be used for help.
-    character(len=*), intent(in), optional :: help
-    !! Help message to be displayed in the help
-    logical, intent(in), optional :: required
-    !! Argument must be given. By default, based on presence of prefix(es).
-    class(*), intent(in), optional :: def_value
-    !! Default value, to use if not set by user.
-    class(*), intent(in), optional :: min_value
-    !! Minimum accepted value
-    class(*), intent(in), optional :: max_value
-    !! Maximum accepted value
-    class(*), intent(in), optional :: const_value
-    !! Constant value, to use whenever the option is given (no value expected)
-    logical, intent(in), optional :: add_value
-    !! Increment value associated to argument each time it is encountered.
-    class(*), intent(in), optional :: min_nvals
-    !! For lists of values, minimum size of the list
-    class(*), intent(in), optional :: max_nvals
-    !! For lists of values, maixmum size of the list.
-end subroutine add_argument_real
-
-! ----------------------------------------------------------------------
-
-module subroutine add_argument_bool(this, argtype, shortname, longname, &
-    label, help, required, def_value)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object
-    character(len=*), intent(in) :: argtype
-    !! Type of argument.
-    character(len=*), intent(in), optional :: shortname
-    !! Short argument name (as `-o`).
-    character(len=*), intent(in), optional :: longname
-    !! Long argument name (as `--option`).
-    character(len=*), intent(in), optional :: label
-    !! Internal argument name, which may be used for help.
-    character(len=*), intent(in), optional :: help
-    !! Help message to be displayed in the help
-    logical, intent(in), optional :: required
-    !! Argument must be given. By default, based on presence of prefix(es).
+        !! Argument must be given. By default, based on presence of prefix(es).
     logical, intent(in), optional :: def_value
-    !! Default value, to use if not set by user.
-end subroutine add_argument_bool
+        !! Default value, to use if not set by user.
+end subroutine argsdb_add_bool
 
 ! ----------------------------------------------------------------------
 
-module subroutine add_argument_char(this, argtype, shortname, longname, &
-    label, help, required, def_value, min_nvals, max_nvals)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object
+module subroutine argsdb_add_char(argsDB, argtype, shortname, longname, &
+                                  label, help, required, def_value, &
+                                  min_nvals, max_nvals)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
     character(len=*), intent(in) :: argtype
-    !! Type of argument.
+        !! Type of argument.
     character(len=*), intent(in), optional :: shortname
-    !! Short argument name (as `-o`).
+        !! Short argument name (as `-o`).
     character(len=*), intent(in), optional :: longname
-    !! Long argument name (as `--option`).
+        !! Long argument name (as `--option`).
     character(len=*), intent(in), optional :: label
-    !! Internal argument name, which may be used for help.
+        !! Internal argument name, which may be used for help.
     character(len=*), intent(in), optional :: help
-    !! Help message to be displayed in the help
+        !! Help message to be displayed in the help
     logical, intent(in), optional :: required
-    !! Argument must be given. By default, based on presence of prefix(es).
+        !! Argument must be given; by default, based on presence of prefix(es).
     character(len=*), intent(in), optional :: def_value
-    !! Default value, to use if not set by user.
+        !! Default value, to use if not set by user.
     class(*), intent(in), optional :: min_nvals
-    !! For lists of values, minimum size of the list
+        !! For lists of values, minimum size of the list
     class(*), intent(in), optional :: max_nvals
-    !! For lists of values, maixmum size of the list.
-end subroutine add_argument_char
+        !! For lists of values, maixmum size of the list.
+end subroutine argsdb_add_char
 
 ! ----------------------------------------------------------------------
 
-module function set_arg_names(this, prefixes, short, long, label, &
-                              required) result(res)
-    class(ArgObj), intent(inout) :: this
-    !! Argument
-    character(len=*), dimension(:), intent(in) :: prefixes
-    !! List of prefix characters.
-    character(len=*), intent(in), optional :: short
-    !! Short form of the argument.
-    character(len=*), intent(in), optional :: long
-    !! Long fprm of the argument.
+module subroutine argsdb_add_int(argsDB, argtype, shortname, longname, label, &
+                                 help, required, def_value, min_value, &
+                                 max_value, const_value, add_value, &
+                                 min_nvals, max_nvals)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argtype
+        !! Type of argument.
+    character(len=*), intent(in), optional :: shortname
+        !! Short argument name (as `-o`).
+    character(len=*), intent(in), optional :: longname
+        !! Long argument name (as `--option`).
     character(len=*), intent(in), optional :: label
-    !! Internal and reference name of the argument.
+        !! Internal argument name, which may be used for help.
+    character(len=*), intent(in), optional :: help
+        !! Help message to be displayed in the help
     logical, intent(in), optional :: required
-    !! If True, the argument is required, only for optional argument.
-    class(BaseException), allocatable :: res
-    !! Return error status.
-end function set_arg_names
+        !! Argument must be given; by default, based on presence of prefix(es).
+    class(*), intent(in), optional :: def_value
+        !! Default value, to use if not set by user.
+    class(*), intent(in), optional :: min_value
+        !! Minimum accepted value
+    class(*), intent(in), optional :: max_value
+        !! Maximum accepted value
+    class(*), intent(in), optional :: const_value
+        !! Constant value, to use when argument found (no value expected).
+    logical, intent(in), optional :: add_value
+        !! Increment value associated to argument each time it is encountered.
+    class(*), intent(in), optional :: min_nvals
+        !! For lists of values, minimum size of the list.
+    class(*), intent(in), optional :: max_nvals
+        !! For lists of values, maixmum size of the list.
+end subroutine argsdb_add_int
 
 ! ----------------------------------------------------------------------
 
-module function set_arg_helpmsg(this, msg) result(err)
-    class(ArgObj), intent(inout) :: this
-    !! Argument
-    character(len=*), intent(in) :: msg
-    !! Help message
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function set_arg_helpmsg
+module subroutine argsdb_add_real(argsDB, argtype, shortname, longname, &
+                                  label, help, required, def_value, &
+                                  min_value, max_value, const_value, &
+                                  add_value, min_nvals, max_nvals)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object
+    character(len=*), intent(in) :: argtype
+        !! Type of argument.
+    character(len=*), intent(in), optional :: shortname
+        !! Short argument name (as `-o`).
+    character(len=*), intent(in), optional :: longname
+        !! Long argument name (as `--option`).
+    character(len=*), intent(in), optional :: label
+        !! Internal argument name, which may be used for help.
+    character(len=*), intent(in), optional :: help
+        !! Help message to be displayed in the help
+    logical, intent(in), optional :: required
+        !! Argument must be given; by default, based on presence of prefix(es).
+    class(*), intent(in), optional :: def_value
+        !! Default value, to use if not set by user.
+    class(*), intent(in), optional :: min_value
+        !! Minimum accepted value
+    class(*), intent(in), optional :: max_value
+        !! Maximum accepted value
+    class(*), intent(in), optional :: const_value
+        !! Constant value, to use when argument found (no value expected).
+    logical, intent(in), optional :: add_value
+        !! Increment value associated to argument each time it is encountered.
+    class(*), intent(in), optional :: min_nvals
+        !! For lists of values, minimum size of the list
+    class(*), intent(in), optional :: max_nvals
+        !! For lists of values, maixmum size of the list.
+end subroutine argsdb_add_real
 
 ! ----------------------------------------------------------------------
 
-module function upd_argint_value(this, string, sep) result(err)
-    class(ArgInt), intent(inout) :: this
-    !! Argument
-    character(len=*), intent(in), optional :: string
-    !! Value stored as string
-    character(len=*), intent(in), optional :: sep
-    !! Dummy argument.
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_argint_value
-
-! ----------------------------------------------------------------------
-
-module function set_argint_list_str(this, string, sep) result(err)
-    class(ArgIntList), intent(inout) :: this
-    !! Argument
-    character(len=*), intent(in), optional :: string
-    !! String containing the values
-    character(len=*), intent(in), optional :: sep
-    !! list of one-character separators, given as a string.
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function set_argint_list_str
-
-! ----------------------------------------------------------------------
-
-module function set_argint_list_arr(this, strings) result(err)
-    class(ArgIntList), intent(inout) :: this
-    !! Argument
-    character(len=*), dimension(:), intent(in) :: strings
-    !! List of values stored as strings
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function set_argint_list_arr
-
-! ----------------------------------------------------------------------
-
-module function upd_argreal_value(this, string, sep) result(err)
-    class(ArgReal), intent(inout) :: this
-    !! Argument
-    character(len=*), intent(in), optional :: string
-    !! Value stored as string
-    character(len=*), intent(in), optional :: sep
-    !! Dummy argument.
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_argreal_value
-
-! ----------------------------------------------------------------------
-
-module function set_argreal_list_str(this, string, sep) result(err)
-    class(ArgRealList), intent(inout) :: this
-    !! Argument
-    character(len=*), intent(in), optional :: string
-    !! String containing the values
-    character(len=*), intent(in), optional :: sep
-    !! list of one-character separators, given as a string.
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function set_argreal_list_str
-
-! ----------------------------------------------------------------------
-
-module function set_argreal_list_arr(this, strings) result(err)
-    class(ArgRealList), intent(inout) :: this
-    !! Argument
-    character(len=*), dimension(:), intent(in) :: strings
-    !! List of values stored as strings
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function set_argreal_list_arr
-
-! ----------------------------------------------------------------------
-
-module function upd_argbool_value(this, string, sep) result(err)
-    class(ArgBool), intent(inout) :: this
-    !! Argument
-    character(len=*), intent(in), optional :: string
-    !! Value stored as string
-    character(len=*), intent(in), optional :: sep
-    !! Dummy argument.
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_argbool_value
-
-! ----------------------------------------------------------------------
-
-module function upd_argchar_value(this, string, sep) result(err)
-    class(ArgChar), intent(inout) :: this
-    !! Argument
-    character(len=*), intent(in), optional :: string
-    !! Value stored as string
-    character(len=*), intent(in), optional :: sep
-    !! Dummy argument.
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_argchar_value
-
-! ----------------------------------------------------------------------
-
-module function set_argchar_list_str(this, string, sep) result(err)
-    class(ArgCharList), intent(inout) :: this
-    !! Argument
-    character(len=*), intent(in), optional :: string
-    !! String containing the values
-    character(len=*), intent(in), optional :: sep
-    !! list of one-character separators, given as a string.
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function set_argchar_list_str
-
-! ----------------------------------------------------------------------
-
-module function set_argchar_list_arr(this, strings) result(err)
-    class(ArgCharList), intent(inout) :: this
-    !! Argument
-    character(len=*), dimension(:), intent(in) :: strings
-    !! List of values stored as strings
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function set_argchar_list_arr
-
-! ----------------------------------------------------------------------
-
-module function argval_set_by_user(this, argname) result(res)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
-    logical :: res
-    !! Boolean stating if value set by user.
-end function argval_set_by_user
-
-! ----------------------------------------------------------------------
-
-module subroutine get_value_int32val(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
-    integer(int32), intent(out) :: result
-    !! Associated value.
-end subroutine get_value_int32val
-
-! ----------------------------------------------------------------------
-
-module subroutine get_value_int64val(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
-    integer(int64), intent(out) :: result
-    !! Associated value.
-end subroutine get_value_int64val
-
-! ----------------------------------------------------------------------
-
-module subroutine get_value_int32arr(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
-    integer(int32), dimension(:), allocatable, intent(out) :: result
-    !! Associated value.
-end subroutine get_value_int32arr
-
-! ----------------------------------------------------------------------
-
-module subroutine get_value_int64arr(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
-    integer(int64), dimension(:), allocatable, intent(out) :: result
-    !! Associated value.
-end subroutine get_value_int64arr
-
-! ----------------------------------------------------------------------
-
-module subroutine get_value_real32val(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
-    real(real32), intent(out) :: result
-    !! Associated value.
-end subroutine get_value_real32val
-
-! ----------------------------------------------------------------------
-
-module subroutine get_value_real64val(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
-    real(real64), intent(out) :: result
-    !! Associated value.
-end subroutine get_value_real64val
-
-! ----------------------------------------------------------------------
-
-module subroutine get_value_real32arr(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
-    real(real32), dimension(:), allocatable, intent(out) :: result
-    !! Associated value.
-end subroutine get_value_real32arr
-
-! ----------------------------------------------------------------------
-
-module subroutine get_value_real64arr(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
-    character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
-    real(real64), dimension(:), allocatable, intent(out) :: result
-    !! Associated value.
-end subroutine get_value_real64arr
-
-! ----------------------------------------------------------------------
-
-module subroutine get_value_boolval(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
+module subroutine argsdb_getval_bool(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
     logical, intent(out) :: result
     !! Associated value.
-end subroutine get_value_boolval
+end subroutine argsdb_getval_bool
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_charval(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
+module subroutine argsdb_getval_char(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
     character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
+        !! Argumemt name/label.
     character(len=*), intent(out) :: result
-    !! Associated value.
-end subroutine get_value_charval
+        !! Associated value.
+end subroutine argsdb_getval_char
 
 ! ----------------------------------------------------------------------
 
-module subroutine get_value_chararr(this, argname, result)
-    class(CmdArgDB), intent(inout) :: this
-    !! Arguments database object.
+module subroutine argsdb_getval_int32(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
     character(len=*), intent(in) :: argname
-    !! Argumemt name/label.
+        !! Argumemt name/label.
+    integer(int32), intent(out) :: result
+        !! Associated value.
+end subroutine argsdb_getval_int32
+
+! ----------------------------------------------------------------------
+
+module subroutine argsdb_getval_int64(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argname
+        !! Argumemt name/label.
+    integer(int64), intent(out) :: result
+        !! Associated value.
+end subroutine argsdb_getval_int64
+
+! ----------------------------------------------------------------------
+
+module subroutine argsdb_getval_real32(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argname
+        !! Argumemt name/label.
+    real(real32), intent(out) :: result
+        !! Associated value.
+end subroutine argsdb_getval_real32
+
+! ----------------------------------------------------------------------
+
+module subroutine argsdb_getval_real64(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argname
+        !! Argumemt name/label.
+    real(real64), intent(out) :: result
+        !! Associated value.
+end subroutine argsdb_getval_real64
+
+! ----------------------------------------------------------------------
+
+module subroutine argsdb_getvals_char(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argname
+        !! Argumemt name/label.
     character(len=:), dimension(:), allocatable, intent(out) :: result
-    !! Associated value.
-end subroutine get_value_chararr
+        !! Associated value.
+end subroutine argsdb_getvals_char
 
 ! ----------------------------------------------------------------------
 
-module function upd_noarrayI(this, strings) result(err)
-    class(ArgInt), intent(inout) :: this
-    !! Argument
-    character(len=*), dimension(:), intent(in) :: strings
-    !! List of values stored as strings
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_noarrayI
+module subroutine argsdb_getvals_int32(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argname
+        !! Argumemt name/label.
+    integer(int32), dimension(:), allocatable, intent(out) :: result
+        !! Associated value.
+end subroutine argsdb_getvals_int32
 
 ! ----------------------------------------------------------------------
 
-module function upd_noarrayR(this, strings) result(err)
-    class(ArgReal), intent(inout) :: this
-    !! Argument
-    character(len=*), dimension(:), intent(in) :: strings
-    !! List of values stored as strings
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_noarrayR
+module subroutine argsdb_getvals_int64(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argname
+        !! Argumemt name/label.
+    integer(int64), dimension(:), allocatable, intent(out) :: result
+        !! Associated value.
+end subroutine argsdb_getvals_int64
 
 ! ----------------------------------------------------------------------
 
-module function upd_noarrayB(this, strings) result(err)
-    class(ArgBool), intent(inout) :: this
-    !! Argument
-    character(len=*), dimension(:), intent(in) :: strings
-    !! List of values stored as strings
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_noarrayB
+module subroutine argsdb_getvals_real32(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argname
+        !! Argumemt name/label.
+    real(real32), dimension(:), allocatable, intent(out) :: result
+        !! Associated value.
+end subroutine argsdb_getvals_real32
 
 ! ----------------------------------------------------------------------
 
-module function upd_noarrayC(this, strings) result(err)
-    class(ArgChar), intent(inout) :: this
-    !! Argument
-    character(len=*), dimension(:), intent(in) :: strings
-    !! List of values stored as strings
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_noarrayC
+module subroutine argsdb_getvals_real64(argsDB, argname, result)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argname
+        !! Argumemt name/label.
+    real(real64), dimension(:), allocatable, intent(out) :: result
+        !! Associated value.
+end subroutine argsdb_getvals_real64
 
 ! ----------------------------------------------------------------------
 
-module function upd_noscalar(this, string, sep) result(err)
-    class(GenArg), intent(inout) :: this
-    !! Argument
-    character(len=*), intent(in), optional :: string
-    !! Dummy argument.
+module subroutine argsdb_parse_args(argsDB, arglist)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), dimension(:), intent(in), optional :: arglist
+        !! List of arguments to parse.
+end subroutine argsdb_parse_args
+
+! ----------------------------------------------------------------------
+
+module function argsdb_val_is_userset(argsDB, argname) result(res)
+    class(CmdLineArgsDB), intent(inout) :: argsDB
+        !! Arguments database object.
+    character(len=*), intent(in) :: argname
+        !! Argumemt name/label.
+    logical :: res
+        !! Boolean stating if value set by user.
+end function argsdb_val_is_userset
+
+
+! ----------------------------------------------------------------------
+! TYPE-BOUND PROCEDURES (INTERFACES) - ARGUMENTS OBJECTS
+! ----------------------------------------------------------------------
+
+module function argbool_from_list_no(arg, argvals) result(done)
+    class(arg_bool), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), dimension(:), intent(in) :: argvals
+        !! List of values stored as strings.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argbool_from_list_no
+
+! ----------------------------------------------------------------------
+
+module function argbool_from_str(arg, argval, sep) result(done)
+    class(arg_bool), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), intent(in), optional :: argval
+        !! Value stored as string.
     character(len=*), intent(in), optional :: sep
-    !! Dummy argument.
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_noscalar
+        !! Dummy argument.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argbool_from_str
 
 ! ----------------------------------------------------------------------
 
-module function upd_noarray(this, strings) result(err)
-    class(GenArg), intent(inout) :: this
-    !! Argument
-    character(len=*), dimension(:), intent(in) :: strings
-    !! Dummy argument.
-    class(BaseException), allocatable :: err
-    !! Return error status.
-end function upd_noarray
+module function argchar_from_list_no(arg, argvals) result(done)
+    class(arg_char), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), dimension(:), intent(in) :: argvals
+        !! List of values stored as strings.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argchar_from_list_no
+
+! ----------------------------------------------------------------------
+
+module function argchar_from_str(arg, argval, sep) result(done)
+    class(arg_char), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), intent(in), optional :: argval
+        !! Value stored as string.
+    character(len=*), intent(in), optional :: sep
+        !! Dummy argument.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argchar_from_str
+
+! ----------------------------------------------------------------------
+
+module function argchars_from_list(arg, argvals) result(done)
+    class(arg_chars), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), dimension(:), intent(in) :: argvals
+        !! List of values stored as strings.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argchars_from_list
+
+! ----------------------------------------------------------------------
+
+module function argchars_from_str(arg, argval, sep) result(done)
+    class(arg_chars), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), intent(in), optional :: argval
+        !! String containing the values.
+    character(len=*), intent(in), optional :: sep
+        !! List of one-character separators, given as a string.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argchars_from_str
+
+! ----------------------------------------------------------------------
+
+module function arggen_from_list_no(arg, argvals) result(done)
+    class(arg_gen), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), dimension(:), intent(in) :: argvals
+        !! Dummy argument.
+    logical :: done
+        !! Success status of the assignment operation.
+end function arggen_from_list_no
+
+! ----------------------------------------------------------------------
+
+module function arggen_from_str_no(arg, argval, sep) result(done)
+    class(arg_gen), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), intent(in), optional :: argval
+        !! Dummy argument.
+    character(len=*), intent(in), optional :: sep
+        !! Dummy argument.
+    logical :: done
+        !! Success status of the assignment operation.
+end function arggen_from_str_no
+
+! ----------------------------------------------------------------------
+
+module function argint_from_list_no(arg, argvals) result(done)
+    class(arg_int), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), dimension(:), intent(in) :: argvals
+        !! List of values stored as strings.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argint_from_list_no
+
+! ----------------------------------------------------------------------
+
+module function argint_from_str(arg, argval, sep) result(done)
+    class(arg_int), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), intent(in), optional :: argval
+        !! Value stored as string.
+    character(len=*), intent(in), optional :: sep
+        !! Dummy argument.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argint_from_str
+
+! ----------------------------------------------------------------------
+
+module function argints_from_list(arg, argvals) result(done)
+    class(arg_ints), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), dimension(:), intent(in) :: argvals
+        !! List of values stored as strings.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argints_from_list
+
+! ----------------------------------------------------------------------
+
+module function argints_from_str(arg, argval, sep) result(done)
+    class(arg_ints), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), intent(in), optional :: argval
+        !! String containing the values.
+    character(len=*), intent(in), optional :: sep
+        !! list of one-character separators, given as a string.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argints_from_str
+
+! ----------------------------------------------------------------------
+
+module function argobj_set_helpmsg(arg, msg) result(done)
+    class(arg_obj), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), intent(in) :: msg
+        !! Help message.
+    logical :: done
+        !! Success status of the operation.
+end function argobj_set_helpmsg
+
+! ----------------------------------------------------------------------
+
+module function argobj_set_names(arg, prefixes, short, long, label, &
+                                 required) result(done)
+    class(arg_obj), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), dimension(:), intent(in) :: prefixes
+        !! List of prefix characters.
+    character(len=*), intent(in), optional :: short
+        !! Short form of the argument.
+    character(len=*), intent(in), optional :: long
+        !! Long form of the argument.
+    character(len=*), intent(in), optional :: label
+        !! Internal and reference name of the argument.
+    logical, intent(in), optional :: required
+        !! Set the argument as required; only for optional argument.
+    logical :: done
+        !! Success status of the operation.
+end function argobj_set_names
+
+! ----------------------------------------------------------------------
+
+module function argreal_from_list_no(arg, argvals) result(done)
+    class(arg_real), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), dimension(:), intent(in) :: argvals
+        !! List of values stored as strings.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argreal_from_list_no
+
+! ----------------------------------------------------------------------
+
+module function argreal_from_str(arg, argval, sep) result(done)
+    class(arg_real), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), intent(in), optional :: argval
+        !! Value stored as string.
+    character(len=*), intent(in), optional :: sep
+        !! Dummy argument.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argreal_from_str
+
+! ----------------------------------------------------------------------
+
+module function argreals_from_list(arg, argvals) result(done)
+    class(arg_reals), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), dimension(:), intent(in) :: argvals
+        !! List of values stored as strings.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argreals_from_list
+
+! ----------------------------------------------------------------------
+
+module function argreals_from_str(arg, argval, sep) result(done)
+    class(arg_reals), intent(inout) :: arg
+        !! Argument object.
+    character(len=*), intent(in), optional :: argval
+        !! String containing the values.
+    character(len=*), intent(in), optional :: sep
+        !! List of one-character separators, given as a string.
+    logical :: done
+        !! Success status of the assignment operation.
+end function argreals_from_str
 
 ! ----------------------------------------------------------------------
 
@@ -675,120 +679,81 @@ end interface
 contains
 
 ! ======================================================================
+! PSEUDO-CONSTRUCTORS
+! ======================================================================
 
-function init_args_db(add_help, prefixes, progname) result(db)
+function init_args_db(add_help, prefixes, progname) result(argsDB)
     !! Initialize database to store arguments parameters
     !!
     !! Initializes a database object to store information on supported
     !!   options in the commandline and extract/process data.
     !! The system expects short-name optional argument to be preceded by
     !!   1 prefix character, long names by 2 identical characters.
-
     logical, intent(in), optional :: add_help
-    !! Add help keywords: -h/--help
+        !! Add help keywords: -h/--help.
     character(len=*), intent(in), optional :: prefixes
-    !! List of accepted 1-char prefixes for optional arguments, as a string.
+        !! List of accepted 1-char prefixes for optional arguments, as a string.
     character(len=*), intent(in), optional :: progname
-    !! Name of the program.
-    type(CmdArgDB) :: db
-    !! Database of command-line arguments.
+        !! Name of the program.
+    type(CmdLineArgsDB) :: argsDB
+        !! Database of command-line arguments.
 
     integer :: i, istat, n_prefix
     logical :: add_help_
     character(len=1) :: prefix
 
-    db%error = InitError()
-
     if (present(prefixes)) then
         n_prefix = len(prefixes)
-        allocate(db%prefixes(n_prefix), db%prefix_short(n_prefix), &
-                 db%prefix_long(n_prefix), stat=istat)
+        allocate(argsDB%prefixes(n_prefix), argsDB%prefix_short(n_prefix), &
+                 argsDB%prefix_long(n_prefix), stat=istat)
         if (istat /= 0) then
-            call RaiseAllocateError(db%error, &
-                                    'user-defined arguments prefixes')
+            call argsDB%error%raise_error('mem', 'allocate', &
+                'failed to set up memory for user-defined argument prefixes')
             return
         end if
         do i = 1, n_prefix
             prefix = prefixes(i:i)
-            db%prefixes(i) = prefix
-            db%prefix_short(i) = prefix
-            db%prefix_long(i) = prefix // prefix
+            argsDB%prefixes(i) = prefix
+            argsDB%prefix_short(i) = prefix
+            argsDB%prefix_long(i) = prefix // prefix
         end do
     else
-        allocate(db%prefixes(1), db%prefix_short(1), db%prefix_long(1), &
+        allocate(argsDB%prefixes(1), argsDB%prefix_short(1), argsDB%prefix_long(1), &
                  stat=istat)
         if (istat /= 0) then
-            Call RaiseAllocateError(db%error, 'default arguments prefixes')
+            call argsDB%error%raise_error('mem', 'allocate', &
+                'failed to set up default arguments prefixes')
             return
         end if
-        db%prefixes(1) = '-'
-        db%prefix_short(1) = '-'
-        db%prefix_long(1) = '--'
+        argsDB%prefixes(1) = '-'
+        argsDB%prefix_short(1) = '-'
+        argsDB%prefix_long(1) = '--'
     end if
 
     if (present(progname)) then
-        db%progname = trim(progname)
+        argsDB%progname = trim(progname)
     else
         call get_command_argument(0, length=i)
-        allocate(character(len=i) :: db%progname)
-        call get_command_argument(0, db%progname)
+        allocate(character(len=i) :: argsDB%progname)
+        call get_command_argument(0, argsDB%progname)
     end if
 
     if (present(add_help)) then
         add_help_ = add_help
     else
-        add_help_ = .True.
+        add_help_ = .true.
     end if
 
     if (add_help_) then
-        call db%add_arg_bool('store_true', '-h', '--help', &
-                             help='Print this help message', &
-                             def_value=.false.)
+        call argsDB%add_arg_bool('store_true', '-h', '--help', &
+                                 help='Print this help message', &
+                                 def_value=.false.)
     end if
 
 end function init_args_db
 
 ! ======================================================================
-
-function get_argDB_error(argDB) result(error)
-    !! Return error attribute stored in CmdArgDB instance.
-    !!
-    !! Returns the error attribute currently stored in CmdArgDB.
-    !! This is mostly intended for testing, for instance with select
-    !! type constructs.
-    class(CmdArgDB), intent(in) :: argDB
-    !! CmdArgDB instance
-    class(BaseException), allocatable :: error
-    !! Error instance
-
-    error = argDB%error
-
-end function get_argDB_error
-
-! ======================================================================
-
-function check_argDB_error_status(argDB) result(raised)
-    class(CmdArgDB), intent(in) :: argDB
-    !! CmdArgDB instance.
-    logical :: raised
-    !! Status of the error
-
-    raised = argDB%error%raised()
-
-end function check_argDB_error_status
-
-! ======================================================================
-
-function get_argDB_error_msg(argDB) result(msg)
-    class(CmdArgDB), intent(in) :: argDB
-    !! CmdArgDB instance.
-    character(len=:), allocatable :: msg
-    !! Error instance.
-
-    msg = argDB%error%msg()
-
-end function get_argDB_error_msg
-
+! TYPE-BOUND PROCEDURES
 ! ======================================================================
 
 function chk_argname_overlap(this, new_arg, argname) result(res)
@@ -799,9 +764,9 @@ function chk_argname_overlap(this, new_arg, argname) result(res)
     !!   the arguments DB.
     !! Returns True if an overlap exist.
 
-    class(CmdArgDB), intent(in) :: this
+    class(CmdLineArgsDB), intent(in) :: this
     !! Arguments database object
-    class(ArgObj), intent(in) :: new_arg
+    class(arg_obj), intent(in) :: new_arg
     !! New argument to be inserted in database
     character(len=*), intent(out) :: argname
     !! Overlapping argument name.
@@ -811,13 +776,13 @@ function chk_argname_overlap(this, new_arg, argname) result(res)
     integer :: iarg
 
     argname = ' '
-    res = .False.
+    res = .false.
     if (allocated(new_arg%short_name)) then
         do iarg = 1, this%nargs
             associate (opt => this%args(iarg)%arg)
             if (allocated(opt%short_name)) then
                 if (opt%short_name == new_arg%short_name) then
-                    res = .True.
+                    res = .true.
                     argname = new_arg%short_name
                     return
                 end if
@@ -831,7 +796,7 @@ function chk_argname_overlap(this, new_arg, argname) result(res)
             associate (opt => this%args(iarg)%arg)
             if (allocated(opt%long_name)) then
                 if (opt%long_name == new_arg%long_name) then
-                    res = .True.
+                    res = .true.
                     argname = new_arg%long_name
                     return
                 end if
@@ -843,7 +808,7 @@ function chk_argname_overlap(this, new_arg, argname) result(res)
     if (allocated(new_arg%label)) then
         do iarg = 1, this%nargs
             if (this%args(iarg)%arg%label == new_arg%label) then
-                res = .True.
+                res = .true.
                 argname = new_arg%label
                 return
             end if
@@ -860,7 +825,7 @@ function get_argname_id(this, argname) result(ind)
     !! Returns the index of `argname` in database `this`.
     !! Returns 0 if not found.
 
-    class(CmdArgDB), intent(in) :: this
+    class(CmdLineArgsDB), intent(in) :: this
     !! Arguments database object.
     character(len=*), intent(in) :: argname
     !! Argumemt name/label.
@@ -887,7 +852,7 @@ subroutine print_help(this)
     !! Builds and prints the help message.
     !! The subroutine then terminates any execution
 
-    class(CmdArgDB), intent(in) :: this
+    class(CmdLineArgsDB), intent(in) :: this
     !! Arguments database object.
 
     integer :: iargDB, lopt, lline, lline0, N
@@ -986,13 +951,13 @@ subroutine build_val_list(arg, argline, l_argline)
     !! Build list of values in vals
 
     interface
-        function tostring(string)
-            character(len=*), intent(in) :: string
-            character(len=len(string)) :: tostring
+        function tostring(text)
+            character(len=*), intent(in) :: text
+            character(len=len(text)) :: tostring
         end function tostring
     end interface
 
-    class(ArgObj), intent(in) :: arg
+    class(arg_obj), intent(in) :: arg
     !! Argument object.
     character(len=*), intent(inout) :: argline
     !! Line with description of argument call, already containing argument.
@@ -1031,14 +996,13 @@ subroutine build_val_list(arg, argline, l_argline)
 
 end subroutine build_val_list
 
-function nochange(string)
+function nochange(text)
     ! do nothing (used as target for conversion)
-    character(len=*), intent(in) :: string
-    character(len=len(string)) :: nochange
+    character(len=*), intent(in) :: text
+    character(len=len(text)) :: nochange
 
-    nochange = string
+    nochange = text
 end function
-
 
 end subroutine print_help
 

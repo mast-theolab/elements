@@ -1,11 +1,11 @@
 program build_boltz_pop
-    use numeric, only: f0, f1, f10p2, realwp
-    use input, only: DataFile
-    use string, only: num_chars_int
-    use parse_cmdline, only: CmdArgDB
-    use output, only: iu_out, sec_header, write_err
-    use exception, only: BaseException, runstat
     use datatypes, only: VibrationsDB
+    use input, only: DataFile
+    use numeric, only: f0, f1, f10p2, realwp
+    use output, only: iu_out, sec_header, write_err
+    use parse_cmdline, only: CmdLineArgsDB
+    use run_env, only: run
+    use string, only: num_chars_int
     use vibrational, only: boltz_pop_max_quanta, full_boltz_pop
 
     integer :: i, iq, j, len_mode, max_modes, n, n_states
@@ -16,19 +16,13 @@ program build_boltz_pop
     character(len=80) :: fmt_state, fmt_line
     character(len=1024) :: line
     character(len=:), allocatable :: infile, outfile
-    type(CmdArgDB) :: opts
+    type(CmdLineArgsDB) :: opts
     type(DataFile) :: dfile
     type(VibrationsDB) :: vibDB
-    class(BaseException), allocatable :: err
 
     ! Build option parser for commandline
-    opts = CmdArgDB(progname='build_boltz_pop')
-    if (opts%has_error()) then
-        err = opts%exception()
-        call runstat%raise_error( &
-            'Unable to initialize the commandline parser', &
-            err%msg())
-    end if
+    opts = CmdLineArgsDB(progname='build_boltz_pop')
+    call run%check(opts%error, 'Unable to initialize the commandline parser')
     call opts%add_arg_char( &
         'string', label='filename', &
         help='Gaussian formatted checkpoint file.')
@@ -50,12 +44,7 @@ program build_boltz_pop
         help='Temperature.')
 
     call opts%parse_args()
-    if (opts%has_error()) then
-        err = opts%exception()
-        call runstat%raise_error( &
-            'Failure to parse commandline options', &
-            err%msg())
-    end if
+    call run%check(opts%error, 'Failure to parse commandline options')
 
     ! Check commandline arguments and set information
     call opts%get_value('filename', line)
@@ -71,15 +60,15 @@ program build_boltz_pop
     call opts%get_value('num-modes', max_modes)
 
     if (T_ref <= f0) then
-        call runstat%raise_error(&
+        call run%error%raise_error('val', 'wrong', &
             'Temperature must be strictly positive')
     end if
     if (rho_min <= f0) then
-        call runstat%raise_error(&
+        call run%error%raise_error('val', 'wrong', &
             'Minimum population must be strictly positive')
     end if
     if (max_modes <= 0) then
-        call runstat%raise_error(&
+        call run%error%raise_error('val', 'wrong', &
             'Maximum number of modes must be strictly positive')
     end if
 
@@ -94,22 +83,17 @@ program build_boltz_pop
 
     ! Extract data from input file.
     dfile = DataFile(infile)
-    if (dfile%has_error()) then
-        call runstat%raise_error( &
-            'Failed to initialize data file', dfile%get_error())
-    end if
+    call run%check(dfile%error, 'Failed to initialize data file')
 
     vibDB = dfile%get_vib_data()
-    if (dfile%has_error()) then
-        call runstat%raise_error( &
-            'Unable to parse vibrational data, check file.', dfile%get_error())
-    end if
+    call run%check(dfile%error, 'Unable to parse vibrational data, check file')
 
     ! Check consistency between max. num. excited modes and num. vibrations.
     if (max_modes > vibDB%n_vib) then
         write(line, '("Reducing max. number of modes from ",i0," to ",i0)') &
             max_modes, vibDB%n_vib
-        call runstat%raise_warning('Too many modes chosen', line)
+        call run%error%raise_warning( &
+            'key', 'args', 'Too many modes chosen', line)
         max_modes = vibDB%n_vib
     end if
 

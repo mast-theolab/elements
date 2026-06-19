@@ -788,28 +788,36 @@ module procedure get_data_from_id_fchk
                 'Number of atoms                      '  &  !  3.
             ]
             dbase = dfchk%get(fchk_keys)
-            if (dbase(2)%dtype == '0') then
+            if (dbase(1)%dtype == '0') then
                 prop%istat = 2
                 return
             end if
             LP = 1  ! we could use prop%pdim but not much sense.
             if (prop%order == 0) then
                 block
-                integer :: exc_state, lblock, n_at3, n_LR, n_states
-                n_states = to_int(dbase(2)%idata(1))
-                exc_state = to_int(dbase(2)%idata(5))
-                lblock = to_int(dbase(2)%idata(2))
-                n_LR = to_int(dbase(2)%idata(3))
-                n_at3 = 3 * to_int(dbase(3)%idata(1))
-                if (exc_state /= prop%states(2) .and. &
-                        prop%states(2) /= -1) then
-                    prop%istat = 2
-                    return
+                integer :: exc_state, lblock, ltot, n_at3, n_LR, n_states
+                if (dbase(3)%dtype /= '0') then
+                    n_at3 = 3 * to_int(dbase(3)%idata(1))
+                    if (size(dbase(1)%rdata) /= n_at3*LP) prop%istat = 4
                 end if
+                ltot = size(dbase(1)%rdata)
                 allocate(prop%data(LP*n_at3))
+                if (dbase(2)%dtype /= '0') then
+                    n_states = to_int(dbase(2)%idata(1))
+                    exc_state = to_int(dbase(2)%idata(5))
+                    lblock = to_int(dbase(2)%idata(2))
+                    n_LR = to_int(dbase(2)%idata(3))
+                    if (exc_state /= prop%states(2) .and. &
+                            prop%states(2) /= -1) then
+                        prop%istat = 2
+                        return
+                    end if
+                else
+                    prop%istat = 3
+                end if
                 prop%data = dbase(1)%rdata
                 prop%loaded = .true.
-                prop%shape = [n_at3]
+                prop%shape = [ltot]
                 prop%dim_shape = [1]
                 end block
             else

@@ -177,6 +177,8 @@ module datatypes
         !!  0. no error, all operations proceeded properly.
         !!  1. property not supported by program.
         !!  2. property not found.
+        !!  3. unable to check that property corresponds to requested state.
+        !!  4. size inconsistency (e.g., not proportional to number of atoms).
         !! 10. unspecified error.
         !! 99. inconsistency in query, e.g., end state < start state
     contains

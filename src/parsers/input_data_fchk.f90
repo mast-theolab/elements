@@ -582,6 +582,8 @@ module procedure build_vib_data_fchk
 
     deallocate(dbase, evec)
 
+    vib%loaded = .true.
+
 end procedure build_vib_data_fchk
 
 ! ======================================================================

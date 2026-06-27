@@ -314,7 +314,7 @@ module procedure argsdb_parse_args
                 end if
             end do
             if (.not.found) then
-                if (nargs_pos /= argsDB%iargs_pos(3,argsDB%nargs_pos)) then
+                if (nargs_pos < argsDB%iargs_pos(3,argsDB%nargs_pos)) then
                     write(errmsg, '("mismatch in number of positional &
                         &arguments: at least ",i0," expected, ",i0," &
                         &given")') argsDB%iargs_pos(3,argsDB%nargs_pos), &
@@ -330,7 +330,7 @@ module procedure argsdb_parse_args
             iargDB = argsDB%iargs_pos(1,iarg_pos)
             i = ioff + argsDB%iargs_pos(2,iarg_pos)
             j = ioff + argsDB%iargs_pos(3,iarg_pos)
-            if (j < 0) then
+            if (j <= 0) then
                 ioff = nargs_pos - abs(argsDB%iargs_pos(3,argsDB%nargs_pos))
                 ! Number of variable elements: ioff+1
                 if (ioff > argsDB%args(iargDB)%arg%max_num - &
@@ -371,7 +371,7 @@ module procedure argsdb_parse_args
     ! Check if we are missing arguments
     do iargDB = 1, argsDB%nargs
         associate(opt => argsDB%args(iargDB)%arg)
-        if (opt%is_req .and. opt%is_set /=2) then
+        if (opt%is_req .and. opt%min_num > 0 .and. opt%is_set /=2) then
             write(errmsg, &
                   '("option ''",a,"'' is required and missing.")') &
                 trim(opt%label)

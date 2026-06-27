@@ -191,7 +191,7 @@ module procedure argsdb_add_char
                 return
             end if
             ival = to_int(min_nvals)
-            if (ival <= 0) then
+            if (ival < 0) then
                 errmsg = 'minimum number of values cannot be negative.'
                 call argsDB%error%raise_deverror('argval', errmsg)
                 return
@@ -398,7 +398,7 @@ module procedure argsdb_add_int
                 return
             end if
             ival = to_int(min_nvals)
-            if (ival <= 0) then
+            if (ival < 0) then
                 errmsg = 'minimum number of values cannot be negative.'
                 call argsDB%error%raise_deverror('argval', errmsg)
                 return
@@ -605,7 +605,7 @@ module procedure argsdb_add_real
                 return
             end if
             ival = to_int(min_nvals)
-            if (ival <= 0) then
+            if (ival < 0) then
                 errmsg = 'minimum number of values cannot be negative.'
                 call argsDB%error%raise_deverror('argval', errmsg)
                 return
@@ -832,7 +832,7 @@ subroutine argsdb_upd_pos_dbase(argsDB, min_nvals, max_nvals)
 
     if (min_nvals < max_nvals) then
         do iarg = 1, argsDB%nargs_pos-1
-            if (argsDB%iargs_pos(3,iarg) < 0) then
+            if (argsDB%iargs_pos(3,iarg) <= 0) then
                 call argsDB%error%raise_deverror('argval', &
                     'only one positional argument with a variable number of &
                     &values allowed in the DB')
@@ -840,8 +840,11 @@ subroutine argsdb_upd_pos_dbase(argsDB, min_nvals, max_nvals)
             end if
         end do
         argsDB%iargs_pos(3,argsDB%nargs_pos) = &
-            -(argsDB%iargs_pos(2,argsDB%nargs_pos) + min_nvals - 1)
+            min(-(argsDB%iargs_pos(2,argsDB%nargs_pos) + min_nvals - 1), 0)
     else
+        if (min_nvals == 0) &
+            call argsDB%error%raise_deverror('argval', &
+                'positional arguments cannot expect no value at all')
         argsDB%iargs_pos(3,argsDB%nargs_pos) = &
             argsDB%iargs_pos(2,argsDB%nargs_pos) + min_nvals - 1
     end if

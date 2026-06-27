@@ -9,6 +9,9 @@
 * ***run_env***: New derived type `ErrorHandle` to handle error at runtime.
 * ***run_env***: New derived type `CoreExecObject` to create basic objects in ELEMENTS.  The derived type for now includes an `error` component to process errors during runtime.
 
+### Fixed
+* ***parse_cmdline***: Fixed parsing of positional arguments with `min_nvals=0`.
+
 ### Changed
 * Internal routines have been updated with new `run_env` module.
 * ***gen_py_atomdb***: Updated generated code to latest changes in ESTAMPES.

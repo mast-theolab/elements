@@ -1,0 +1,58 @@
+/----------------------------------------------------------------------------\
+|                                                                            |
+|           Vibrational Transition Current Density Cube Generator            |
+|                                                                            |
+\----------------------------------------------------------------------------/
+
+
+Simulation Parameters
+=====================
+
+ - Reading moldata from file --------------> vtcd_meox_mol.dat
+ - Lowest excited state -------------------> 1
+ - Highest excited state ------------------> 3
+ - Reading cubes from file ----------------> vtcd_meox_cube.dat
+ - Dipole gauge ---------------------------> velocity
+
+
+Data on Molecular System
+========================
+
+ > Number of atoms           : 10
+ > Charge                    : 0
+ > Multiplicity              : 1
+ > Open-/Closed-shell        : closed
+
+ > Number of basis functions : 146
+ > Type of D functions       : pure
+ > Type of F functions       : pure
+ > Number of atomic orbitals : 146
+
+Atomic coordinates
+------------------
+ ===== ============ ========================================
+ Atom      Mass             X            Y            Z
+ ----- ------------ ----------------------------------------
+  C       12.0000        0.152772    -0.038044     0.486643
+  C       12.0000        1.505887     0.100568    -0.148286
+  H        1.0078        1.407360     0.326752    -1.216789
+  H        1.0078        2.073895     0.907622     0.334331
+  H        1.0078        2.077759    -0.830420    -0.041403
+  C       12.0000       -1.041324     0.615308    -0.057704
+  H        1.0078       -0.952251     1.218660    -0.964197
+  O       15.9949       -0.823477    -0.786877    -0.244214
+  H        1.0078       -1.874998     0.869015     0.600262
+  H        1.0078        0.152043    -0.263605     1.557585
+ ===== ============ ========================================
+
+
+Transition Data
+===============
+
+ > Number of excited states : 3
+ > Reference excited state  : 1
+
+
+Cube Generation
+===============
+File vtcd_meox_mol_v05_s1-3.cube                     has been generated!

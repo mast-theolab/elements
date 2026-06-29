@@ -1,0 +1,72 @@
+/----------------------------------------------------------------------------\
+|                                                                            |
+|           Vibrational Transition Current Density Cube Generator            |
+|                                                                            |
+\----------------------------------------------------------------------------/
+
+
+Simulation Parameters
+=====================
+
+ - TD input filename ----------------------> vtcd_meox_TD.fchk
+ - NAC filenames template -----------------> vtcd_meox_nac_###-mod.fchk
+ - Frequencies input filename -------------> vtcd_meox_freq.fchk
+ - Grid sparsity --------------------------> scarce
+ - Lowest excited state -------------------> 1
+ - Highest excited state ------------------> 3
+ - Dipole gauge ---------------------------> velocity
+
+
+Data on Molecular System
+========================
+
+ > Number of atoms           : 10
+ > Charge                    : 0
+ > Multiplicity              : 1
+ > Open-/Closed-shell        : closed
+
+ > Number of basis functions : 146
+ > Type of D functions       : pure
+ > Type of F functions       : pure
+ > Number of atomic orbitals : 146
+
+Atomic coordinates
+------------------
+ ===== ============ ========================================
+ Atom      Mass             X            Y            Z
+ ----- ------------ ----------------------------------------
+  C       12.0000        0.152772    -0.038044     0.486643
+  C       12.0000        1.505887     0.100568    -0.148286
+  H        1.0078        1.407360     0.326752    -1.216789
+  H        1.0078        2.073895     0.907622     0.334331
+  H        1.0078        2.077759    -0.830420    -0.041403
+  C       12.0000       -1.041324     0.615308    -0.057704
+  H        1.0078       -0.952251     1.218660    -0.964197
+  O       15.9949       -0.823477    -0.786877    -0.244214
+  H        1.0078       -1.874998     0.869015     0.600262
+  H        1.0078        0.152043    -0.263605     1.557585
+ ===== ============ ========================================
+
+
+Transition Data
+===============
+
+ > Number of excited states : 3
+ > Reference excited state  : 1
+
+
+Cube Generation
+===============
+
+Grid type:                       cubic
+Grid origin x:                  -12.385698
+Grid origin y:                   -7.995000
+Grid origin z:                   -8.671627
+Number of points along x-axis:     0
+Number of points along y-axis:     0
+Number of points along z-axis:     0
+Step size along x-axis:         -25.915513
+Step size along y-axis:         -16.677185
+Step size along z-axis:         -19.266261
+
+File vtcd_meox_TD_v04_s1-3.cube                     has been generated!

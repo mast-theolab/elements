@@ -1,0 +1,72 @@
+/----------------------------------------------------------------------------\
+|                                                                            |
+|                 Transition Current Density Cube Generator                  |
+|                                                                            |
+\----------------------------------------------------------------------------/
+
+
+Simulation Parameters
+=====================
+
+ - TD input filename ----------------------> methylaziridine+.vac.B3LYP.631Gd.TD.fchk
+ - Grid sparsity --------------------------> scarce
+ - Dipole gauge ---------------------------> velocity
+ - Requested excited state ----------------> 2
+
+
+Data on Molecular System
+========================
+
+ > Number of atoms           : 11
+ > Charge                    : 1
+ > Multiplicity              : 2
+ > Open-/Closed-shell        : open
+
+ > Number of basis functions : 74
+ > Type of D functions       : Cartesian
+ > Type of F functions       : pure
+ > Number of atomic orbitals : 74
+
+Atomic coordinates
+------------------
+ ===== ============ ========================================
+ Atom      Mass             X            Y            Z
+ ----- ------------ ----------------------------------------
+  C       12.0000       -1.031939     0.718673     0.079245
+  C       12.0000        0.221131    -0.319584     0.419161
+  H        1.0078       -1.878035     0.942101     0.724925
+  H        1.0078       -0.605977     1.533106    -0.502232
+  H        1.0078        0.234813    -0.885664     1.349748
+  N       14.0031       -0.894909    -0.585704    -0.410779
+  H        1.0078       -1.578095    -1.303266    -0.151039
+  C       12.0000        1.547526     0.128980    -0.129591
+  H        1.0078        2.051031     0.781817     0.589341
+  H        1.0078        2.165631    -0.770963    -0.254931
+  H        1.0078        1.454685     0.634379    -1.093254
+ ===== ============ ========================================
+
+
+Transition Data
+===============
+
+ > Number of excited states : 5
+ > Reference excited state  : 1
+
+
+Cube Generation
+===============
+
+Doing state num. 2
+
+Grid type:                       cubic
+Grid origin x:                   -7.177566
+Grid origin y:                   -5.300689
+Grid origin z:                   -4.614907
+Number of points along x-axis:     0
+Number of points along y-axis:     0
+Number of points along z-axis:     0
+Step size along x-axis:         -15.294261
+Step size along y-axis:         -11.351909
+Step size along z-axis:         -10.067380
+
+File methylaziridine+.vac.B3LYP.631Gd.TD_PT_2.cube             has been generated!

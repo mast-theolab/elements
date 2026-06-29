@@ -39,6 +39,15 @@ target("calcites")
     --                       "-p", "0.005",
     --                       "-o", "bzpop_meox_T400_P005.txt"}})
 
+target("density_cube")
+    set_default(false)
+    set_kind("binary")
+    add_packages("openmp")
+    add_deps("elements")
+    add_files("src/progs/density_cube.f90")
+-- TO DO: ADD TESTS
+
+
 target("gen_py_atomDB")
     set_default(false)
     set_rundir("$(projectdir)/tests")
@@ -151,9 +160,100 @@ target("mcd_tensor")
                           "--final=2",
                           "--no-timestamp"}})
 
+target("tcd_cube")
+    set_default(false)
+    set_kind("binary")
+    add_links("blas")
+    add_packages("openmp")
+    add_deps("molelib")
+    add_deps("mathlib")
+    add_deps("cubelib")
+    add_files("src/progs/tcd_cube.f90")
+    set_rundir("$(projectdir)/tests")
+    add_tests("meaz_ECD",
+              {runargs = {"methylaziridine+.vac.B3LYP.631Gd.TD.fchk",
+                          "-s", "2", "-e", "2", "-d", "scarce",
+                          "-o", "tcd_cube_meax_scarce.txt"
+                          }})
+
 target("vertex")
     set_default(false)
     add_packages("openmp")
     set_rundir("$(projectdir)/tests")
     add_deps("elements")
     add_files("src/progs/vertex.f90")
+
+target("vtcd_cube")
+    set_default(false)
+    set_kind("binary")
+    add_packages("openmp")
+    add_links("blas")
+    add_deps("corelib")
+    add_deps("molelib")
+    add_deps("mathlib")
+    add_deps("cubelib")
+    add_files("src/progs/vtcd_cube.f90")
+    set_rundir("$(projectdir)/tests")
+
+    before_test(function (target, opt)
+        if opt.name == "vtcd_cube/meox_v05_moldata" then
+            import("lib.detect.find_file")
+            local moldatfile = "vtcd_meox_mol.dat"
+            local cubdatfile = "vtcd_meox_cube.dat"
+            local workdir = path.join(os.projectdir(), "tests")
+            os.cd(workdir)
+            if find_file(moldatfile, ".") then
+                os.rm(moldatfile)
+            end
+            if find_file(cubdatfile, ".") then
+                os.rm(cubdatfile)
+            end
+            os.runv(target:targetfile(),
+                    {"vtcd_meox_TD.fchk",
+                     "vtcd_meox_nac_###-mod.fchk",
+                     "vtcd_meox_freq.fchk",
+                     "-q", "6",
+                     "-s", "1",
+                     "-e", "3",
+                     "-m", moldatfile,
+                     "-b", cubdatfile,
+                     "-d", "scarce"})
+            os.rm("vtcd_meox_TD_v06_s1-3.cube")
+            os.cd(os.projectdir())
+            return
+        end
+    end)
+
+    add_tests("meox_v05_moldata",
+              {runargs = {
+                  "-u", "vtcd_meox_mol.dat",
+                  "-c", "vtcd_meox_cube.dat",
+                  "-q", "5",
+                  "-s", "1",
+                  "-e", "3",
+                  "-o", "vtcd_cube_meox_v05_data.txt"
+            }})
+
+    add_tests("meox_v04_scarce",
+              {runargs = {
+                    "vtcd_meox_TD.fchk",
+                    "vtcd_meox_nac_###-mod.fchk",
+                    "vtcd_meox_freq.fchk",
+                    "-q", "4",
+                    "-s", "1",
+                    "-e", "3",
+                    "-d", "scarce",
+                    "-o", "vtcd_cube_meox_v04_scarce.txt"
+            }})
+
+    add_tests("meox_v18_vlow",
+              {runargs = {
+                  "vtcd_meox_TD.fchk",
+                  "vtcd_meox_nac_###-mod.fchk",
+                  "vtcd_meox_freq.fchk",
+                  "-q", "18",
+                  "-s", "1",
+                  "-e", "3",
+                  "-d", "scarce",
+                  "-o", "vtcd_cube_meox_v18_vlow.txt"
+            }})

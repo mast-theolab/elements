@@ -97,7 +97,8 @@ module datatypes
         integer :: &
             n_ab = 1, &  ! num. of unique alpha-beta orbitals (1=closed shell)
             n_ao = 0, &  ! number of atomic orbitals
-            n_mo = 0     ! Max. number of molecular orbitals, mainly for storage
+            n_mo = 0, &  ! Max. number of molecular orbitals, mainly for storage
+            n_ao_cart = 0 ! number of atomic orbitals (cartesian)
         integer, dimension(2) :: &  ! n_ab elements are expected to be set
             n_mos = [0, 0], &   ! number of alpha/beta molecular orbitals
             n_els = [0, 0]      ! number of alpha/beta electrons

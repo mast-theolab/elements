@@ -210,11 +210,11 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
     end if
 
     ia0 = 0
-    do ia = 1, n_at
-        ri = at_crd(:,ia)
-        do iprim = 1, nprim_per_at(ia)
-            ai = bsetDB(ia,iprim)%alpha
-            call set_primC_comp(bsetDB(ia,iprim), ndi, ldi, ci, suberr)
+    do ia = 1, n_at ! Loop over atoms
+        ri = at_crd(:,ia) ! Coordinates of atom ia
+        do iprim = 1, nprim_per_at(ia) ! Loop over primitives
+            ai = bsetDB(ia,iprim)%alpha ! Exponent of primitive iprim
+            call set_primC_comp(bsetDB(ia,iprim), ndi, ldi, ci, suberr) ! Coefficients of primitive iprim
             if (suberr%raised()) then
                 if (suberr%has_type('dev')) then
                     call err%raise_deverror('case', &
@@ -253,13 +253,13 @@ subroutine overlap_ao_1e(iout, n_at, n_ao, qty_flag, ondisk, inmem, &
             else
                 c2pi => ident_mat
             end if
-            ja0 = 0
-            do ja = 1, n_at
-                rj = at_crd(:,ja)
-                r2ij = sum((rj-ri)**2)
-                do jprim = 1, nprim_per_at(ja)
-                    aj = bsetDB(ja,jprim)%alpha
-                    call set_primC_comp(bsetDB(ja,jprim), ndj, ldj, cj, suberr)
+            ja0 = 0 ! Initialize index for atom ja
+            do ja = 1, n_at ! Loop over atoms
+                rj = at_crd(:,ja) ! Coordinates of atom ja
+                r2ij = sum((rj-ri)**2) ! Square distance between atoms ia and ja
+                do jprim = 1, nprim_per_at(ja) ! Loop over primitives
+                    aj = bsetDB(ja,jprim)%alpha ! Exponent of primitive jprim
+                    call set_primC_comp(bsetDB(ja,jprim), ndj, ldj, cj, suberr) ! Coefficients of primitive jprim
                     if (suberr%raised()) then
                         if (suberr%has_type('dev')) then
                             call err%raise_deverror('case', &

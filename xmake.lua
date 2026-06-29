@@ -1,5 +1,17 @@
 add_rules("mode.debug", "mode.release")
 
+-- if is_mode("debug") then -- debug purpose
+-- set_policy("check.auto_ignore_flags", false)
+-- --add_fcflags("-Wall -Wextra -Wconversion -fcheck=all -fmax-errors=5 -std=f2008")
+-- --add_fcflags("-Wall -Wextra -Wconversion -fcheck=bounds -fmax-errors=5 -finit-real=nan -finit-integer=0")
+-- --add_fcflags("-Wall -Wextra -Wconversion -fcheck=all -fmax-errors=5 -finit-real=nan -finit-integer=0")
+-- add_fcflags("-Wall -Wextra -Wconversion -fcheck=all")
+-- add_fcflags("-Wall -Wextra -Wconversion -fcheck=all -fmax-errors=5")
+-- end
+
+-- xmake g --pkg_searchdirs=/home/alberto/prog/elements/xmake_pkgs/ --to set pkgs dir
+
+--add_repositories("local-repo .xmake")
 add_requires("openmp")
 add_requires("openblas")
 

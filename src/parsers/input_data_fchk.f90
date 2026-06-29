@@ -318,6 +318,8 @@ module procedure build_orb_data_fchk
         deallocate(dbase(5)%rdata)
     end if
 
+    orb%n_ao_cart = 0
+
     orb%loaded = .true.
 
     deallocate(dbase)

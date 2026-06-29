@@ -42,53 +42,58 @@ module run_env
             !! Category of error.
             !! 10^1^ for the main category, 10^0^ for the sub-category
             !!
-            !! | code | meaning                           |
-            !! |-----:|-----------------------------------|
-            !! |    0 | generic                           |
-            !! |   10 | memory                            |
-            !! |   11 | memory - allocation               |
-            !! |   12 | memory - exceeded                 |
-            !! |   20 | file - generic                    |
-            !! |   21 | file - not found                  |
-            !! |   22 | file - wrong type                 |
-            !! |   23 | file - cannot open                |
-            !! |   24 | file - cannot close               |
-            !! |   25 | file - cannot read                |
-            !! |   26 | file - cannot write               |
-            !! |   27 | file - EOF reached                |
-            !! |   30 | keyword - generic                 |
-            !! |   31 | keyword - not found               |
-            !! |   32 | keyword - input arguments         |
-            !! |   40 | data - generic                    |
-            !! |   41 | data - missing                    |
-            !! |   42 | data - inconsistency              |
-            !! |   43 | data - excess/insufficiency       |
-            !! |   44 | data - unknown structure          |
-            !! |   50 | value - generic                   |
-            !! |   51 | value - failed conversion         |
-            !! |   52 | value - incompatibility           |
-            !! |   53 | value - unset                     |
-            !! |   54 | value - wrong type                |
-            !! |   55 | value - wrong/unexpected          |
-            !! |   60 | calc - generic                    |
-            !! |   61 | calc - NaN/invalid operation      |
-            !! |   62 | calc - singularity (or risk)      |
-            !! |   63 | calc - inconsistency in results   |
-            !! |   70 | option - generic                  |
-            !! |   71 | option - unsupported option       |
-            !! |   72 | option - unsupported value        |
-            !! |   73 | option - conflicting options      |
-            !! |  -10 | dev - generic error               |
-            !! |  -11 | dev - wrong value in call         |
-            !! |  -12 | dev - unsupported case            |
-            !! |  -13 | dev - feature NYI                 |
-            !! |  -14 | dev - internal limit reached      |
-            !! |  -20 | arg - generic problem             |
-            !! |  -21 | arg - wrong/unexpected value      |
-            !! |  -22 | arg - wrong type                  |
-            !! |  -23 | arg - empty content               |
-            !! |  -24 | arg - missing                     |
-            !! |  -25 | arg - array size/number           |
+            !! | code | meaning                                  |
+            !! |-----:|------------------------------------------|
+            !! |    0 | generic                                  |
+            !! |   10 | memory                                   |
+            !! |   11 | memory - allocation                      |
+            !! |   12 | memory - exceeded                        |
+            !! |   20 | file - generic                           |
+            !! |   21 | file - not found                         |
+            !! |   22 | file - wrong type                        |
+            !! |   23 | file - cannot open                       |
+            !! |   24 | file - cannot close                      |
+            !! |   25 | file - cannot read                       |
+            !! |   26 | file - cannot write                      |
+            !! |   27 | file - EOF reached                       |
+            !! |   30 | keyword - generic                        |
+            !! |   31 | keyword - not found                      |
+            !! |   32 | keyword - input arguments                |
+            !! |   33 | keyword - duplicate/equivalent keys      |
+            !! |   40 | data - generic                           |
+            !! |   41 | data - missing                           |
+            !! |   42 | data - inconsistency                     |
+            !! |   43 | data - incorrect number                  |
+            !! |   44 | data - unknown structure                 |
+            !! |   45 | data - unexpected/unsupported value      |
+            !! |   46 | data - unexpected/unsupported type       |
+            !! |   50 | value - generic                          |
+            !! |   51 | value - failed conversion                |
+            !! |   52 | value - incompatibility                  |
+            !! |   53 | value - unset                            |
+            !! |   54 | value - wrong type                       |
+            !! |   55 | value - wrong/unexpected                 |
+            !! |   60 | calc - generic                           |
+            !! |   61 | calc - NaN/invalid operation             |
+            !! |   62 | calc - singularity (or risk)             |
+            !! |   63 | calc - inconsistency in results          |
+            !! |   70 | option - generic                         |
+            !! |   71 | option - unsupported option              |
+            !! |   72 | option - unsupported value               |
+            !! |   73 | option - conflicting options             |
+            !! |   74 | option - missing option/specification    |
+            !! |  -10 | dev - generic error                      |
+            !! |  -11 | dev - wrong value in call                |
+            !! |  -12 | dev - unsupported case                   |
+            !! |  -13 | dev - feature NYI                        |
+            !! |  -14 | dev - internal limit reached             |
+            !! |  -20 | arg - generic problem                    |
+            !! |  -21 | arg - wrong/unexpected value             |
+            !! |  -22 | arg - wrong type                         |
+            !! |  -23 | arg - empty content                      |
+            !! |  -24 | arg - missing                            |
+            !! |  -25 | arg - array size/number                  |
+            !! |  -26 | arg - conflicts between given arguments  |
         ! integer :: label
         !     !! Internal classifier of the error type.
         !     !! -1: undefined
@@ -1022,6 +1027,8 @@ function get_error_code(cat, op) result (code)
                     cat_sub = -4
                 case ('number', 'size')
                     cat_sub = -5
+                case ('conflict', 'conflicting')
+                    cat_sub = -6
             end select
         case (1)  ! memory
             select case(locase(trim(op)))
@@ -1053,6 +1060,8 @@ function get_error_code(cat, op) result (code)
                     cat_sub = 1
                 case ('args', 'arguments', 'input')
                     cat_sub = 2
+                case ('dupl', 'duplicate', 'equiv', 'equivalent')
+                    cat_sub = 3
             end select
         case (4)  ! data
             select case(locase(trim(op)))
@@ -1061,10 +1070,14 @@ function get_error_code(cat, op) result (code)
                 case ('consistent', 'consistency', 'inconsistent', &
                       'inconsistency')
                     cat_sub = 2
-                case ('excess', 'too many')
+                case ('excess', 'too many', 'num', 'number')
                     cat_sub = 3
                 case ('struct', 'structure', 'unknown')
                     cat_sub = 4
+                case ('val', 'value')
+                    cat_sub = 5
+                case ('type')
+                    cat_sub = 6
             end select
         case (5)  ! value
             select case(locase(trim(op)))
@@ -1096,6 +1109,8 @@ function get_error_code(cat, op) result (code)
                     cat_sub = 2
                 case ('conflict', 'conflicting')
                     cat_sub = 3
+                case ('missing', 'not found')
+                    cat_sub = 4
             end select
     end select
 

@@ -40,7 +40,6 @@ target("datalib")
     add_files("src/core/input_*.f90")
     add_files("src/parsers/input_data_*.f90")
 
-
 target("molelib")
     -- Molecular structure-related resources
     set_kind("static")
@@ -59,6 +58,18 @@ target("eleclib")
     add_deps("mathlib")
     add_files("src/core/orbital.f90")
     add_files("src/core/electronic.f90")
+
+
+target("cubelib")
+    set_kind("static")
+    add_packages("openmp")
+    set_default(false)
+    add_deps("corelib")
+    add_deps("datalib")
+    add_deps("mathlib")
+    add_deps("eleclib")
+    add_files("src/cube/cubegen.f90")
+    add_files("src/cube/cubegen_*.f90")
 
 
 target("speclib")
@@ -84,6 +95,7 @@ target("elements")
     add_deps("molelib")
     add_deps("eleclib")
     add_deps("speclib")
+    add_deps("cubelib")
     add_packages("openmp")
     add_files("src/core/exc_sos.f90")
 

@@ -8,6 +8,8 @@
 * ***run_env***: New object `run` to handle runtime errors.  It can be set up to choose the behavior in case or warning/errors.
 * ***run_env***: New derived type `ErrorHandle` to handle error at runtime.
 * ***run_env***: New derived type `CoreExecObject` to create basic objects in ELEMENTS.  The derived type for now includes an `error` component to process errors during runtime.
+* ***tcd_cube***: New program to generate TCD cube (see DOI: 10.1021/acs.jctc.6c00980)
+* ***vtcd_cube***: New program to generate VTCD cube (see DOI: 10.1021/acs.jctc.6c00980)
 
 ### Fixed
 * ***parse_cmdline***: Fixed parsing of positional arguments with `min_nvals=0`.

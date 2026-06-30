@@ -45,6 +45,9 @@ build/
 /tmp/*
 /local/*
 
+# VSCode files
+.vscode/
+
 # Added
 /doc/api
 /mytests

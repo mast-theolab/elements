@@ -23,7 +23,7 @@ module procedure c_det
     call xgetrf(n, n, A, n, ipiv, info)
     if (info /= 0) stop 'Matrix is numerically singular!'
 
-    det_A = (0.0_real32, 0.0_real32)
+    det_A = (1.0_real32, 0.0_real32)
     do i = 1, n
         det_A = det_A * A(i, i)
     end do

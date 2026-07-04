@@ -3,6 +3,7 @@
 ## 0.26.06
 
 ### Added
+* ***cubegen***: New module to generate Gaussian cube files.
 * ***fchk_io***: New module to handle I/O operations on Gaussian formatted checkpoint files.
 * ***run_env***: Extensive rewriting of the module.
 * ***run_env***: New object `run` to handle runtime errors.  It can be set up to choose the behavior in case or warning/errors.
@@ -12,6 +13,7 @@
 * ***vtcd_cube***: New program to generate VTCD cube (see DOI: 10.1021/acs.jctc.6c00980)
 
 ### Fixed
+* ***math***: Fixed determinant calculation.
 * ***parse_cmdline***: Fixed parsing of positional arguments with `min_nvals=0`.
 
 ### Changed
